@@ -8,23 +8,31 @@ def calculate_house_positions(date, latitude, longitude, planets_positions):
         return {}  #Return an empty dictionary if the time is not specified
     
     # Convert date and time to Julian Day
-    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
+    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600)
     
     # Calculate houses
     h_sys = 'P'  # Placidus house system
-    houses, _ = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
+    houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
     house_cusps = houses[:13]  # The cusps of the houses are the first 12 elements of the houses list
 
-    # Determine the house for each planet
-    house_positions = {}
-    for planet, longitude in planets_positions.items():
-        longitude = longitude['longitude']  # Correctly extract the longitude
+    ascendant_long = ascmc[0]  # Ascendant is the first item in ascmc
+    midheaven_long = ascmc[1]  # Midheaven (MC) is the second item in ascmc
+
+    # Initialize house positions with Ascendant and Midheaven
+    house_positions = {
+        'Ascendant': {'longitude': ascendant_long, 'house': 1},  # Ascendant is always the 1st house
+        'Midheaven': {'longitude': midheaven_long, 'house': None}  # MC's house is not determined here
+    }
+
+  # Determine the house for each planet
+    for planet, planet_info in planets_positions.items():
+        planet_longitude = planet_info['longitude']
         house_num = 1
         for i in range(1, len(houses)):
-            if longitude < houses[i]:
+            if planet_longitude < houses[i]:
                 break
             house_num = i + 1
-        house_positions[planet] = house_num
+        house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
     
     return house_positions, house_cusps
 
@@ -103,7 +111,7 @@ def read_fixed_stars():
     return fixed_stars
 
 def calculate_planet_positions(date, latitude, longitude):
-    jd = swe.julday(date.year, date.month, date.day)
+    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     planets = {
         'Sun': swe.SUN,
         'Moon': swe.MOON,
@@ -124,9 +132,9 @@ def calculate_planet_positions(date, latitude, longitude):
     positions = {}
     for planet, id in planets.items():
         if planet == 'Chiron':
-            pos, ret = swe.calc(jd, id)  # For asteroids, use swe.calc instead of swe.calc_ut
+            pos = swe.calc(jd, id)  # For asteroids, use swe.calc instead of swe.calc_ut
         else:
-            pos, ret = swe.calc_ut(jd, id)
+            pos = swe.calc_ut(jd, id)
         longitude = pos[0]
         # Check for retrograde movement
         retrograde = 'R' if is_planet_retrograde(id, jd) else ''
@@ -178,19 +186,19 @@ def print_planet_positions(planet_positions):
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 54 if house_positions else "-" * 46))  
 
-    for planet in planet_positions:
+    for planet in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
             continue
-        data = planet_positions[planet]
-        longitude = data['longitude']
-        retrograde = data['retrograde']
-        house = house_positions.get(planet, "Unknown")  # Fallback to "Unknown" if not found
+        longitude = planet['longitude']
+        retrograde = planet['retrograde']
+        house_num = planet['house']
+        # house = house_positions.get(planet, "Unknown")  # Fallback to "Unknown" if not found
         zodiac_position = longitude_to_zodiac(longitude)
         zodiac, position = zodiac_position.split()
         retrograde_status = "R" if retrograde else ""
         print(f"{planet:<10} | {zodiac:<11} | {position:>8} | {retrograde_status:<10}", end='')
         if house_positions:
-            print(f" | {house:<5}", end='')
+            print(f" | {house_num:<5}", end='')
         elif planet in notime_imprecise_planets:
             print(f"±{off_by[planet]}°", end='')
         print()
@@ -221,6 +229,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
 
 def print_fixed_star_aspects(aspects):
     print("Aspects to fixed stars:")
+    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<10} | {'House':<7}")
     print("-" * 49)
     for aspect in aspects:
         print(f"{aspect[0]:<10} | {aspect[2]:<14} | {aspect[1]:<10} | {aspect[3]:<7}")
