@@ -191,8 +191,10 @@ def print_planet_positions(planet_positions):
         print()
 
 def print_aspects(aspects, imprecise_aspects="off"):
-    print(f"\nAspects ({orb}° orb) with imprecise aspects {imprecise_aspects}:")
-    print("-" * 49)
+    print(f"\nAspects ({orb}° orb)", end="")
+    if notime:
+        print(f" with imprecise aspects {imprecise_aspects}", end="")
+    print(":\n" + "-" * 49)
     for aspect in aspects:
         angle_with_degree = f"{aspect[3]:.2f}°" # Format the angle with the degree sign included
         if imprecise_aspects == "off" and (aspect[0] in notime_imprecise_planets or aspect[1] in notime_imprecise_planets):
@@ -212,7 +214,7 @@ def print_aspects(aspects, imprecise_aspects="off"):
         print("\n  Please specify the time of birth for a complete chart.\n")
 
 def print_fixed_star_aspects(aspects):
-    print("\nAspects to fixed stars:")
+    print("Aspects to fixed stars:")
     print("-" * 49)
     for aspect in aspects:
         print(f"{aspect[0]:<10} | {aspect[2]:<14} | {aspect[1]:<10} | {aspect[3]:<7}")
@@ -224,7 +226,7 @@ notime = (date.hour == 0 and date.minute == 0)
 
 latitude = 57.7089  # Göteborg, Sweden
 longitude = 11.9746
-orb = 0.5 # 1 degree orb
+orb = 0.1 # 1 degree orb
 aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
 minor_aspect_types = {
     'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
