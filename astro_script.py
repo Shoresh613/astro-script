@@ -232,7 +232,7 @@ minor_aspect_types = {
 }
 
 notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
-imprecise_aspects = "off"  # If True, the script will not show, if "Warn" print a warning for uncertain aspects
+imprecise_aspects = "warn"  # If True, the script will not show, if "Warn" print a warning for uncertain aspects
 always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
 minor_aspects = True  # If True, the script will include minor aspects
 if minor_aspects:
@@ -241,10 +241,8 @@ if minor_aspects:
 planet_positions = calculate_planet_positions(date, latitude, longitude)
 house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, planet_positions)
 aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
-
 fixstar_aspects = list_aspects_to_fixed_stars_and_houses(date, planet_positions, house_cusps, orb, aspect_types=aspect_types)
 
-
 print_planet_positions(planet_positions)
-print_aspects(aspects)
+print_aspects(aspects, imprecise_aspects)
 print_fixed_star_aspects(fixstar_aspects)
