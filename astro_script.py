@@ -146,6 +146,7 @@ def calculate_planet_positions(date, latitude, longitude):
 
 def calculate_aspects(planet_positions, orb, aspect_types, minor_aspects=True):
     aspects = []
+    aspects_to_ignore = [{"Sun","Ascendant"}, {"Sun","Midheaven"}, {"Ascendant","Midheaven"}, {"North Node","South Node"}]
 
     planets = list(planet_positions.keys())
     for i, planet1 in enumerate(planets):
@@ -157,11 +158,15 @@ def calculate_aspects(planet_positions, orb, aspect_types, minor_aspects=True):
             angle = min(angle, 360 - angle)  # Correct for angles > 180
 
             for aspect, aspect_angle in aspect_types.items():
+                if {planet1, planet2} in aspects_to_ignore: # Skip Sun-Ascendant etc
+                    continue
                 if abs(angle - aspect_angle) <= orb:  # Within the specified orb
                     aspects.append((planet1, planet2, aspect, angle))
             
             if minor_aspects:
                 for aspect, aspect_angle in minor_aspect_types.items():
+                    if {planet1, planet2} in aspects_to_ignore: # Skip Sun-Ascendant etc
+                        continue
                     if abs(angle - aspect_angle) <= orb:
                         aspects.append((planet1, planet2, aspect, angle))
     return aspects
@@ -190,8 +195,9 @@ def print_planet_positions(planet_positions):
             print(f"±{off_by[planet]}°", end='')
         print()
 
-def print_aspects(aspects, imprecise_aspects="off"):
+def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
     print(f"\nAspects ({orb}° orb)", end="")
+    print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
         print(f" with imprecise aspects {imprecise_aspects}", end="")
     print(":\n" + "-" * 49)
@@ -226,7 +232,7 @@ notime = (date.hour == 0 and date.minute == 0)
 
 latitude = 57.7089  # Göteborg, Sweden
 longitude = 11.9746
-orb = 0.1 # 1 degree orb
+orb = 1 # 1 degree orb
 aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
 minor_aspect_types = {
     'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
