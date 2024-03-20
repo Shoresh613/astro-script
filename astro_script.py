@@ -1,7 +1,7 @@
 import swisseph as swe
 import datetime
 
-swe.set_ephe_path('../swisseph/ephe/')
+swe.set_ephe_path('./ephe/')
 
 def calculate_house_positions(date, latitude, longitude, planets_positions):
     if date.hour == 0 and date.minute == 0: # Doesn't work for people born at midnight
@@ -13,7 +13,8 @@ def calculate_house_positions(date, latitude, longitude, planets_positions):
     # Calculate houses
     h_sys = 'P'  # Placidus house system
     houses, _ = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
-    
+    house_cusps = houses[:13]  # The cusps of the houses are the first 12 elements of the houses list
+
     # Determine the house for each planet
     house_positions = {}
     for planet, longitude in planets_positions.items():
@@ -25,7 +26,7 @@ def calculate_house_positions(date, latitude, longitude, planets_positions):
             house_num = i + 1
         house_positions[planet] = house_num
     
-    return house_positions
+    return house_positions, house_cusps
 
 def longitude_to_zodiac(longitude):
     zodiac_signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
@@ -59,18 +60,21 @@ def get_fixed_star_position(star_name, jd):
     star_info = swe.fixstar(star_name, jd)
     return star_info[0][0]  # Returning the longitude part of the position
 
-def list_aspects_to_fixed_stars_and_houses(fixed_stars, planet_positions, houses, orb=1.0):
+def list_aspects_to_fixed_stars_and_houses(date, planet_positions, houses, orb=1.0, aspect_types={'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60}):
     """
     List aspects between planets and fixed stars, including the house of each fixed star.
     
     Parameters:
-    - fixed_stars: A list of fixed star names.
+    - date: datetime object specifying the date and time for the calculation.
     - planet_positions: A dictionary of planets and their positions.
     - houses: A list of house cusp positions.
     - orb: Orb value for aspect consideration.
+    - aspect_types: A dictionary of aspect names and their angular distances.
     """
-    jd = swe.julday(date.year, date.month, date.day, date.hour)  # Use appropriate datetime components
+    fixed_stars = read_fixed_stars()
+    jd = swe.julday(date.year, date.month, date.day, date.hour)  # Assumes date includes time information
     aspects = []
+    
     for star_name in fixed_stars:
         star_long = get_fixed_star_position(star_name, jd)
         # Find the house of the fixed star
@@ -79,16 +83,25 @@ def list_aspects_to_fixed_stars_and_houses(fixed_stars, planet_positions, houses
             if star_long < cusp:
                 break
             star_house = i + 1
+        
         # Check aspects with planets
         for planet, data in planet_positions.items():
             planet_long = data['longitude']
-            if abs(planet_long - star_long) <= orb:
-                aspects.append((planet, star_name, "Conjunction", star_house))
-            # Add more aspect types as needed
-            
+            for aspect_name, aspect_angle in aspect_types.items():
+                angular_difference = abs(planet_long - star_long) % 360
+                if angular_difference > 180:  # Normalize the angle
+                    angular_difference = 360 - angular_difference
+                if abs(angular_difference - aspect_angle) <= orb:
+                    aspects.append((planet, star_name, aspect_name, star_house))
+    
     return aspects
 
-# Including Chiron and the Lunar Nodes in planet_positions
+
+def read_fixed_stars():
+    with open('./ephe/fixed_stars.txt', 'r') as file:
+        fixed_stars = file.read().splitlines()
+    return fixed_stars
+
 def calculate_planet_positions(date, latitude, longitude):
     jd = swe.julday(date.year, date.month, date.day)
     planets = {
@@ -131,13 +144,8 @@ def calculate_planet_positions(date, latitude, longitude):
 
     return positions
 
-def calculate_aspects(planet_positions, orb, minor_aspects=True):
+def calculate_aspects(planet_positions, orb, aspect_types, minor_aspects=True):
     aspects = []
-    aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
-    minor_aspect_types = {
-        'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
-        'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
-    }
 
     planets = list(planet_positions.keys())
     for i, planet1 in enumerate(planets):
@@ -160,7 +168,7 @@ def calculate_aspects(planet_positions, orb, minor_aspects=True):
 
 def print_planet_positions(planet_positions):
     off_by = {"Sun": 1, "Moon": 12, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5}  # Movement per day in degrees
-    print(f"{'Planet':<10} | {'Zodiac':<11} | {'Position':<8} | {'Retrograde':<10}", end='')
+    print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<8} | {'Retrograde':<10}", end='')
     if house_positions:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 54 if house_positions else "-" * 46))  
@@ -196,12 +204,19 @@ def print_aspects(aspects, imprecise_aspects="off"):
         if imprecise_aspects == "warning" and (aspect[0] in notime_imprecise_planets or aspect[1] in notime_imprecise_planets):
             print(" (uncertain)", end='')
         print()
-
+    print("\n")
     if not house_positions:
-        print("\n* No time of day specified. Houses cannot be calculated. ")
+        print("* No time of day specified. Houses cannot be calculated. ")
         print("  Aspects to the Ascendant and Midheaven are not available.")
         print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
         print("\n  Please specify the time of birth for a complete chart.\n")
+
+def print_fixed_star_aspects(aspects):
+    print("\nAspects to fixed stars:")
+    print("-" * 49)
+    for aspect in aspects:
+        print(f"{aspect[0]:<10} | {aspect[2]:<14} | {aspect[1]:<10} | {aspect[3]:<7}")
+    print("\n")
 
 # Example usage
 date = datetime.datetime(1979, 1, 9, 12, 38)  # Time of day needed for house calculation, ascendant and midheaven
@@ -210,14 +225,26 @@ notime = (date.hour == 0 and date.minute == 0)
 latitude = 57.7089  # Göteborg, Sweden
 longitude = 11.9746
 orb = 0.5 # 1 degree orb
+aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
+minor_aspect_types = {
+    'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
+    'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
+}
+
 notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
 imprecise_aspects = "off"  # If True, the script will not show, if "Warn" print a warning for uncertain aspects
-minor_aspects = True  # If True, the script will include minor aspects
 always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
+minor_aspects = True  # If True, the script will include minor aspects
+if minor_aspects:
+    aspect_types.update(minor_aspect_types)
 
 planet_positions = calculate_planet_positions(date, latitude, longitude)
-house_positions = calculate_house_positions(date, latitude, longitude, planet_positions)
-aspects = calculate_aspects(planet_positions, orb)
+house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, planet_positions)
+aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
+
+fixstar_aspects = list_aspects_to_fixed_stars_and_houses(date, planet_positions, house_cusps, orb, aspect_types=aspect_types)
+
 
 print_planet_positions(planet_positions)
 print_aspects(aspects)
+print_fixed_star_aspects(fixstar_aspects)
