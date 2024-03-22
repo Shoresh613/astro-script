@@ -1,7 +1,17 @@
 import swisseph as swe
 import datetime
+import pytz
 
 swe.set_ephe_path('./ephe/')
+
+def convert_to_utc(local_datetime, local_timezone):
+    # Make the datetime object timezone-aware
+    local_datetime = local_timezone.localize(local_datetime)
+    
+    # Convert to UTC
+    utc_datetime = local_datetime.astimezone(pytz.utc)
+    
+    return utc_datetime
 
 def calculate_house_positions(date, latitude, longitude, planets_positions):
     """
@@ -25,7 +35,21 @@ def calculate_house_positions(date, latitude, longitude, planets_positions):
     h_sys = 'P'
     houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
 
-    house_positions = {'Ascendant': {'longitude': ascmc[0], 'house': 1}, 'Midheaven': {'longitude': ascmc[1], 'house': 10}}
+    ascendant_long = ascmc[5]
+    midheaven_long = ascmc[7]
+   
+    # Determine the house number for Midheaven
+    midheaven_house = 10  # Default to 10th house
+    for i, cusp in enumerate(houses[1:], start=1):
+        if midheaven_long < cusp:
+            midheaven_house = i
+            break
+
+    house_positions = {
+        'Ascendant': {'longitude': ascendant_long, 'house': 1},
+        'Midheaven': {'longitude': midheaven_long, 'house': midheaven_house}
+    }
+
     for planet, planet_info in planets_positions.items():
         planet_longitude = planet_info['longitude']
         house_num = 1
@@ -48,9 +72,11 @@ def longitude_to_zodiac(longitude):
     - A string representation of the zodiac sign and degree.
     """
     zodiac_signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
-    sign_index = int(longitude / 30)
-    degree = longitude % 30
-    return f"{zodiac_signs[sign_index]} {degree:.2f}°"
+    sign_index = int(longitude // 30)
+    degree = int(longitude % 30)
+    minutes = int((longitude % 1) * 60)
+    seconds = int((((longitude % 1) * 60) % 1) * 60)
+    return f"{zodiac_signs[sign_index]} {degree}°{minutes}'{seconds}''"
 
 
 def is_planet_retrograde(planet, jd):
@@ -135,6 +161,10 @@ def read_fixed_stars(all_stars=False):
             fixed_stars = file.read().splitlines()
     return fixed_stars
 
+def get_max_star_name_length(all_stars=False):
+    fixed_stars = read_fixed_stars(all_stars)
+    max_length = max(len(star_name) for star_name in fixed_stars)
+    return max_length
 
 def calculate_planet_positions(date, latitude, longitude):
     """
@@ -206,7 +236,7 @@ def calculate_aspects(planet_positions, orb, aspect_types):
     excluded_pairs = [
         {"Sun", "Ascendant"}, {"Sun", "Midheaven"}, 
         {"Moon", "Ascendant"}, {"Moon", "Midheaven"},
-        {"Ascendant", "Midheaven"}
+        {"Ascendant", "Midheaven"}, {"South Node", "North Node"}
     ]
 
     aspects_found = []
@@ -231,10 +261,10 @@ def calculate_aspects(planet_positions, orb, aspect_types):
 
 def print_planet_positions(planet_positions):
     off_by = {"Sun": 1, "Moon": 12, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5}  # Movement per day in degrees
-    print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<8} | {'Retrograde':<10}", end='')
+    print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
     if house_positions:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
-    print("\n" + ("-" * 54 if house_positions else "-" * 46))  
+    print("\n" + ("-" * 58 if house_positions else "-" * 50))  
 
     for planet, info in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
@@ -245,7 +275,7 @@ def print_planet_positions(planet_positions):
         zodiac_position = longitude_to_zodiac(longitude)
         zodiac, position = zodiac_position.split()
         retrograde_status = "R" if retrograde else ""
-        print(f"{planet:<10} | {zodiac:<11} | {position:>8} | {retrograde_status:<10}", end='')
+        print(f"{planet:<10} | {zodiac:<11} | {position:>10} | {retrograde_status:<10}", end='')
         if house_positions:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')  
             print(f" | {house_num:<5}", end='')
@@ -254,7 +284,7 @@ def print_planet_positions(planet_positions):
         print()
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
-    print(f"\nAspects ({orb}° orb)", end="")
+    print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
         print(f" with imprecise aspects {imprecise_aspects}", end="")
@@ -277,15 +307,22 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
         print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
         print("\n  Please specify the time of birth for a complete chart.\n")
 
-def print_fixed_star_aspects(aspects):
-    print("Aspects to fixed stars:")
-    # Adjust the header to include 'Angle'
-    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<16} | {'House':<5} | {'Angle':<6}")
-    print("-" * 63)  # Adjust the separator length accordingly
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=False):
+    print(f"\nFixed Star Aspects ({orb}° orb)", end="")
+    print(" including Minor Aspects" if minor_aspects else "", end="")
+    if notime:
+        print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
+    print()
+    
+    # When you print the table
+    max_star_name_length = get_max_star_name_length(all_stars)
+
+    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'House':<5} | {'Angle':<6}")
+    print("-" * (46+max_star_name_length))  # Adjust the separator length accordingly
     for aspect in aspects:
         # Unpack the aspect tuple to include the angle
         planet, star_name, aspect_name, angle, house = aspect
-        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<16} | {house:<5} | {angle:.2f}°")
+        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {house:<5} | {angle:.2f}°")
     print("\n")
 
 
@@ -310,13 +347,20 @@ orb = 0.1 # 1 degree orb
 minor_aspects = False  # If True, the script will include minor aspects
 all_stars = False  # If True, the script will include all fixed stars
 
+local_timezone = pytz.timezone('Europe/Stockholm')  # For Göteborg, Sweden
+local_datetime = date
+
+utc_datetime = convert_to_utc(local_datetime, local_timezone)
+print(f"\nLocal Time: {local_datetime} {local_timezone}")
+print(f"UTC Time: {utc_datetime} UTC")
+
 if minor_aspects:
     aspect_types.update(minor_aspect_types)
 
-planet_positions = calculate_planet_positions(date, latitude, longitude)
-house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, planet_positions)
+planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions)
 aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
-fixstar_aspects = list_aspects_to_fixed_stars_and_houses(date, planet_positions, house_cusps, orb, aspect_types, all_stars)
+fixstar_aspects = list_aspects_to_fixed_stars_and_houses(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
 
 print_planet_positions(planet_positions)
 print_aspects(aspects, imprecise_aspects, minor_aspects)
