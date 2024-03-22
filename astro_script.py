@@ -299,10 +299,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     for planet, info in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
             continue
-        if degree_in_minutes:
-            position = f"{info['long_minutes']}"
-        else:
-            position = f"{info['longitude']:.2f}°"
+        longitude = info['longitude']
+        # zodiac_index = int(longitude // 30)
+        degrees_within_sign = longitude % 30
+        position = coord_in_minutes(degrees_within_sign) if degree_in_minutes else f"{degrees_within_sign:.2f}°"
         retrograde = info['retrograde']
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
