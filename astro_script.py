@@ -1,6 +1,8 @@
 import swisseph as swe
 import datetime
 import pytz
+import json
+import os
 
 swe.set_ephe_path('./ephe/')
 
@@ -199,21 +201,19 @@ def calculate_planet_positions(date, latitude, longitude):
             'retrograde': 'R' if pos[3] < 0 else ''  # pos[3] is the daily motion. If negative, the planet is retrograde.
         }
 
-    # Special calculations for South Node, Midheaven (MC), and Ascendant
+    # Calculate South Node as opposite of North Node
+    positions['South Node'] = {
+        'longitude': (positions['North Node']['longitude'] + 180) % 360,
+        'retrograde': 'R' if positions['North Node']['retrograde'] else ''
+    }
+
+    # Special calculations for Midheaven (MC), and Ascendant
     _, ascmc = swe.houses(jd, latitude, longitude, 'P'.encode('utf-8'))  # Placidus system
     positions['Ascendant'] = {'longitude': ascmc[0], 'retrograde': ''}
     positions['Midheaven'] = {'longitude': ascmc[1], 'retrograde': ''}
 
-    # Calculate South Node as opposite of North Node
-    positions['South Node'] = {
-        'longitude': (positions['North Node']['longitude'] + 180) % 360,
-        'retrograde': ''
-    }
 
     return positions
-
-
-
 
 def calculate_aspects(planet_positions, orb, aspect_types):
     """
@@ -234,18 +234,17 @@ def calculate_aspects(planet_positions, orb, aspect_types):
     """
     # Pairs to exclude from the aspect calculations
     excluded_pairs = [
-        {"Sun", "Ascendant"}, {"Sun", "Midheaven"}, 
-        {"Moon", "Ascendant"}, {"Moon", "Midheaven"},
+        {"Sun", "Ascendant"}, {"Sun", "Midheaven"}, {"Moon", "Ascendant"}, {"Moon", "Midheaven"},
         {"Ascendant", "Midheaven"}, {"South Node", "North Node"}
     ]
 
-    aspects_found = []
+    aspects_found = {}
     planet_names = list(planet_positions.keys())
 
     for i, planet1 in enumerate(planet_names):
         for planet2 in planet_names[i+1:]:
-            # Skip calculation if the pair is in the exclusion list
-            if {planet1, planet2} in excluded_pairs:
+            # Skip calculation if the pair is in the exclusion list or the same planet
+            if {planet1, planet2} in (excluded_pairs or planet1 == planet2):
                 continue
 
             long1 = planet_positions[planet1]['longitude']
@@ -255,14 +254,26 @@ def calculate_aspects(planet_positions, orb, aspect_types):
 
             for aspect_name, aspect_angle in aspect_types.items():
                 if abs(angle_diff - aspect_angle) <= orb:
-                    aspects_found.append((planet1, planet2, aspect_name, angle_diff))
-
+                    # Check if the aspect is imprecise based on the movement per day of the planets involved
+                    is_imprecise = any(
+                        planet in off_by and off_by[planet] > angle_diff
+                        for planet in (planet1, planet2)
+                    )
+                    
+                    # Create a tuple for the planets involved in the aspect
+                    planets_pair = (planet1, planet2)
+                    
+                    # Update the aspects_found dictionary
+                    aspects_found[planets_pair] = {
+                        'aspect_name': aspect_name,
+                        'angle_diff': angle_diff,
+                        'is_imprecise': is_imprecise
+                    }
     return aspects_found
 
 def print_planet_positions(planet_positions):
-    off_by = {"Sun": 1, "Moon": 12, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5}  # Movement per day in degrees
     print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
-    if house_positions:  # Checks if house_positions is not empty
+    if house_positions and not notime:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 58 if house_positions else "-" * 50))  
 
@@ -271,15 +282,14 @@ def print_planet_positions(planet_positions):
             continue
         longitude = info['longitude']
         retrograde = info['retrograde']
-        # house = house_positions.get(planet, "Unknown")  # Fallback to "Unknown" if not found
         zodiac_position = longitude_to_zodiac(longitude)
         zodiac, position = zodiac_position.split()
         retrograde_status = "R" if retrograde else ""
         print(f"{planet:<10} | {zodiac:<11} | {position:>10} | {retrograde_status:<10}", end='')
-        if house_positions:
+        if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')  
             print(f" | {house_num:<5}", end='')
-        elif planet in notime_imprecise_planets:
+        elif planet in off_by.keys() and off_by[planet] > orb:
             print(f"±{off_by[planet]}°", end='')
         print()
 
@@ -287,17 +297,18 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
-        print(f" with imprecise aspects {imprecise_aspects}", end="")
+        print(f" with imprecise aspects set to {imprecise_aspects}", end="")
     print(":\n" + "-" * 49)
-    for aspect in aspects:
-        angle_with_degree = f"{aspect[3]:.2f}°" # Format the angle with the degree sign included
-        if imprecise_aspects == "off" and (aspect[0] in notime_imprecise_planets or aspect[1] in notime_imprecise_planets):
+
+    for planets, aspect_details in aspects.items():
+        angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
+        if imprecise_aspects == "off" and (planets[0] in off_by.keys() or planets[1] in off_by.keys()):
             continue
-        elif notime and (aspect[0] in always_exclude_if_no_time or aspect[1] in always_exclude_if_no_time):
+        elif notime and (planets[0] in always_exclude_if_no_time or planets[1] in always_exclude_if_no_time):
             continue
         else:
-            print(f"{aspect[0]:<10} | {aspect[2]:<14} | {aspect[1]:<10} | {angle_with_degree:<7}", end='')
-        if imprecise_aspects == "warning" and (aspect[0] in notime_imprecise_planets or aspect[1] in notime_imprecise_planets):
+            print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
+        if imprecise_aspects == "warning" and ((planets[0] in off_by.keys() or planets[1] in off_by.keys())):
             print(" (uncertain)", end='')
         print()
     print("\n")
@@ -308,7 +319,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
         print("\n  Please specify the time of birth for a complete chart.\n")
 
 def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=False):
-    print(f"\nFixed Star Aspects ({orb}° orb)", end="")
+    print(f"Fixed Star Aspects ({orb}° orb)", end="")
     print(" including Minor Aspects" if minor_aspects else "", end="")
     if notime:
         print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
@@ -325,34 +336,68 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {house:<5} | {angle:.2f}°")
     print("\n")
 
+# Function to check if there is an entry for a specified name in the JSON file
+def load_event(filename, name):
+    # Check if the file exists
+    if not os.path.exists(filename):
+        print(f"No file named {filename} found.")
+        return False
 
+    # Read the current data from the file
+    try:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+    except json.JSONDecodeError:
+        print(f"Error reading JSON data from {filename}.")
+        return False
+
+    # Check if the name exists in the data
+    if name in data:
+        return data[name],
+    else:
+        print(f"No entry found for {name}.")
+        return False
+
+# Constants
 aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
 minor_aspect_types = {
     'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
     'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
 }
-notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
-imprecise_aspects = "warn"  # If True, the script will not show, if "Warn" print a warning for uncertain aspects
+# notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
+# Movement per day for each planet in degrees
+off_by = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
+          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05}
+
 always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
+filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
 
-# Example usage
-date = datetime.datetime(1979, 1, 9, 12, 38)  # Time of day needed for house calculation, ascendant and midheaven
-notime = (date.hour == 0 and date.minute == 0)
+# Load event and Settings
+name = "Dolphin"  # Specify the name you want to check
+exists = load_event(filename, name)
+if exists:
+    local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
+    latitude = exists[0]['latitude']
+    longitude = exists[0]['longitude']
+    local_timezone = pytz.timezone(exists[0]['timezone'])
+else:
+    local_datetime = datetime.datetime(1937, 11, 9, 2, 55)  # Time of day needed for house calculation, ascendant and midheaven
+    latitude = 57.6828  # Sahlgrenska, Göteborg, Sweden
+    longitude = 11.9624  # 11°57'44'' E 57°40'58'' N
+    local_timezone = pytz.timezone('Europe/Stockholm')  # For Göteborg, Sweden
+utc_datetime = convert_to_utc(local_datetime, local_timezone)
+# Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
+notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
 
-latitude = 57.7089  # Göteborg, Sweden
-longitude = 11.9746
-
-# Settings
+imprecise_aspects = "warn"  # If "off", the script will not show, if "warn" print a warning for uncertain aspects
 orb = 0.1 # 1 degree orb
 minor_aspects = False  # If True, the script will include minor aspects
 all_stars = False  # If True, the script will include all fixed stars
 
-local_timezone = pytz.timezone('Europe/Stockholm')  # For Göteborg, Sweden
-local_datetime = date
-
-utc_datetime = convert_to_utc(local_datetime, local_timezone)
 print(f"\nLocal Time: {local_datetime} {local_timezone}")
 print(f"UTC Time: {utc_datetime} UTC")
+print(f"Latitude: {latitude}, Longitude: {longitude}")
+print("Placidus Houses")
 
 if minor_aspects:
     aspect_types.update(minor_aspect_types)
@@ -364,4 +409,4 @@ fixstar_aspects = list_aspects_to_fixed_stars_and_houses(utc_datetime, planet_po
 
 print_planet_positions(planet_positions)
 print_aspects(aspects, imprecise_aspects, minor_aspects)
-print_fixed_star_aspects(fixstar_aspects)
+print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime)
