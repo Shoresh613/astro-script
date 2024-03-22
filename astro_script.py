@@ -290,7 +290,7 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     }
     return aspects_found
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1):
     print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
     if house_positions and not notime:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
@@ -513,7 +513,7 @@ If no record is found, default values will be used.''')
     aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
 
-    print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions)
+    print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
     print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
     print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
 
