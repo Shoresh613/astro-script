@@ -197,24 +197,37 @@ def calculate_planet_positions(date, latitude, longitude):
 
     for planet, id in planets.items():
         pos, ret = swe.calc_ut(jd, id) if planet != 'Chiron' else swe.calc(jd, id)
+        zodiac, position = longitude_to_zodiac(pos[0]).split()
         positions[planet] = {
             'longitude': pos[0],
+            'long_minutes': position,
+            'zodiac_sign': zodiac,
             'retrograde': 'R' if pos[3] < 0 else ''  # pos[3] is the daily motion. If negative, the planet is retrograde.
         }
 
     # Calculate South Node as opposite of North Node
     positions['South Node'] = {
         'longitude': (positions['North Node']['longitude'] + 180) % 360,
-        'retrograde': 'R' if positions['North Node']['retrograde'] else ''
+        'long_minutes': coord_in_minutes((positions['North Node']['longitude'] + 180) % 360),
+        'retrograde': 'R' if positions['North Node']['retrograde'] else '',
+        'zodiac_sign': longitude_to_zodiac((positions['North Node']['longitude'] + 180) % 360).split()[0]
     }
 
     # Special calculations for Midheaven (MC), and Ascendant
     _, ascmc = swe.houses(jd, latitude, longitude, 'P'.encode('utf-8'))  # Placidus system
-    positions['Ascendant'] = {'longitude': ascmc[0], 'retrograde': ''}
-    positions['Midheaven'] = {'longitude': ascmc[1], 'retrograde': ''}
+    positions['Ascendant'] = {'longitude': ascmc[0], 'long_minutes': coord_in_minutes(ascmc[0]),
+                               'retrograde': '', 'zodiac_sign': longitude_to_zodiac(ascmc[0]).split()[0]}
+    positions['Midheaven'] = {'longitude': ascmc[1], 'long_minutes': coord_in_minutes(ascmc[1]),
+                               'retrograde': '', 'zodiac_sign': longitude_to_zodiac(ascmc[1]).split()[0]}
 
 
     return positions
+
+def coord_in_minutes(longitude):
+    degree = int(longitude % 30)
+    minutes = int((longitude % 1) * 60)
+    seconds = int((((longitude % 1) * 60) % 1) * 60)
+    return f"{degree}°{minutes}'{seconds}''"    
 
 def calculate_aspects(planet_positions, orb, aspect_types):
     """
@@ -267,14 +280,16 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     # Update the aspects_found dictionary
                     angle_diff = angle_diff - aspect_angle # Just show the difference
 
+
                     aspects_found[planets_pair] = {
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
+                        'angle_diff_in_minutes': coord_in_minutes(angle_diff),
                         'is_imprecise': is_imprecise
                     }
     return aspects_found
 
-def print_planet_positions(planet_positions):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False):
     print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
     if house_positions and not notime:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
@@ -283,10 +298,12 @@ def print_planet_positions(planet_positions):
     for planet, info in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
             continue
-        longitude = info['longitude']
+        if degree_in_minutes:
+            position = f"{info['long_minutes']}"
+        else:
+            position = f"{info['longitude']:.2f}°"
         retrograde = info['retrograde']
-        zodiac_position = longitude_to_zodiac(longitude)
-        zodiac, position = zodiac_position.split()
+        zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
         print(f"{planet:<10} | {zodiac:<11} | {position:>10} | {retrograde_status:<10}", end='')
         if house_positions and not notime:
@@ -296,7 +313,7 @@ def print_planet_positions(planet_positions):
             print(f"±{off_by[planet]}°", end='')
         print()
 
-def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
+def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False):
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
@@ -304,7 +321,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
     print(":\n" + "-" * 49)
 
     for planets, aspect_details in aspects.items():
-        angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
+        if degree_in_minutes:
+            angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
+        else:
+            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in always_exclude_if_no_time or planets[1] in always_exclude_if_no_time):
             continue
         else:
@@ -319,7 +339,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
         print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
         print("\n  Please specify the time of birth for a complete chart.\n")
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True):
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False):
     print(f"Fixed Star Aspects ({orb}° orb)", end="")
     print(" including Minor Aspects" if minor_aspects else "", end="")
     if notime:
@@ -331,7 +351,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<6}", end="")
     if house_positions and not notime:
-        print(f" | {'House':<5}", end='')
+        print(f" | {'Star in House':<5}", end='')
     print("\n" + "-" * (47+max_star_name_length)) 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
@@ -382,7 +402,7 @@ always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are alway
 filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
 
 # Load event and Settings
-name = "Mikael Notime"  # Specify the name you want to check
+name = "Mikael"  # Specify the name you want to check
 exists = load_event(filename, name)
 if exists:
     local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
@@ -402,6 +422,7 @@ imprecise_aspects = "off"  # If "off", the script will not show, if "warn" print
 orb = 1 # 1 degree orb
 minor_aspects = False  # If True, the script will include minor aspects
 all_stars = False  # If True, the script will include all fixed stars
+degree_in_minutes = False  # If True, the script will show the positions in degrees and minutes
 
 print(f"\nLocal Time: {local_datetime} {local_timezone}")
 print(f"UTC Time: {utc_datetime} UTC")
@@ -416,6 +437,6 @@ house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude,
 aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
 fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
 
-print_planet_positions(planet_positions)
-print_aspects(aspects, imprecise_aspects, minor_aspects)
-print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime)
+print_planet_positions(planet_positions, degree_in_minutes, notime)
+print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes)
+print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes)
