@@ -111,7 +111,7 @@ def get_fixed_star_position(star_name, jd):
     star_info = swe.fixstar(star_name, jd)
     return star_info[0][0]  # Returning the longitude part of the position
 
-def list_aspects_to_fixed_stars_and_houses(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
+def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
     """
     List aspects between planets and fixed stars, including the house of each fixed star.
 
@@ -144,6 +144,7 @@ def list_aspects_to_fixed_stars_and_houses(date, planet_positions, houses, orb=1
                 if angular_difference > 180:
                     angular_difference = 360 - angular_difference
                 if abs(angular_difference - aspect_angle) <= orb:
+                    angular_difference = angular_difference - aspect_angle # Just show the difference
                     aspects.append((planet, star_name, aspect_name, angular_difference, star_house))
     
     return aspects
@@ -264,6 +265,8 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     planets_pair = (planet1, planet2)
                     
                     # Update the aspects_found dictionary
+                    angle_diff = angle_diff - aspect_angle # Just show the difference
+
                     aspects_found[planets_pair] = {
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
@@ -302,9 +305,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
 
     for planets, aspect_details in aspects.items():
         angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
-        if imprecise_aspects == "off" and (planets[0] in off_by.keys() or planets[1] in off_by.keys()):
-            continue
-        elif notime and (planets[0] in always_exclude_if_no_time or planets[1] in always_exclude_if_no_time):
+        if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in always_exclude_if_no_time or planets[1] in always_exclude_if_no_time):
             continue
         else:
             print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
@@ -318,23 +319,31 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True):
         print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
         print("\n  Please specify the time of birth for a complete chart.\n")
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=False):
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True):
     print(f"Fixed Star Aspects ({orb}° orb)", end="")
     print(" including Minor Aspects" if minor_aspects else "", end="")
     if notime:
         print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
     print()
     
-    # When you print the table
+    # For formatting the table
     max_star_name_length = get_max_star_name_length(all_stars)
 
-    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'House':<5} | {'Angle':<6}")
-    print("-" * (46+max_star_name_length))  # Adjust the separator length accordingly
+    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<6}", end="")
+    if house_positions and not notime:
+        print(f" | {'House':<5}", end='')
+    print("\n" + "-" * (47+max_star_name_length)) 
     for aspect in aspects:
-        # Unpack the aspect tuple to include the angle
         planet, star_name, aspect_name, angle, house = aspect
-        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {house:<5} | {angle:.2f}°")
-    print("\n")
+        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:>5.2f}°", end='')
+
+        if house_positions and not notime:
+            print(f" | {house:<5}", end='')
+        elif planet in off_by.keys() and off_by[planet] > orb:
+            print(f" ±{off_by[planet]}°", end='')
+        print()
+
+    print()
 
 # Function to check if there is an entry for a specified name in the JSON file
 def load_event(filename, name):
@@ -373,14 +382,14 @@ always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are alway
 filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
 
 # Load event and Settings
-name = "Dolphin"  # Specify the name you want to check
+name = "Mikael Notime"  # Specify the name you want to check
 exists = load_event(filename, name)
 if exists:
     local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
     latitude = exists[0]['latitude']
     longitude = exists[0]['longitude']
     local_timezone = pytz.timezone(exists[0]['timezone'])
-else:
+else: # If the name does not exist, use the following default settings
     local_datetime = datetime.datetime(1937, 11, 9, 2, 55)  # Time of day needed for house calculation, ascendant and midheaven
     latitude = 57.6828  # Sahlgrenska, Göteborg, Sweden
     longitude = 11.9624  # 11°57'44'' E 57°40'58'' N
@@ -389,8 +398,8 @@ utc_datetime = convert_to_utc(local_datetime, local_timezone)
 # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
 notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
 
-imprecise_aspects = "warn"  # If "off", the script will not show, if "warn" print a warning for uncertain aspects
-orb = 0.1 # 1 degree orb
+imprecise_aspects = "off"  # If "off", the script will not show, if "warn" print a warning for uncertain aspects
+orb = 1 # 1 degree orb
 minor_aspects = False  # If True, the script will include minor aspects
 all_stars = False  # If True, the script will include all fixed stars
 
@@ -405,7 +414,7 @@ if minor_aspects:
 planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
 house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions)
 aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
-fixstar_aspects = list_aspects_to_fixed_stars_and_houses(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
+fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
 
 print_planet_positions(planet_positions)
 print_aspects(aspects, imprecise_aspects, minor_aspects)
