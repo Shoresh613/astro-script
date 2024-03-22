@@ -400,8 +400,27 @@ off_by = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "J
 
 always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
 filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
+house_systems = {
+    'Placidus': 'P',
+    'Koch': 'K',
+    'Porphyrius': 'O',
+    'Regiomontanus': 'R',
+    'Campanus': 'C',
+    'Equal (cusp 1 is Ascendant)': 'A',
+    'Equal (cusp 1 is 0 Aries)': 'E',
+    'Vehlow equal (Ascendant = cusp 1)': 'V',
+    'Axial rotation system/ Meridian system/ Zariel system': 'X',
+    'Horizon / Azimuthal system': 'H',
+    'Polich/Page (‘topocentric’ system)': 'T',
+    'Alcabitius': 'B',
+    'Gauquelin sectors': 'G',
+    'Sripati': 'S',
+    'Morinus': 'M'
+}
 
-# Load event and Settings
+h_sys = house_systems['Placidus']
+
+#################### Load event and Settings ####################
 name = "Mikael"  # Specify the name you want to check
 exists = load_event(filename, name)
 if exists:
@@ -409,6 +428,7 @@ if exists:
     latitude = exists[0]['latitude']
     longitude = exists[0]['longitude']
     local_timezone = pytz.timezone(exists[0]['timezone'])
+    place = exists[0]['location']
 else: # If the name does not exist, use the following default settings
     local_datetime = datetime.datetime(1937, 11, 9, 2, 55)  # Time of day needed for house calculation, ascendant and midheaven
     latitude = 57.6828  # Sahlgrenska, Göteborg, Sweden
@@ -423,11 +443,20 @@ orb = 1 # 1 degree orb
 minor_aspects = False  # If True, the script will include minor aspects
 all_stars = False  # If True, the script will include all fixed stars
 degree_in_minutes = False  # If True, the script will show the positions in degrees and minutes
+#################### Settings End ####################
 
+if exists:
+    print(f"\nName: {name}")
+if place:
+    print(f"Place: {place}")
 print(f"\nLocal Time: {local_datetime} {local_timezone}")
 print(f"UTC Time: {utc_datetime} UTC")
-print(f"Latitude: {latitude}, Longitude: {longitude}")
-print("Placidus Houses")
+if degree_in_minutes:
+    print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
+else:
+    print(f"Latitude: {latitude}, Longitude: {longitude}")
+house_system_name = next((name for name, code in house_systems.items() if code == h_sys), None)
+print(f"House system: {house_system_name}\n")
 
 if minor_aspects:
     aspect_types.update(minor_aspect_types)
