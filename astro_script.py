@@ -409,36 +409,37 @@ house_systems = {
     'Porphyrius': 'O',
     'Regiomontanus': 'R',
     'Campanus': 'C',
-    'Equal (cusp 1 is Ascendant)': 'A',
-    'Equal (cusp 1 is 0 Aries)': 'E',
-    'Vehlow equal (Ascendant = cusp 1)': 'V',
-    'Axial rotation system/ Meridian system/ Zariel system': 'X',
-    'Horizon / Azimuthal system': 'H',
-    'Polich/Page (‘topocentric’ system)': 'T',
+    'Equal (Ascendant cusp 1)': 'A',
+    'Equal (Aries cusp 1)': 'E',
+    'Vehlow equal': 'V',
+    'Axial rotation system/Meridian system/Zariel system': 'X',
+    'Horizon/Azimuthal system': 'H',
+    'Polich/Page/Topocentric': 'T',
     'Alcabitius': 'B',
     'Gauquelin sectors': 'G',
     'Sripati': 'S',
     'Morinus': 'M'
 }
 
-
-
 def main():
-    parser = argparse.ArgumentParser(description='Arguments that can be passed to astro_script. If none, values in the script will be used.')
+    parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
+If a name is passed, the script will look up the record for that name in the JSON file and overwrite other passed values,
+provided there are such values stored in the file (only the first 6 types are stored). 
+If no record is found, default values will be used.''')
 
     # Add arguments
     parser.add_argument('--name', help='Name to look up the record for', required=False)
     parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM:SS local time)', required=False)
-    parser.add_argument('--latitude', type=float, help='Latitude of the location', required=False)
-    parser.add_argument('--longitude', type=float, help='Longitude of the location', required=False)
-    parser.add_argument('--timezone', help='Timezone of the location', required=False)
+    parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828', required=False)
+    parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96', required=False)
+    parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm")', required=False)
     parser.add_argument('--place', help='Name of location', required=False)
-    parser.add_argument('--imprecise_aspects', help='Whether to not show imprecise aspects or just warn', required=False)
-    parser.add_argument('--minor_aspects', help='Whether to show minor aspects', required=False)
-    parser.add_argument('--orb', help='Orb size in degrees', required=False)
-    parser.add_argument('--degree_in_minutes', help='Show degrees in arch minutes and seconds', required=False)
-    parser.add_argument('--all_stars', help='Show aspects for all fixed stars', required=False)
-    parser.add_argument('--house_system', help='House system to use (Placidus, Koch etc)', required=False)
+    parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn', required=False)
+    parser.add_argument('--minor_aspects', choices=['True','False'], type=bool, help='Whether to show minor aspects', required=False)
+    parser.add_argument('--orb', type=float, help='Orb size in degrees', required=False)
+    parser.add_argument('--degree_in_minutes',choices=['True','False'], type=bool, help='Show degrees in arch minutes and seconds', required=False)
+    parser.add_argument('--all_stars', choices=['True','False'], type=bool, help='Show aspects for all fixed stars', required=False)
+    parser.add_argument('--house_system', choices=list(house_systems.keys()), help='House system to use (Placidus, Koch etc)', required=False)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -463,11 +464,14 @@ def main():
     degree_in_minutes = True if args.degree_in_minutes and args.degree_in_minutes.lower() in ["true", "yes", "1"] else False
     # If True, the script will include all roughly 700 fixed stars
     all_stars = True if args.all_stars and args.all_stars.lower() in ["true", "yes", "1"] else False
+    if args.house_system and args.house_system not in house_systems:
+        print(f"Invalid house system. Available house systems are: {', '.join(house_systems.keys())}")
+        h_sys = house_systems["Placidus"]  # Default house system
     h_sys = house_systems[args.house_system] if args.house_system else house_systems["Placidus"]  # Default house system
 
 
     #################### Load event and Settings ####################
-    name = "Mikael"  # Specify the name you want to load from file
+    if not name: name = "Mikael"  # Specify the name you want to load from file unless passed as argument
     exists = load_event(filename, name)
     if exists:
         local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
