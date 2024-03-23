@@ -7,228 +7,365 @@ import argparse
 
 swe.set_ephe_path('./ephe/')
 
+############### Constants ###############
+aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
+minor_aspect_types = {
+    'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
+    'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
+}
+# notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
+# Movement per day for each planet in degrees
+off_by = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
+          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05}
+
+always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
+filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
+house_systems = {
+    'Placidus': 'P',
+    'Koch': 'K',
+    'Porphyrius': 'O',
+    'Regiomontanus': 'R',
+    'Campanus': 'C',
+    'Equal (Ascendant cusp 1)': 'A',
+    'Equal (Aries cusp 1)': 'E',
+    'Vehlow equal': 'V',
+    'Axial rotation system/Meridian system/Zariel system': 'X',
+    'Horizon/Azimuthal system': 'H',
+    'Polich/Page/Topocentric': 'T',
+    'Alcabitius': 'B',
+    'Gauquelin sectors': 'G',
+    'Sripati': 'S',
+    'Morinus': 'M'
+}
+
+PLANETS = {
+    'Sun': swe.SUN, 'Moon': swe.MOON, 'Mercury': swe.MERCURY, 'Venus': swe.VENUS,
+    'Mars': swe.MARS, 'Jupiter': swe.JUPITER, 'Saturn': swe.SATURN,
+    'Uranus': swe.URANUS, 'Neptune': swe.NEPTUNE, 'Pluto': swe.PLUTO,
+    'Chiron': swe.CHIRON, 'North Node': swe.MEAN_NODE
+}
+
+############### Functions ###############
 def convert_to_utc(local_datetime, local_timezone):
-    # Make the datetime object timezone-aware
+    """
+    Convert a naive datetime object to UTC using a specified timezone.
+
+    Parameters:
+    - local_datetime (datetime.datetime): A naive datetime object representing local time.
+    - local_timezone (pytz.timezone): A timezone object representing the local timezone.
+
+    Returns:
+    - datetime.datetime: A datetime object converted to UTC.
+    """
+    # Ensure local_datetime is naive before localization
+    if local_datetime.tzinfo is not None:
+        raise ValueError("local_datetime should be naive (no timezone info).")
+
+    # Localize the naive datetime object to the specified timezone
     local_datetime = local_timezone.localize(local_datetime)
     
-    # Convert to UTC
+    # Convert the timezone-aware datetime object to UTC
     utc_datetime = local_datetime.astimezone(pytz.utc)
     
     return utc_datetime
 
-def calculate_house_positions(date, latitude, longitude, planets_positions):
+
+def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False):
     """
-    Calculate the house positions for a given date, time, latitude, and longitude.
-    
+    Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
+
     Parameters:
-    - date: datetime object specifying the date and time for the calculation.
-    - latitude: Latitude of the place for the chart.
-    - longitude: Longitude of the place for the chart.
-    - planets_positions: A dictionary containing planets and their ecliptic longitudes.
-    
+    - date (datetime.datetime): The date and time for the calculation. Must include a time component; calculations at midnight may be less accurate.
+    - latitude (float): The latitude of the location.
+    - longitude (float): The longitude of the location.
+    - planets_positions (dict): A dictionary containing planets and their ecliptic longitudes.
+    - notime (bool): A flag indicating if the time of day is not specified. If True, houses can not be calculated accurately.
+
     Returns:
-    - house_positions: A dictionary mapping each planet, including the Ascendant ('Ascendant')
-      and Midheaven ('Midheaven'), to their house numbers.
-    - house_cusps: A list of the zodiac positions of the beginnings of each house.
+    - tuple: 
+        - house_positions (dict): A dictionary mapping each planet, including the Ascendant ('Ascendant') and Midheaven ('Midheaven'), to their house numbers.
+        - house_cusps (list): The zodiac positions of the beginnings of each house.
+
+    Raises:
+    - ValueError: If the time component of the date is exactly midnight, which may result in less accurate calculations.
     """
+    # Validate input date has a time component (convention to use 00:00:00 for unknown time )
     if date.hour == 0 and date.minute == 0 and date.second == 0:
-        raise ValueError("Time must be specified for accurate house calculations.")
+        print("Warning: Time is not set. Calculations may be less accurate.")
 
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600)
-    h_sys = 'P'
+    h_sys = 'P'  # Placidus house system; consider making this a parameter if flexibility is needed
     houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
 
-    ascendant_long = ascmc[5]
-    midheaven_long = ascmc[7]
+    ascendant_long = ascmc[0]  # Ascendant is the first item in ascmc list
+    midheaven_long = ascmc[1]  # Midheaven is the second item in ascmc list
    
-    # Determine the house number for Midheaven
-    midheaven_house = 10  # Default to 10th house
-    for i, cusp in enumerate(houses[1:], start=1):
-        if midheaven_long < cusp:
-            midheaven_house = i
-            break
-
+    # Initialize dictionary with Ascendant and Midheaven
     house_positions = {
         'Ascendant': {'longitude': ascendant_long, 'house': 1},
-        'Midheaven': {'longitude': midheaven_long, 'house': midheaven_house}
+        'Midheaven': {'longitude': midheaven_long, 'house': 10}  # Midheaven is traditionally associated with the 10th house
     }
 
+    # Assign planets to houses
     for planet, planet_info in planets_positions.items():
         planet_longitude = planet_info['longitude']
         house_num = 1
-        for i in range(1, len(houses)):
-            if planet_longitude < houses[i]:
+        for i, cusp in enumerate(houses[1:], start=1):  # Skip the 0th cusp as it represents the Ascendant
+            if planet_longitude < cusp:
                 break
             house_num = i + 1
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
 
-    return house_positions, houses[:13]  # Return the house positions and the house cusps
+    return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
+
 
 def longitude_to_zodiac(longitude):
     """
-    Convert ecliptic longitude to its zodiac sign and degree.
+    Convert ecliptic longitude to its corresponding zodiac sign and precise degree.
+
+    This function calculates the zodiac sign and the exact position (degrees, minutes, and seconds)
+    of a given ecliptic longitude.
 
     Parameters:
-    - longitude: The ecliptic longitude to convert.
-    
+    - longitude (float): The ecliptic longitude to convert, in degrees.
+
     Returns:
-    - A string representation of the zodiac sign and degree.
+    - str: A string representing the zodiac sign and degree, formatted as 'Sign Degree°Minutes'Seconds"'. 
+           For example, "Aries 15°30'45''" represents 15 degrees, 30 minutes, and 45 seconds into Aries.
     """
-    zodiac_signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+    zodiac_signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
+                    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
     sign_index = int(longitude // 30)
     degree = int(longitude % 30)
     minutes = int((longitude % 1) * 60)
     seconds = int((((longitude % 1) * 60) % 1) * 60)
+    
     return f"{zodiac_signs[sign_index]} {degree}°{minutes}'{seconds}''"
 
 
 def is_planet_retrograde(planet, jd):
     """
-    Determine if a planet is retrograde on a given Julian Day.
+    Determine if a planet is retrograde on a given Julian Day (JD).
+
+    Retrograde motion is when a planet appears to move backward in the sky from the perspective of Earth.
+    This function checks the planet's motion by comparing its positions slightly before and after the given JD.
+    A planet is considered retrograde if its ecliptic longitude decreases over time.
 
     Parameters:
-    - planet: The planet's identifier for swisseph.
-    - jd: Julian Day.
-    
+    - planet (int): The planet's identifier for swisseph.
+    - jd (float): Julian Day to check for retrograde motion.
+
     Returns:
-    - True if the planet is retrograde, False otherwise.
+    - bool: True if the planet is retrograde, False otherwise.
     """
+    # Calculate the planet's position slightly before and after the given Julian Day
     pos_before = swe.calc_ut(jd - (10 / 1440), planet)[0]
     pos_after = swe.calc_ut(jd + (10 / 1440), planet)[0]
+    
+    # A planet is considered retrograde if its position (in longitude) decreases over time
     return pos_after[0] < pos_before[0]
+
 
 
 def get_fixed_star_position(star_name, jd):
     """
-    Get the longitudinal position of a fixed star on a given Julian Day.
-    
+    Retrieve the ecliptic longitude of a fixed star on a given Julian Day.
+
+    Fixed stars' positions are relatively constant, but due to precession, their
+    longitudes change very slowly over time. This function uses the Swiss Ephemeris
+    to calculate the current position of a star given its name.
+
     Parameters:
-    - star_name: The name of the fixed star.
-    - jd: Julian Day.
+    - star_name (str): The name of the fixed star.
+    - jd (float): Julian Day for which to calculate the star's position.
 
     Returns:
-    - The longitude of the fixed star.
+    - float: The ecliptic longitude of the fixed star, or None if the star is not found.
+
+    Raises:
+    - ValueError: If the star name is not recognized by the Swiss Ephemeris.
     """
-    star_info = swe.fixstar(star_name, jd)
-    return star_info[0][0]  # Returning the longitude part of the position
+    try:
+        star_info = swe.fixstar(star_name, jd)
+        return star_info[0][0]  # Returning the longitude part of the position
+    except swe.SwissephException as e:
+        raise ValueError(f"Fixed star '{star_name}' not recognized: {e}")
+
+
+def check_aspect(planet_long, star_long, aspect_angle, orb):
+    """
+    Check if an aspect exists between two points based on their longitudes and calculate the difference
+    from the exact aspect angle. This function helps in determining not only if an astrological aspect
+    (e.g., conjunction, opposition) is present within a specified orb but also how much the actual angle
+    is off from the desired aspect angle.
+
+    Parameters:
+    - planet_long (float): The ecliptic longitude of the planet.
+    - star_long (float): The ecliptic longitude of the fixed star.
+    - aspect_angle (float): The angle that defines the aspect (e.g., 90 degrees for a square).
+    - orb (float): The maximum allowed deviation from the aspect_angle for the aspect to be considered valid.
+
+    Returns:
+    - tuple: A tuple containing a boolean and a float. The boolean indicates whether the aspect is within
+             the allowed orb, and the float represents how much the actual angle is off from the aspect_angle.
+    """
+    angular_difference = abs(planet_long - star_long) % 360
+    # Normalize the angle to <= 180 degrees for comparison
+    if angular_difference > 180:
+        angular_difference = 360 - angular_difference
+    
+    angle_off = abs(angular_difference - aspect_angle)
+    return angle_off <= orb, angle_off
+
 
 def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
     """
-    List aspects between planets and fixed stars, including the house of each fixed star.
+    List aspects between planets and fixed stars, considering the house placement of each fixed star
+    and the angle difference from the exact aspect angle. This function enriches astrological analysis
+    by providing detailed insights into the relationships between planets and stars, including how closely
+    each aspect aligns with its ideal angular relationship.
 
     Parameters:
-    - date: datetime object specifying the date and time for the calculation.
-    - planet_positions: A dictionary of planets and their positions.
-    - houses: A list of house cusp positions.
-    - orb: Orb value for aspect consideration. Default is 1.0 degree.
-    - aspect_types: A dictionary of aspect names and their angular distances. Defaults to common aspects if None.
+    - date (datetime.datetime): The date and time for the calculation.
+    - planet_positions (dict): A dictionary of planets and their positions.
+    - houses (list): A list of house cusp positions.
+    - orb (float): Orb value for aspect consideration. Default is 1.0 degree.
+    - aspect_types (dict, optional): A dictionary of aspect names and their angular distances.
+                                     Defaults to common aspects if None.
+    - all_stars (bool): Whether to include all stars or a predefined list of astrologically significant stars.
 
     Returns:
-    - A list of tuples, each representing an aspect between a planet and a fixed star, including the aspect name and the house of the fixed star.
+    - list: A list of tuples, each representing an aspect between a planet and a fixed star. Each tuple includes
+            the planet name, star name, aspect name, the angle difference from the aspect angle, and the house of the fixed star.
     """
+    if aspect_types is None:
+        aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60}
+
     fixed_stars = read_fixed_stars(all_stars)
     jd = swe.julday(date.year, date.month, date.day, date.hour)  # Assumes date includes time information
     aspects = []
 
     for star_name in fixed_stars:
-        star_long = get_fixed_star_position(star_name, jd)
-        
-        # Determine the house for the fixed star
-        star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
+        try:
+            star_long = get_fixed_star_position(star_name, jd)
+            star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
 
-        # Check aspects with planets
-        for planet, data in planet_positions.items():
-            planet_long = data['longitude']
-            for aspect_name, aspect_angle in aspect_types.items():
-                angular_difference = abs(planet_long - star_long) % 360
-                # Normalize the angle to <= 180 degrees for comparison
-                if angular_difference > 180:
-                    angular_difference = 360 - angular_difference
-                if abs(angular_difference - aspect_angle) <= orb:
-                    angular_difference = angular_difference - aspect_angle # Just show the difference
-                    aspects.append((planet, star_name, aspect_name, angular_difference, star_house))
-    
+            for planet, data in planet_positions.items():
+                planet_long = data['longitude']
+                for aspect_name, aspect_angle in aspect_types.items():
+                    valid_aspect, angle_off = check_aspect(planet_long, star_long, aspect_angle, orb)
+                    if valid_aspect:
+                        aspects.append((planet, star_name, aspect_name, angle_off, star_house))
+        except ValueError as e:
+            print(f"Error processing star {star_name}: {e}")
+
     return aspects
 
 def read_fixed_stars(all_stars=False):
     """
-    Read a list of fixed star names from a file.
+    Read and return a list of fixed star names from a predefined file. This function can select
+    between a comprehensive list of all fixed stars or a curated list of those known for their
+    astrological significance based on the input parameter.
+
+    Parameters:
+    - all_stars (bool): Determines which list of fixed stars to read:
+                        if True, reads a comprehensive list;
+                        if False, reads a list of astrologically significant stars.
 
     Returns:
-    - A list of fixed star names.
+    - list: A list containing the names of fixed stars.
+
+    Raises:
+    - FileNotFoundError: If the specified file cannot be found.
+    - IOError: If there is an issue reading from the file.
     """
-    if all_stars:
-        with open('./ephe/fixed_stars_all.txt', 'r') as file:
+    filename = './ephe/fixed_stars_all.txt' if all_stars else './ephe/astrologically_known_fixed_stars.txt'
+    
+    try:
+        with open(filename, 'r') as file:
             fixed_stars = file.read().splitlines()
-    else:   
-        with open('./ephe/astrologically_known_fixed_stars.txt', 'r') as file:
-            fixed_stars = file.read().splitlines()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file '{filename}' was not found.")
+    except IOError as e:
+        raise IOError(f"An error occurred while reading from '{filename}': {e}")
+    
     return fixed_stars
 
 def get_max_star_name_length(all_stars=False):
+    """
+    Determine the length of the longest fixed star name from a predefined list. This function can
+    operate on either a comprehensive list of all fixed stars or a curated list of those known for
+    their astrological significance, depending on the input parameter.
+
+    Parameters:
+    - all_stars (bool): Determines which list of fixed stars to evaluate:
+                        if True, uses a comprehensive list;
+                        if False, uses a list of astrologically significant stars.
+
+    Returns:
+    - int: The length of the longest fixed star name in the selected list.
+
+    Raises:
+    - FileNotFoundError: If the specified file cannot be found. This is propagated from the
+                         `read_fixed_stars` function.
+    - IOError: If there is an issue reading from the file. This is also propagated from the
+               `read_fixed_stars` function.
+    """
     fixed_stars = read_fixed_stars(all_stars)
     max_length = max(len(star_name) for star_name in fixed_stars)
     return max_length
 
-def calculate_planet_positions(date, latitude, longitude):
+
+def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     """
-    Calculate the ecliptic longitudes and retrograde status of celestial bodies 
-    at a given date and time, including special points like the Ascendant, Midheaven,
-    and the South Node.
+    Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
+    at a given datetime, for a specified location. This includes the Sun, Moon, planets,
+    Chiron, and the lunar nodes, along with the Ascendant (ASC) and Midheaven (MC).
 
     Parameters:
-    - date: A datetime object specifying the exact date and time.
-    - latitude: The latitude of the observation point.
-    - longitude: The longitude of the observation point.
+    - date (datetime.datetime): The datetime for which positions are calculated.
+    - latitude (float): Latitude of the location in degrees.
+    - longitude (float): Longitude of the location in degrees.
 
     Returns:
-    - A dictionary with each celestial body or point as keys, and their ecliptic longitude 
-      and retrograde status as values.
+    - dict: A dictionary with each celestial body as keys, and dictionaries containing
+      their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
     """
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
-
-    planets = {
-        'Sun': swe.SUN, 'Moon': swe.MOON, 'Mercury': swe.MERCURY, 'Venus': swe.VENUS,
-        'Mars': swe.MARS, 'Jupiter': swe.JUPITER, 'Saturn': swe.SATURN,
-        'Uranus': swe.URANUS, 'Neptune': swe.NEPTUNE, 'Pluto': swe.PLUTO,
-        'Chiron': swe.CHIRON, 'North Node': swe.MEAN_NODE  # Using the Mean Node
-    }
-
     positions = {}
 
-    for planet, id in planets.items():
-        pos, ret = swe.calc_ut(jd, id) if planet != 'Chiron' else swe.calc(jd, id)
-        zodiac, position = longitude_to_zodiac(pos[0]).split()
+    for planet, id in PLANETS.items():
+        pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
             'longitude': pos[0],
-            'long_minutes': position,
-            'zodiac_sign': zodiac,
-            'retrograde': 'R' if pos[3] < 0 else ''  # pos[3] is the daily motion. If negative, the planet is retrograde.
+            'zodiac_sign': longitude_to_zodiac(pos[0]).split()[0],
+            'retrograde': 'R' if pos[3] < 0 else ''
         }
 
-    # Calculate South Node as opposite of North Node
-    positions['South Node'] = {
-        'longitude': (positions['North Node']['longitude'] + 180) % 360,
-        'long_minutes': coord_in_minutes((positions['North Node']['longitude'] + 180) % 360),
-        'retrograde': 'R' if positions['North Node']['retrograde'] else '',
-        'zodiac_sign': longitude_to_zodiac((positions['North Node']['longitude'] + 180) % 360).split()[0]
-    }
-
-    # Special calculations for Midheaven (MC), and Ascendant
-    _, ascmc = swe.houses(jd, latitude, longitude, 'P'.encode('utf-8'))  # Placidus system
-    positions['Ascendant'] = {'longitude': ascmc[0], 'long_minutes': coord_in_minutes(ascmc[0]),
-                               'retrograde': '', 'zodiac_sign': longitude_to_zodiac(ascmc[0]).split()[0]}
-    positions['Midheaven'] = {'longitude': ascmc[1], 'long_minutes': coord_in_minutes(ascmc[1]),
-                               'retrograde': '', 'zodiac_sign': longitude_to_zodiac(ascmc[1]).split()[0]}
-
+    # Calculate Ascendant and Midheaven
+    asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
+    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0]).split()[0], 'retrograde': ''}
+    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1]).split()[0], 'retrograde': ''}
 
     return positions
 
 def coord_in_minutes(longitude):
-    degree = int(longitude % 30)
-    minutes = int((longitude % 1) * 60)
-    seconds = int((((longitude % 1) * 60) % 1) * 60)
-    return f"{degree}°{minutes}'{seconds}''"    
+    """
+    Convert a celestial longitude into degrees, minutes, and seconds format.
+
+    This function is used to translate a decimal longitude (such as the position of a planet in the ecliptic coordinate system) into a format that is more commonly used in astrological and astronomical contexts, expressing the longitude in terms of degrees, minutes, and seconds.
+
+    Parameters:
+    - longitude (float): The ecliptic longitude to be converted, in decimal degrees.
+
+    Returns:
+    - str: The formatted string representing the longitude in degrees, minutes, and seconds (D°M'S'').
+    """
+    degrees = int(longitude)  # Extract whole degrees
+    minutes = int((longitude - degrees) * 60)  # Extract whole minutes
+    seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
+
+    return f"{degrees}°{minutes}'{seconds}''"  
 
 def calculate_aspects(planet_positions, orb, aspect_types):
     """
@@ -291,6 +428,23 @@ def calculate_aspects(planet_positions, orb, aspect_types):
     return aspects_found
 
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1):
+    """
+    Print the positions of planets in a human-readable format. This includes the zodiac sign, 
+    degree (optionally in minutes), whether the planet is retrograde, and its house position 
+    if available and relevant.
+
+    Parameters:
+    - planet_positions (dict): A dictionary with celestial bodies as keys and dictionaries as values, 
+      containing 'longitude', 'zodiac_sign', 'retrograde', and optionally 'house'.
+    - degree_in_minutes (bool): If True, display the longitude in degrees, minutes, and seconds.
+      Otherwise, display only in decimal degrees.
+    - notime (bool): If True, house information is considered irrelevant or unavailable.
+    - house_positions (dict, optional): Additional dictionary mapping planets to their house positions, 
+      if this information is available.
+    - orb (float): The orb value to consider when determining the preciseness of the planet's position.
+      This parameter might not be directly used in this function but is included for consistency with the 
+      overall structure of the astrological calculations.
+    """
     print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
     if house_positions and not notime:  # Checks if house_positions is not empty
         print(f" | {'House':<5}", end='')
@@ -315,6 +469,33 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print()
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
+    """
+    Print the astrological aspects found between planets, including details about each aspect's nature,
+    the involved celestial bodies, and the precise or approximate angular separation.
+
+    Parameters:
+    - aspects (dict): A dictionary containing the aspects found between celestial bodies. Each key is a tuple of
+      two celestial body names with a dictionary as its value, detailing the aspect type, the angular separation,
+      and optionally the precision of the calculation.
+    - imprecise_aspects (str): Controls how imprecise aspects are handled. If set to "off", imprecise aspects are not shown.
+      If set to "warn", imprecise aspects are included with a warning. Default is "off".
+    - minor_aspects (bool): Indicates whether minor aspects should be included in the output. Default is True.
+    - degree_in_minutes (bool): If True, angles are displayed in degrees, minutes, and seconds format. Otherwise, displayed
+      in decimal degrees. Default is False.
+    - house_positions (dict, optional): A dictionary mapping planets to their house positions, used to provide context
+      for the aspects. This parameter is optional and only relevant if `notime` is False.
+    - orb (float): The orb value used to determine the inclusion of aspects. This does not affect the output directly
+      but may be relevant for understanding the context of the displayed aspects.
+    - notime (bool): Indicates whether the exact time of birth (or event) was unknown, affecting the relevance of certain
+      aspects and house positions. If True, house-related information is omitted from the output.
+
+    This function directly prints the aspects to the console, formatted for readability. Each aspect is listed with
+    the involved planets, the type of aspect, the angular separation, and any relevant warnings about precision or
+    the inclusion of minor aspects.
+
+    Note: The actual implementation should handle the formatting based on the provided flags and the structure
+    of the `aspects` dictionary to ensure the output is informative and user-friendly.
+    """
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
@@ -341,6 +522,36 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         print("\n  Please specify the time of birth for a complete chart.\n")
 
 def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False):
+    """
+    Print aspects between planets and fixed stars, including details about the angular separation,
+    whether the aspect is considered minor, and any warnings regarding the precision of the calculation.
+
+    Parameters:
+    - aspects (list): A list of tuples containing the aspects found between planets and fixed stars. 
+      Each tuple includes the planet name, fixed star name, aspect type, angular separation, and,
+      if applicable, the house position of the fixed star.
+    - orb (float): The orb value used to determine the inclusion of aspects. This parameter influences
+      which aspects are considered close enough to be significant. Default is 1 degree.
+    - minor_aspects (bool): Indicates whether minor aspects are included in the output. Default is False.
+    - imprecise_aspects (str): Determines how imprecise aspects are handled. If set to "off", imprecise
+      aspects are not shown. If set to "warn", imprecise aspects are included with a warning. Default is "off".
+    - notime (bool): Specifies whether the exact time of the event was unknown, which affects the relevance
+      of house positions for the fixed stars. If True, house information is omitted. Default is True.
+    - degree_in_minutes (bool): If True, angles are displayed in degrees, minutes, and seconds format.
+      Otherwise, displayed in decimal degrees. Default is False.
+    - house_positions (dict, optional): A dictionary mapping fixed stars to their house positions, used
+      to provide additional context for the aspects. Relevant only if `notime` is False.
+    - all_stars (bool): Indicates whether the output includes aspects to all fixed stars or only a
+      predefined list of astrologically significant stars. Default is False.
+
+    This function prints a formatted list of aspects between planets and fixed stars to the console,
+    tailored based on the specified parameters. It aims to provide a clear and informative overview
+    of these celestial interactions, with special attention to the precision and significance of each aspect.
+
+    Note: The function's implementation should ensure the output is easily readable and informative,
+    taking into account the user's preferences for detail level and the inclusion of specific types of aspects.
+    """
+
     print(f"Fixed Star Aspects ({orb}° orb)", end="")
     print(" including Minor Aspects" if minor_aspects else "", end="")
     if notime:
@@ -350,7 +561,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     # For formatting the table
     max_star_name_length = get_max_star_name_length(all_stars)
 
-    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<6}", end="")
+    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<9}", end="")
     if house_positions and not notime:
         print(f" | {'Star in House':<5}", end='')
     print("\n" + "-" * (47+max_star_name_length)) 
@@ -358,7 +569,9 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         planet, star_name, aspect_name, angle, house = aspect
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
-        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:>5.2f}°", end='')
+        else:
+            angle = f"{angle:.2f}°"
+        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:<9}", end='')
 
         if house_positions and not notime:
             print(f" | {house:<5}", end='')
@@ -370,6 +583,23 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
 # Function to check if there is an entry for a specified name in the JSON file
 def load_event(filename, name):
+    """
+    Load event details from a JSON file based on the given event name.
+
+    Attempts to read from a specified file and retrieve event information for a named event. 
+    If successful, returns the event details; otherwise, provides an appropriate message.
+
+    Parameters:
+    - filename (str): Path to the JSON file containing event data.
+    - name (str): The name of the event to retrieve information for.
+
+    Returns:
+    - dict or bool: Event details as a dictionary if found, False otherwise.
+
+    Raises:
+    - FileNotFoundError: If the specified file does not exist.
+    - json.JSONDecodeError: If there's an error parsing the JSON file.
+    """
     # Check if the file exists
     if not os.path.exists(filename):
         print(f"No file named {filename} found.")
@@ -390,37 +620,6 @@ def load_event(filename, name):
         print(f"No entry found for {name}.")
         return False
 
-############### Constants ###############
-aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
-minor_aspect_types = {
-    'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
-    'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
-}
-# notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
-# Movement per day for each planet in degrees
-off_by = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
-          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05}
-
-always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
-filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
-house_systems = {
-    'Placidus': 'P',
-    'Koch': 'K',
-    'Porphyrius': 'O',
-    'Regiomontanus': 'R',
-    'Campanus': 'C',
-    'Equal (Ascendant cusp 1)': 'A',
-    'Equal (Aries cusp 1)': 'E',
-    'Vehlow equal': 'V',
-    'Axial rotation system/Meridian system/Zariel system': 'X',
-    'Horizon/Azimuthal system': 'H',
-    'Polich/Page/Topocentric': 'T',
-    'Alcabitius': 'B',
-    'Gauquelin sectors': 'G',
-    'Sripati': 'S',
-    'Morinus': 'M'
-}
-
 def main():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
 If a name is passed, the script will look up the record for that name in the JSON file and overwrite other passed values,
@@ -435,14 +634,14 @@ If no record is found, default values will be used.''')
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm").', required=False)
     parser.add_argument('--place', help='Name of location.', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn.', required=False)
-    parser.add_argument('--minor_aspects', choices=[True,False], type=bool, help='Whether to show minor aspects.', required=False)
+    parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
     parser.add_argument('--orb', type=float, help='Orb size in degrees.', required=False)
-    parser.add_argument('--degree_in_minutes',choices=[True,False], type=bool, help='Show degrees in arch minutes and seconds', required=False)
-    parser.add_argument('--all_stars', choices=[True,False], type=bool, help='Show aspects for all fixed stars.', required=False)
+    parser.add_argument('--degree_in_minutes',choices=['true','false'], help='Show degrees in arch minutes and seconds', required=False)
+    parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars.', required=False)
     parser.add_argument('--house_system', choices=list(house_systems.keys()), help='House system to use (Placidus, Koch etc).', required=False)
-    parser.add_argument('--hide_planetary_positions', type=bool, choices=[True,False], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
-    parser.add_argument('--hide_planetary_aspects', type=bool, choices=[True,False], help='Output: hide aspects planets are in.', required=False)
-    parser.add_argument('--hide_fixed_star_aspects', type=bool, choices=[True,False], help='Output: hide aspects planets are in to fixed stars.', required=False)
+    parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
+    parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
+    parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -507,7 +706,7 @@ If no record is found, default values will be used.''')
         aspect_types.update(minor_aspect_types)
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
-    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions)
+    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime)
     aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
 
