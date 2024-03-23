@@ -486,14 +486,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 58 if house_positions else "-" * 50))  
 
-    sign_counts = {sign: 0 for sign in zodiac_elements.keys()}
+    sign_counts = {sign: {'count': 0, 'planets':[]} for sign in zodiac_elements.keys()}
     element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
 
     for planet, info in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
             continue
         longitude = info['longitude']
-        # zodiac_index = int(longitude // 30)
         degrees_within_sign = longitude % 30
         position = coord_in_minutes(degrees_within_sign) if degree_in_minutes else f"{degrees_within_sign:.2f}°"
         retrograde = info['retrograde']
@@ -507,16 +506,17 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             print(f"±{off_by[planet]}°", end='')
         print()
         # Count zodiac signs and elements
-        sign_counts[zodiac] += 1
+        sign_counts[zodiac]['count'] += 1
+        sign_counts[zodiac]['planets'].append(planet)
         element_counts[zodiac_elements[zodiac]] += 1
 
     # Print zodiac sign and element counts
-    print("\nZodiac Sign Counts:")
-    for sign, count in sign_counts.items():
-        if count > 0:
-            print(f"{sign}: {count}")
+    print("\nZodiac Sign Counts\n-------------------")
+    for sign, data in sign_counts.items():
+        if data['count'] > 0:
+            print(f"{sign}: {data['count']} ({', '.join(data['planets'])})")
     
-    print("\nElement Counts:")
+    print("\nElement Counts\n--------------")
     for element, count in element_counts.items():
         if count > 0:
             print(f"{element}: {count}")
