@@ -4,6 +4,7 @@ import pytz
 import json
 import os
 import argparse
+from math import cos, radians
 
 swe.set_ephe_path('./ephe/')
 
@@ -69,7 +70,6 @@ def convert_to_utc(local_datetime, local_timezone):
     
     return utc_datetime
 
-
 def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False):
     """
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
@@ -118,7 +118,6 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
 
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
-
 def longitude_to_zodiac(longitude):
     """
     Convert ecliptic longitude to its corresponding zodiac sign and precise degree.
@@ -142,7 +141,6 @@ def longitude_to_zodiac(longitude):
     
     return f"{zodiac_signs[sign_index]} {degree}°{minutes}'{seconds}''"
 
-
 def is_planet_retrograde(planet, jd):
     """
     Determine if a planet is retrograde on a given Julian Day (JD).
@@ -164,8 +162,6 @@ def is_planet_retrograde(planet, jd):
     
     # A planet is considered retrograde if its position (in longitude) decreases over time
     return pos_after[0] < pos_before[0]
-
-
 
 def get_fixed_star_position(star_name, jd):
     """
@@ -191,7 +187,6 @@ def get_fixed_star_position(star_name, jd):
     except swe.SwissephException as e:
         raise ValueError(f"Fixed star '{star_name}' not recognized: {e}")
 
-
 def check_aspect(planet_long, star_long, aspect_angle, orb):
     """
     Check if an aspect exists between two points based on their longitudes and calculate the difference
@@ -216,7 +211,6 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
     
     angle_off = abs(angular_difference - aspect_angle)
     return angle_off <= orb, angle_off
-
 
 def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
     """
@@ -314,7 +308,6 @@ def get_max_star_name_length(all_stars=False):
     fixed_stars = read_fixed_stars(all_stars)
     max_length = max(len(star_name) for star_name in fixed_stars)
     return max_length
-
 
 def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     """
@@ -427,6 +420,43 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     }
     return aspects_found
 
+def moon_phase(date):
+    """
+    Calculates the moon phase and illumination for a given date. The function considers 8 distinct phases 
+    of the moon and returns the phase name and illumination percentage for the specified date.
+
+    Parameters:
+    - date (datetime.datetime): The date for which to calculate the moon phase and illumination.
+
+    Returns:
+    - a tuple (str: The name of the moon phase, float: the degree of moon illumination).
+
+    The function considers 8 distinct phases of the moon and returns the phase name for the specified date.
+    """
+    jd = swe.julday(date.year, date.month, date.day)
+    sun_pos = swe.calc_ut(jd, swe.SUN)[0][0]
+    moon_pos = swe.calc_ut(jd, swe.MOON)[0][0]
+    phase_angle = (moon_pos - sun_pos) % 360
+
+    illumination = 50 - 50 * cos(radians(phase_angle))
+
+    if phase_angle < 45:
+        return "New Moon", illumination
+    elif phase_angle < 90:
+        return "Waxing Crescent", illumination
+    elif phase_angle < 135:
+        return "First Quarter", illumination
+    elif phase_angle < 180:
+        return "Waxing Gibbous", illumination
+    elif phase_angle < 225:
+        return "Full Moon", illumination
+    elif phase_angle < 270:
+        return "Waning Gibbous", illumination
+    elif phase_angle < 315:
+        return "Last Quarter", illumination
+    else:
+        return "Waning Crescent"
+
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
@@ -470,32 +500,20 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
     """
-    Print the astrological aspects found between planets, including details about each aspect's nature,
-    the involved celestial bodies, and the precise or approximate angular separation.
+    Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
     Parameters:
-    - aspects (dict): A dictionary containing the aspects found between celestial bodies. Each key is a tuple of
-      two celestial body names with a dictionary as its value, detailing the aspect type, the angular separation,
-      and optionally the precision of the calculation.
-    - imprecise_aspects (str): Controls how imprecise aspects are handled. If set to "off", imprecise aspects are not shown.
-      If set to "warn", imprecise aspects are included with a warning. Default is "off".
-    - minor_aspects (bool): Indicates whether minor aspects should be included in the output. Default is True.
-    - degree_in_minutes (bool): If True, angles are displayed in degrees, minutes, and seconds format. Otherwise, displayed
-      in decimal degrees. Default is False.
-    - house_positions (dict, optional): A dictionary mapping planets to their house positions, used to provide context
-      for the aspects. This parameter is optional and only relevant if `notime` is False.
-    - orb (float): The orb value used to determine the inclusion of aspects. This does not affect the output directly
-      but may be relevant for understanding the context of the displayed aspects.
-    - notime (bool): Indicates whether the exact time of birth (or event) was unknown, affecting the relevance of certain
-      aspects and house positions. If True, house-related information is omitted from the output.
+    - aspects (dict): Dictionary containing aspect data between celestial bodies.
+    - imprecise_aspects (str): Controls display of imprecise aspects ('off' or 'warn').
+    - minor_aspects (bool): Whether to include minor aspects in the output.
+    - degree_in_minutes (bool): Display angles in degrees, minutes, and seconds format.
+    - house_positions (dict, optional): House positions for additional context, ignored if notime is True.
+    - orb (float): Orb value used for aspect consideration.
+    - notime (bool): If True, time-dependent aspects and house positions are not displayed.
 
-    This function directly prints the aspects to the console, formatted for readability. Each aspect is listed with
-    the involved planets, the type of aspect, the angular separation, and any relevant warnings about precision or
-    the inclusion of minor aspects.
-
-    Note: The actual implementation should handle the formatting based on the provided flags and the structure
-    of the `aspects` dictionary to ensure the output is informative and user-friendly.
+    Directly prints formatted aspect information based on specified parameters.
     """
+
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
@@ -523,33 +541,19 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
 def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False):
     """
-    Print aspects between planets and fixed stars, including details about the angular separation,
-    whether the aspect is considered minor, and any warnings regarding the precision of the calculation.
+    Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
     Parameters:
-    - aspects (list): A list of tuples containing the aspects found between planets and fixed stars. 
-      Each tuple includes the planet name, fixed star name, aspect type, angular separation, and,
-      if applicable, the house position of the fixed star.
-    - orb (float): The orb value used to determine the inclusion of aspects. This parameter influences
-      which aspects are considered close enough to be significant. Default is 1 degree.
-    - minor_aspects (bool): Indicates whether minor aspects are included in the output. Default is False.
-    - imprecise_aspects (str): Determines how imprecise aspects are handled. If set to "off", imprecise
-      aspects are not shown. If set to "warn", imprecise aspects are included with a warning. Default is "off".
-    - notime (bool): Specifies whether the exact time of the event was unknown, which affects the relevance
-      of house positions for the fixed stars. If True, house information is omitted. Default is True.
-    - degree_in_minutes (bool): If True, angles are displayed in degrees, minutes, and seconds format.
-      Otherwise, displayed in decimal degrees. Default is False.
-    - house_positions (dict, optional): A dictionary mapping fixed stars to their house positions, used
-      to provide additional context for the aspects. Relevant only if `notime` is False.
-    - all_stars (bool): Indicates whether the output includes aspects to all fixed stars or only a
-      predefined list of astrologically significant stars. Default is False.
+    - aspects (list): Aspects between planets and fixed stars.
+    - orb (float): Orb for aspect significance.
+    - minor_aspects (bool): Include minor aspects.
+    - imprecise_aspects (str): Handle imprecise aspects ('off' or 'warn').
+    - notime (bool): Exclude time-dependent data.
+    - degree_in_minutes (bool): Show angles in degrees, minutes, and seconds.
+    - house_positions (dict, optional): Mapping of fixed stars to house positions.
+    - all_stars (bool): Include aspects for all stars or significant ones only.
 
-    This function prints a formatted list of aspects between planets and fixed stars to the console,
-    tailored based on the specified parameters. It aims to provide a clear and informative overview
-    of these celestial interactions, with special attention to the precision and significance of each aspect.
-
-    Note: The function's implementation should ensure the output is easily readable and informative,
-    taking into account the user's preferences for detail level and the inclusion of specific types of aspects.
+    Outputs a formatted list of aspects to the console based on the provided parameters.
     """
 
     print(f"Fixed Star Aspects ({orb}° orb)", end="")
@@ -709,6 +713,7 @@ If no record is found, default values will be used.''')
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime)
     aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
+    moon_phase_name, illumination = moon_phase(utc_datetime)
 
     if not args.hide_planetary_positions:
         print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
@@ -716,6 +721,8 @@ If no record is found, default values will be used.''')
         print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
     if not args.hide_fixed_star_aspects:
         print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
+    
+    print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: approximately {illumination:.1f}%\n")
 
 if __name__ == "__main__":
     main()
