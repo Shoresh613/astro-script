@@ -46,6 +46,12 @@ PLANETS = {
     'Chiron': swe.CHIRON, 'North Node': swe.MEAN_NODE
 }
 
+zodiac_elements = {
+    'Aries': 'Fire', 'Taurus': 'Earth', 'Gemini': 'Air', 'Cancer': 'Water',
+    'Leo': 'Fire', 'Virgo': 'Earth', 'Libra': 'Air', 'Scorpio': 'Water',
+    'Sagittarius': 'Fire', 'Capricorn': 'Earth', 'Aquarius': 'Air', 'Pisces': 'Water'
+}
+
 ############### Functions ###############
 def convert_to_utc(local_datetime, local_timezone):
     """
@@ -461,7 +467,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
-    if available and relevant.
+    if available.
 
     Parameters:
     - planet_positions (dict): A dictionary with celestial bodies as keys and dictionaries as values, 
@@ -480,6 +486,9 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 58 if house_positions else "-" * 50))  
 
+    sign_counts = {sign: 0 for sign in zodiac_elements.keys()}
+    element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
+
     for planet, info in planet_positions.items():
         if notime and (planet in always_exclude_if_no_time):
             continue
@@ -497,6 +506,21 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         elif planet in off_by.keys() and off_by[planet] > orb:
             print(f"±{off_by[planet]}°", end='')
         print()
+        # Count zodiac signs and elements
+        sign_counts[zodiac] += 1
+        element_counts[zodiac_elements[zodiac]] += 1
+
+    # Print zodiac sign and element counts
+    print("\nZodiac Sign Counts:")
+    for sign, count in sign_counts.items():
+        if count > 0:
+            print(f"{sign}: {count}")
+    
+    print("\nElement Counts:")
+    for element, count in element_counts.items():
+        if count > 0:
+            print(f"{element}: {count}")
+
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
     """
