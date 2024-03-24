@@ -800,7 +800,8 @@ If no record is found, default values will be used.''')
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
 
     #################### Main Script ####################    
-    if exists:
+    print("\nAstroScript Chart\n------------------")
+    if exists or name:
         print(f"\nName: {name}")
     if place:
         print(f"Place: {place}")
@@ -822,6 +823,7 @@ If no record is found, default values will be used.''')
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
     moon_phase_name, illumination = moon_phase(utc_datetime)
 
+    # Ifs commented out as not working
     # if hide_planetary_positions:
     print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
     # if hide_planetary_aspects:
