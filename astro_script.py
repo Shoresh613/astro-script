@@ -1,5 +1,5 @@
 import swisseph as swe
-import datetime
+from datetime import datetime, timedelta
 import pytz
 import json
 import os
@@ -72,11 +72,11 @@ def convert_to_utc(local_datetime, local_timezone):
     Convert a naive datetime object to UTC using a specified timezone.
 
     Parameters:
-    - local_datetime (datetime.datetime): A naive datetime object representing local time.
+    - local_datetime (datetime): A naive datetime object representing local time.
     - local_timezone (pytz.timezone): A timezone object representing the local timezone.
 
     Returns:
-    - datetime.datetime: A datetime object converted to UTC.
+    - datetime: A datetime object converted to UTC.
     """
     # Ensure local_datetime is naive before localization
     if local_datetime.tzinfo is not None:
@@ -122,7 +122,7 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
 
     Parameters:
-    - date (datetime.datetime): The date and time for the calculation. Must include a time component; calculations at midnight may be less accurate.
+    - date (datetime): The date and time for the calculation. Must include a time component; calculations at midnight may be less accurate.
     - latitude (float): The latitude of the location.
     - longitude (float): The longitude of the location.
     - planets_positions (dict): A dictionary containing planets and their ecliptic longitudes.
@@ -267,7 +267,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
     each aspect aligns with its ideal angular relationship.
 
     Parameters:
-    - date (datetime.datetime): The date and time for the calculation.
+    - date (datetime): The date and time for the calculation.
     - planet_positions (dict): A dictionary of planets and their positions.
     - houses (list): A list of house cusp positions.
     - orb (float): Orb value for aspect consideration. Default is 1.0 degree.
@@ -363,7 +363,7 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     Chiron, and the lunar nodes, along with the Ascendant (ASC) and Midheaven (MC).
 
     Parameters:
-    - date (datetime.datetime): The datetime for which positions are calculated.
+    - date (datetime): The datetime for which positions are calculated.
     - latitude (float): Latitude of the location in degrees.
     - longitude (float): Longitude of the location in degrees.
 
@@ -473,7 +473,7 @@ def moon_phase(date):
     of the moon and returns the phase name and illumination percentage for the specified date.
 
     Parameters:
-    - date (datetime.datetime): The date for which to calculate the moon phase and illumination.
+    - date (datetime): The date for which to calculate the moon phase and illumination.
 
     Returns:
     - a tuple (str: The name of the moon phase, float: the degree of moon illumination).
@@ -728,7 +728,7 @@ If no record is found, default values will be used.''')
     name = args.name if args.name else None
 
     ######### Default settings if no arguments are passed #########
-    def_date = datetime.datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
+    def_date = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
@@ -750,14 +750,14 @@ If no record is found, default values will be used.''')
     if not name: name = def_name  # Default name to to load from file unless name passed as argument
     exists = load_event(FILENAME, name)
     if exists:
-        local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
+        local_datetime = datetime.fromisoformat(exists[0]['datetime'])
         latitude = exists[0]['latitude']
         longitude = exists[0]['longitude']
         local_timezone = pytz.timezone(exists[0]['timezone'])
         place = exists[0]['location']
     else:
         try:
-            local_datetime = datetime.datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S") if args.date else def_date
+            local_datetime = datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S") if args.date else def_date
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
             local_datetime = None
@@ -821,7 +821,13 @@ If no record is found, default values will be used.''')
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime)
     aspects = calculate_aspects(planet_positions, orb, aspect_types=ASPECT_TYPES)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
-    moon_phase_name, illumination = moon_phase(utc_datetime)
+    if notime:
+        moon_phase_name1, illumination1 = moon_phase(utc_datetime)
+        moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
+        illumination = f"{illumination1:.2f}-{illumination2:.2f}%"  # Format the illumination percentage
+    else:
+        moon_phase_name, illumination = moon_phase(utc_datetime)
+        illumination = f"{illumination:.2f}%"  # Format the illumination percentage
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
@@ -831,7 +837,10 @@ If no record is found, default values will be used.''')
     # if hide_fixed_star_aspects:
     print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
-    print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination:.2f}%\n")
+    if moon_phase_name1 != moon_phase_name2:
+        print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}", end="")
+    else:
+        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination:.2f}%", end="")
 
 if __name__ == "__main__":
     main()
