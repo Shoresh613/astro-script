@@ -5,6 +5,7 @@ import json
 import os
 import argparse
 from math import cos, radians
+from geopy.geocoders import Nominatim
 
 swe.set_ephe_path('./ephe/')
 
@@ -88,6 +89,33 @@ def convert_to_utc(local_datetime, local_timezone):
     utc_datetime = local_datetime.astimezone(pytz.utc)
     
     return utc_datetime
+
+def get_coordinates(location_name:str):
+    """
+    Returns the geographic coordinates (latitude, longitude) of a specified location name.
+
+    Utilizes the Nominatim geocoder from the geopy library to convert a location name (such as a street address,
+    city, or country) into geographic coordinates. The function is initialized with a user_agent named
+    "geoapiExercises" for the Nominatim API.
+
+    Parameters:
+    - location_name (str): The name of the location for which to obtain geographic coordinates.
+
+    Returns:
+    - tuple: A tuple containing the latitude and longitude of the specified location.
+
+    Note:
+    - The accuracy of the coordinates returned depends on the specificity of the location name provided.
+    - Ensure compliance with Nominatim's usage policy when using this function.
+    """
+    # Initialize Nominatim API
+    geolocator = Nominatim(user_agent="AstroScript")
+
+    # Get location
+    location = geolocator.geocode(location_name)
+
+    return location.latitude, location.longitude
+
 
 def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False):
     """
@@ -541,7 +569,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     print("\nModality Counts\n-------------------")
     for modality, info in modality_counts.items():
-        print(f"{modality:<8}: {info['count']} | Planets: {', '.join(info['planets'])}")
+        print(f"{modality:<8}: {info['count']} | ({', '.join(info['planets'])})")
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
     """
@@ -678,10 +706,11 @@ If no record is found, default values will be used.''')
     # Add arguments
     parser.add_argument('--name', help='Name to look up the record for.', required=False)
     parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM:SS local time).', required=False)
+    parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden".', required=False)
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828.', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96.', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm").', required=False)
-    parser.add_argument('--place', help='Name of location.', required=False)
+    parser.add_argument('--place', help='Name of location without lookup of coordinates.', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn.', required=False)
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
     parser.add_argument('--orb', type=float, help='Orb size in degrees.', required=False)
@@ -695,36 +724,30 @@ If no record is found, default values will be used.''')
     # Parse the arguments
     args = parser.parse_args()
 
-    # Check if any arguments were provided
+    # Check if name was provided as argument
     name = args.name if args.name else None
 
-    try:
-        local_datetime = datetime.datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S") if args.date else datetime.datetime.now()
-    except ValueError:
-        print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
-        local_datetime = None
+    ######### Default settings if no arguments are passed #########
+    def_date = datetime.datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
+    def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
+    def_place_name = "Sahlgrenska"  # Default place
+    def_lat = 57.6828  # Default latitude
+    def_long = 11.9624  # Default longitude
+    def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
+    def_minor_aspects = False  # Default minor aspects
+    def_orb = 1  # Default orb size
+    def_degree_in_minutes = False  # Default degree in minutes
+    def_all_stars = False  # Default all stars
+    def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
+    def_name = "Mikael"  # Default name
 
-    ######### Default settings if no arguments are passed. Change default by entering other option after 'else #########
-    latitude = args.latitude if args.latitude is not None else 57.6828
-    longitude = args.longitude if args.longitude is not None else 11.9624
-    local_timezone = args.timezone if args.timezone else pytz.timezone('Europe/Stockholm')
-    # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
-    imprecise_aspects = args.imprecise_aspects if args.imprecise_aspects else "off"
-    # If True, the script will include minor aspects
-    minor_aspects = True if args.minor_aspects and args.minor_aspects.lower() in ["true", "yes", "1"] else False
-    orb = float(args.orb) if args.orb else 1  # Default orb size set to 1
-    # If True, the script will show the positions in degrees and minutes
-    degree_in_minutes = True if args.degree_in_minutes and args.degree_in_minutes.lower() in ["true", "yes", "1"] else False
-    # If True, the script will include all roughly 700 fixed stars
-    all_stars = True if args.all_stars and args.all_stars.lower() in ["true", "yes", "1"] else False
-    if args.house_system and args.house_system not in HOUSE_SYSTEMS:
-        print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
-        h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
-    h_sys = HOUSE_SYSTEMS[args.house_system] if args.house_system else HOUSE_SYSTEMS["Placidus"]  # Default house system
-
+    # Default Output settings
+    hide_planetary_positions = False  # Default hide planetary positions
+    hide_planetary_aspects = False  # Default hide planetary aspects
+    hide_fixed_star_aspects = False  # Default hide fixed star aspects
 
     #################### Load event ####################
-    if not name: name = "Mikael"  # Specify the name you want to load from file unless passed as argument
+    if not name: name = def_name  # Default name to to load from file unless name passed as argument
     exists = load_event(FILENAME, name)
     if exists:
         local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
@@ -732,7 +755,46 @@ If no record is found, default values will be used.''')
         longitude = exists[0]['longitude']
         local_timezone = pytz.timezone(exists[0]['timezone'])
         place = exists[0]['location']
-    
+    else:
+        try:
+            local_datetime = datetime.datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S") if args.date else def_date
+        except ValueError:
+            print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
+            local_datetime = None
+
+    if args.location: 
+        place = args.location
+        latitude, longitude = get_coordinates(args.location)
+    elif args.place:
+        place = args.place_name
+    else:
+        place = def_place_name
+
+    if not args.location:
+        latitude = args.latitude if args.latitude is not None else def_lat
+        longitude = args.longitude if args.longitude is not None else def_long
+    local_timezone = args.timezone if args.timezone else def_tz
+    # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
+    imprecise_aspects = args.imprecise_aspects if args.imprecise_aspects else def_imprecise_aspects
+    # If True, the script will include minor aspects
+    minor_aspects = True if args.minor_aspects and args.minor_aspects.lower() in ["true", "yes", "1"] else def_minor_aspects
+    orb = float(args.orb) if args.orb else def_orb
+    # If True, the script will show the positions in degrees and minutes
+    degree_in_minutes = True if args.degree_in_minutes and args.degree_in_minutes.lower() in ["true", "yes", "1"] else def_degree_in_minutes
+    # If True, the script will include all roughly 700 fixed stars
+    all_stars = True if args.all_stars and args.all_stars.lower() in ["true", "yes", "1"] else def_all_stars
+    if args.house_system and args.house_system not in HOUSE_SYSTEMS:
+        print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
+        h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
+    h_sys = HOUSE_SYSTEMS[args.house_system] if args.house_system else def_house_system
+
+    if args.hide_planetary_positions:
+        if args.hide_planetary_positions.lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
+    if args.hide_planetary_aspects:
+        if args.hide_planetary_aspects.lower() in ["true", "yes", "1"]: hide_planetary_aspects = True
+    if args.hide_fixed_star_aspects:
+        if args.hide_fixed_star_aspects.lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
+
     utc_datetime = convert_to_utc(local_datetime, local_timezone)
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
@@ -760,12 +822,12 @@ If no record is found, default values will be used.''')
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
     moon_phase_name, illumination = moon_phase(utc_datetime)
 
-    if not args.hide_planetary_positions:
-        print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
-    if not args.hide_planetary_aspects:
-        print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
-    if not args.hide_fixed_star_aspects:
-        print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
+    # if hide_planetary_positions:
+    print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
+    # if hide_planetary_aspects:
+    print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
+    # if hide_fixed_star_aspects:
+    print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
     print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination:.2f}%\n")
 
