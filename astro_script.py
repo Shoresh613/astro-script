@@ -9,19 +9,19 @@ from math import cos, radians
 swe.set_ephe_path('./ephe/')
 
 ############### Constants ###############
-aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
-minor_aspect_types = {
+ASPECT_TYPES = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
+MINOR_ASPECT_TYPES = {
     'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
     'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
 }
 # notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
 # Movement per day for each planet in degrees
-off_by = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
+OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05}
 
-always_exclude_if_no_time = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
-filename = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
-house_systems = {
+ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
+FILENAME = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
+HOUSE_SYSTEMS = {
     'Placidus': 'P',
     'Koch': 'K',
     'Porphyrius': 'O',
@@ -46,10 +46,23 @@ PLANETS = {
     'Chiron': swe.CHIRON, 'North Node': swe.MEAN_NODE
 }
 
-zodiac_elements = {
+ZODIAC_ELEMENTS = {
     'Aries': 'Fire', 'Taurus': 'Earth', 'Gemini': 'Air', 'Cancer': 'Water',
     'Leo': 'Fire', 'Virgo': 'Earth', 'Libra': 'Air', 'Scorpio': 'Water',
     'Sagittarius': 'Fire', 'Capricorn': 'Earth', 'Aquarius': 'Air', 'Pisces': 'Water'
+}
+
+ZODIAC_MODALITIES = {
+    'Cardinal': ['Aries', 'Cancer', 'Libra', 'Capricorn'],
+    'Fixed': ['Taurus', 'Leo', 'Scorpio', 'Aquarius'],
+    'Mutable': ['Gemini', 'Virgo', 'Sagittarius', 'Pisces'],
+}
+
+ZODIAC_SIGN_TO_MODALITY = {
+    'Aries': 'Cardinal', 'Taurus': 'Fixed', 'Gemini': 'Mutable',
+    'Cancer': 'Cardinal', 'Leo': 'Fixed', 'Virgo': 'Mutable',
+    'Libra': 'Cardinal', 'Scorpio': 'Fixed', 'Sagittarius': 'Mutable',
+    'Capricorn': 'Cardinal', 'Aquarius': 'Fixed', 'Pisces': 'Mutable',
 }
 
 ############### Functions ###############
@@ -407,7 +420,7 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
                     is_imprecise = any(
-                        planet in off_by and off_by[planet] > angle_diff
+                        planet in OFF_BY and OFF_BY[planet] > angle_diff
                         for planet in (planet1, planet2)
                     )
                     
@@ -438,6 +451,7 @@ def moon_phase(date):
     - a tuple (str: The name of the moon phase, float: the degree of moon illumination).
 
     The function considers 8 distinct phases of the moon and returns the phase name for the specified date.
+    Doesn't take Earth's shadow into account.
     """
     jd = swe.julday(date.year, date.month, date.day)
     sun_pos = swe.calc_ut(jd, swe.SUN)[0][0]
@@ -486,11 +500,12 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(f" | {'House':<5}", end='')
     print("\n" + ("-" * 58 if house_positions else "-" * 50))  
 
-    sign_counts = {sign: {'count': 0, 'planets':[]} for sign in zodiac_elements.keys()}
+    sign_counts = {sign: {'count': 0, 'planets':[]} for sign in ZODIAC_ELEMENTS.keys()}
+    modality_counts = {modality: {'count': 0, 'planets':[]} for modality in ZODIAC_MODALITIES.keys()}
     element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
 
     for planet, info in planet_positions.items():
-        if notime and (planet in always_exclude_if_no_time):
+        if notime and (planet in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         longitude = info['longitude']
         degrees_within_sign = longitude % 30
@@ -502,13 +517,16 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')  
             print(f" | {house_num:<5}", end='')
-        elif planet in off_by.keys() and off_by[planet] > orb:
-            print(f"±{off_by[planet]}°", end='')
+        elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+            print(f"±{OFF_BY[planet]}°", end='')
         print()
-        # Count zodiac signs and elements
+        # Count zodiac signs, elements and modalities
         sign_counts[zodiac]['count'] += 1
         sign_counts[zodiac]['planets'].append(planet)
-        element_counts[zodiac_elements[zodiac]] += 1
+        modality = ZODIAC_SIGN_TO_MODALITY[zodiac]
+        modality_counts[modality]['count'] += 1
+        modality_counts[modality]['planets'].append(planet)
+        element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
     # Print zodiac sign and element counts
     print("\nZodiac Sign Counts\n-------------------")
@@ -521,6 +539,9 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if count > 0:
             print(f"{element}: {count}")
 
+    print("\nModality Counts\n-------------------")
+    for modality, info in modality_counts.items():
+        print(f"{modality:<8}: {info['count']} | Planets: {', '.join(info['planets'])}")
 
 def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
     """
@@ -549,11 +570,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
         else:
             angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
-        if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in always_exclude_if_no_time or planets[1] in always_exclude_if_no_time):
+        if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
             print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
-        if imprecise_aspects == "warning" and ((planets[0] in off_by.keys() or planets[1] in off_by.keys())):
+        if imprecise_aspects == "warning" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
             print(" (uncertain)", end='')
         print()
     print("\n")
@@ -603,8 +624,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
         if house_positions and not notime:
             print(f" | {house:<5}", end='')
-        elif planet in off_by.keys() and off_by[planet] > orb:
-            print(f" ±{off_by[planet]}°", end='')
+        elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+            print(f" ±{OFF_BY[planet]}°", end='')
         print()
 
     print()
@@ -666,7 +687,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--orb', type=float, help='Orb size in degrees.', required=False)
     parser.add_argument('--degree_in_minutes',choices=['true','false'], help='Show degrees in arch minutes and seconds', required=False)
     parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars.', required=False)
-    parser.add_argument('--house_system', choices=list(house_systems.keys()), help='House system to use (Placidus, Koch etc).', required=False)
+    parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc).', required=False)
     parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
@@ -696,15 +717,15 @@ If no record is found, default values will be used.''')
     degree_in_minutes = True if args.degree_in_minutes and args.degree_in_minutes.lower() in ["true", "yes", "1"] else False
     # If True, the script will include all roughly 700 fixed stars
     all_stars = True if args.all_stars and args.all_stars.lower() in ["true", "yes", "1"] else False
-    if args.house_system and args.house_system not in house_systems:
-        print(f"Invalid house system. Available house systems are: {', '.join(house_systems.keys())}")
-        h_sys = house_systems["Placidus"]  # Default house system
-    h_sys = house_systems[args.house_system] if args.house_system else house_systems["Placidus"]  # Default house system
+    if args.house_system and args.house_system not in HOUSE_SYSTEMS:
+        print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
+        h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
+    h_sys = HOUSE_SYSTEMS[args.house_system] if args.house_system else HOUSE_SYSTEMS["Placidus"]  # Default house system
 
 
     #################### Load event ####################
     if not name: name = "Mikael"  # Specify the name you want to load from file unless passed as argument
-    exists = load_event(filename, name)
+    exists = load_event(FILENAME, name)
     if exists:
         local_datetime = datetime.datetime.fromisoformat(exists[0]['datetime'])
         latitude = exists[0]['latitude']
@@ -727,16 +748,16 @@ If no record is found, default values will be used.''')
         print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
     else:
         print(f"Latitude: {latitude}, Longitude: {longitude}")
-    house_system_name = next((name for name, code in house_systems.items() if code == h_sys), None)
+    house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     print(f"House system: {house_system_name}\n")
 
     if minor_aspects:
-        aspect_types.update(minor_aspect_types)
+        ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime)
-    aspects = calculate_aspects(planet_positions, orb, aspect_types=aspect_types)
-    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, aspect_types, all_stars)
+    aspects = calculate_aspects(planet_positions, orb, aspect_types=ASPECT_TYPES)
+    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
     moon_phase_name, illumination = moon_phase(utc_datetime)
 
     if not args.hide_planetary_positions:
@@ -746,7 +767,7 @@ If no record is found, default values will be used.''')
     if not args.hide_fixed_star_aspects:
         print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
-    print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: approximately {illumination:.1f}%\n")
+    print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination:.2f}%\n")
 
 if __name__ == "__main__":
     main()
