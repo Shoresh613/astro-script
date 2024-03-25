@@ -8,6 +8,7 @@ from math import cos, radians
 from geopy.geocoders import Nominatim
 
 swe.set_ephe_path('./ephe/')
+saved_locations_file = "saved_locations.json"  # File to save locations to
 
 ############### Constants ###############
 ASPECT_TYPES = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
@@ -94,9 +95,11 @@ def get_coordinates(location_name:str):
     """
     Returns the geographic coordinates (latitude, longitude) of a specified location name.
 
-    Utilizes the Nominatim geocoder from the geopy library to convert a location name (such as a street address,
+    Loads the coordinates from a JSON file if the location has been previously saved, othwerwise
+    utilizes the Nominatim geocoder from the geopy library to convert a location name (such as a street address,
     city, or country) into geographic coordinates. The function is initialized with a user_agent named
-    "geoapiExercises" for the Nominatim API.
+    "AstroScript" for the Nominatim API, which has a limit of 1 request/second. 
+    Saves the coordinates to a JSON file, so that internet access and API calls are minimized.
 
     Parameters:
     - location_name (str): The name of the location for which to obtain geographic coordinates.
@@ -108,14 +111,75 @@ def get_coordinates(location_name:str):
     - The accuracy of the coordinates returned depends on the specificity of the location name provided.
     - Ensure compliance with Nominatim's usage policy when using this function.
     """
-    # Initialize Nominatim API
-    geolocator = Nominatim(user_agent="AstroScript")
+    
+    location_details = load_location('locations.json', 'Sahlgrenska')
+    if location_details:
+        return location_details.latutude, location_details.longitude 
+    else:
+        # Initialize Nominatim API
+        geolocator = Nominatim(user_agent="AstroScript")
 
-    # Get location
-    location = geolocator.geocode(location_name)
+        # Get location
+        location = geolocator.geocode(location_name)
+        save_location(saved_locations_file, location_name, location.latitude, location.longitude)
 
-    return location.latitude, location.longitude
+        return location.latitude, location.longitude
 
+def save_location(filename, location_name, latitude, longitude):
+    """
+    Save a location with its latitude and longitude to a JSON file.
+    
+    Parameters:
+    - filename (str): The name of the file where the data will be saved.
+    - location_name (str): The name of the location.
+    - latitude (float): The latitude of the location.
+    - longitude (float): The longitude of the location.
+    """
+    # Check if the file exists and read its content if it does
+    if os.path.exists(filename):
+        with open(filename, 'r') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                # If the file is empty or corrupted, start with an empty dictionary
+                data = {}
+    else:
+        data = {}
+
+    # Add or update the location in the data
+    data[location_name] = {
+        'latitude': latitude,
+        'longitude': longitude
+    }
+
+    # Write the updated data back to the file
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+
+def load_location(filename, location_name):
+    """
+    Load and return the details of a specified location from a JSON file.
+    
+    Parameters:
+    - filename (str): The name of the JSON file to read from.
+    - location_name (str): The name of the location to retrieve details for.
+    
+    Returns:
+    - dict or None: The dictionary containing the latitude and longitude of the location if found, 
+                     None otherwise.
+    """
+    try:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+            
+        # Check if the location exists in the data and return its details
+        if location_name in data:
+            return data[location_name]
+        else:
+            return None
+    except (FileNotFoundError, json.JSONDecodeError):
+        # If the file doesn't exist or there's an error reading it, return None
+        return None
 
 def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False):
     """
@@ -746,6 +810,7 @@ If no record is found, default values will be used.''')
     hide_planetary_aspects = False  # Default hide planetary aspects
     hide_fixed_star_aspects = False  # Default hide fixed star aspects
 
+
     #################### Load event ####################
     if not name: name = def_name  # Default name to to load from file unless name passed as argument
     exists = load_event(FILENAME, name)
@@ -767,7 +832,7 @@ If no record is found, default values will be used.''')
         latitude, longitude = get_coordinates(args.location)
     elif args.place:
         place = args.place_name
-    else:
+    elif not exists:
         place = def_place_name
 
     if not args.location:
@@ -837,10 +902,11 @@ If no record is found, default values will be used.''')
     # if hide_fixed_star_aspects:
     print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
-    if moon_phase_name1 != moon_phase_name2:
-        print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}", end="")
+    if notime:
+        if moon_phase_name1 != moon_phase_name2:
+            print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}", end="")
     else:
-        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination:.2f}%", end="")
+        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}", end="")
 
 if __name__ == "__main__":
     main()
