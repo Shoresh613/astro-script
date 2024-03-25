@@ -904,9 +904,9 @@ If no record is found, default values will be used.''')
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
-            print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}", end="")
+            print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
     else:
-        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}", end="")
+        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
 
 if __name__ == "__main__":
     main()
