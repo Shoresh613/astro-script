@@ -657,6 +657,8 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         print(f" with imprecise aspects set to {imprecise_aspects}", end="")
     print(":\n" + "-" * 49)
 
+    aspect_counts = {aspect: {'count': 0, 'planets':[]} for aspect in ASPECT_TYPES.keys()}
+
     for planets, aspect_details in aspects.items():
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
@@ -668,8 +670,16 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
         if imprecise_aspects == "warning" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
             print(" (uncertain)", end='')
+        
+        aspect = ASPECT_TYPES[{aspect_details['aspect_name']}]
+        aspect_counts['aspect_name']['count'] += 1
         print()
     print("\n")
+
+    print("\nModality Counts\n-------------------")
+    for aspect, info in aspect_counts.items():
+        print(f"{aspect:<8}: {info['count']}")
+
     if not house_positions:
         print("* No time of day specified. Houses cannot be calculated. ")
         print("  Aspects to the Ascendant and Midheaven are not available.")
