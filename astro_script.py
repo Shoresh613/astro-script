@@ -771,7 +771,10 @@ def load_event(filename, name):
         print(f"No entry found for {name}.")
         return False
 
-def main():
+def called_by_gui():
+    pass
+
+def argparser():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
 If a name is passed, the script will look up the record for that name in the JSON file and overwrite other passed values,
 provided there are such values stored in the file (only the first 6 types are stored). 
@@ -797,7 +800,10 @@ If no record is found, default values will be used.''')
 
     # Parse the arguments
     args = parser.parse_args()
+    return args
 
+def main():    
+    args = argparser()
     # Check if name was provided as argument
     name = args.name if args.name else None
 
