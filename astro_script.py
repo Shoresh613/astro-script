@@ -6,9 +6,13 @@ import os
 import argparse
 from math import cos, radians
 from geopy.geocoders import Nominatim
+from tabulate import tabulate
+import save_event
+
 
 swe.set_ephe_path('./ephe/')
-saved_locations_file = "saved_locations.json"  # File to save locations to
+saved_locations_file = 'saved_locations.json'  # File to save locations to
+saved_events_file = 'saved_events.json'
 
 ############### Constants ###############
 ASPECT_TYPES = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
@@ -569,7 +573,7 @@ def moon_phase(date):
     else:
         return "Waning Crescent"
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output="text"):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -587,14 +591,17 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
       This parameter might not be directly used in this function but is included for consistency with the 
       overall structure of the astrological calculations.
     """
-    print(f"\n{'Planet':<10} | {'Zodiac':<11} | {'Position':<10} | {'Retrograde':<10}", end='')
-    if house_positions and not notime:  # Checks if house_positions is not empty
-        print(f" | {'House':<5}", end='')
-    print("\n" + ("-" * 58 if house_positions else "-" * 50))  
-
+    
     sign_counts = {sign: {'count': 0, 'planets':[]} for sign in ZODIAC_ELEMENTS.keys()}
     modality_counts = {modality: {'count': 0, 'planets':[]} for modality in ZODIAC_MODALITIES.keys()}
     element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
+
+    zodiac_table_data = []
+
+    # Define headers based on whether house positions should be included
+    headers = ["Planet", "Zodiac", "Position", "Margin", "Retrograde"]
+    if house_positions:
+        headers.append("House")
 
     for planet, info in planet_positions.items():
         if notime and (planet in ALWAYS_EXCLUDE_IF_NO_TIME):
@@ -605,13 +612,20 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         retrograde = info['retrograde']
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
-        print(f"{planet:<10} | {zodiac:<11} | {position:>10} | {retrograde_status:<10}", end='')
+
+        if planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+            off_by = f"±{OFF_BY[planet]}°"
+        else:
+            off_by=""
+        row = [planet, zodiac, position, off_by, retrograde_status]
+
         if house_positions and not notime:
-            house_num = house_positions.get(planet, {}).get('house', 'Unknown')  
-            print(f" | {house_num:<5}", end='')
-        elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
-            print(f"±{OFF_BY[planet]}°", end='')
-        print()
+            house_num = house_positions.get(planet, {}).get('house', 'Unknown')
+            row.append(house_num)
+            pass
+        zodiac_table_data.append(row)
+
+
         # Count zodiac signs, elements and modalities
         sign_counts[zodiac]['count'] += 1
         sign_counts[zodiac]['planets'].append(planet)
@@ -620,22 +634,52 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_counts[modality]['planets'].append(planet)
         element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
+    table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple")
+    to_return = table
+    if output == 'text':
+        print(table)
+
+    sign_count_table_data = list()
+    element_count_table_data = list()
+    modality_count_table_data = list()
+
     # Print zodiac sign and element counts
-    print("\nZodiac Sign Counts\n-------------------")
+    print("\n")
     for sign, data in sign_counts.items():
         if data['count'] > 0:
-            print(f"{sign}: {data['count']} ({', '.join(data['planets'])})")
-    
-    print("\nElement Counts\n--------------")
+            # print(f"{sign}: {data['count']} ({', '.join(data['planets'])})")
+            row = [sign, data['count'], ', '.join(data['planets'])]
+            sign_count_table_data.append(row)
+
+    table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt="simple")
+    to_return += "\n" + table
+    if output == 'text':
+        print(table + "\n")
+
+    # print("\nElement Counts\n--------------")
     for element, count in element_counts.items():
         if count > 0:
-            print(f"{element}: {count}")
+            # print(f"{element}: {count}")
+            row = [element, count]
+            element_count_table_data.append(row)
+    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple")
+    to_return += "\n" + table
+    if output == 'text':
+        print(table + "\n")
 
-    print("\nModality Counts\n-------------------")
+    # print("\nModality Counts\n-------------------")
     for modality, info in modality_counts.items():
-        print(f"{modality:<8}: {info['count']} | ({', '.join(info['planets'])})")
+        # print(f"{modality:<8}: {info['count']} | ({', '.join(info['planets'])})")
+        row = [modality, info['count'], ', '.join(info['planets'])]
+        modality_count_table_data.append(row)
+    table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt="simple")
+    to_return += "\n" + table
+    if output == 'text':
+        print(table + "\n")
 
-def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False):
+    return to_return
+
+def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False, output="text"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
@@ -651,11 +695,14 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     Directly prints formatted aspect information based on specified parameters.
     """
 
+    planetary_aspects_table_data = []
+    headers = ["Planet", "Aspect", "Planet", "Degree", "Margin"]
+
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
     if notime:
         print(f" with imprecise aspects set to {imprecise_aspects}", end="")
-    print(":\n" + "-" * 49)
+    print(":\n" + "=" * 49)
 
     for planets, aspect_details in aspects.items():
         if degree_in_minutes:
@@ -665,18 +712,30 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
-            print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
+            # print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
+            row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
+
         if imprecise_aspects == "warning" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
-            print(" (uncertain)", end='')
-        print()
+            # print(" (uncertain)", end='')
+            row.apped(" (uncertain)")
+        # print()
+        planetary_aspects_table_data.append(row)
+
+    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple")
+    to_return = table
+    if output == 'text':
+        print(table)
+
+
     print("\n")
     if not house_positions:
         print("* No time of day specified. Houses cannot be calculated. ")
         print("  Aspects to the Ascendant and Midheaven are not available.")
         print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
         print("\n  Please specify the time of birth for a complete chart.\n")
+    return to_return
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False):
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False, output="text"):
     """
     Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
@@ -699,28 +758,46 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
     print()
     
+    star_aspects_table_data = []
+
     # For formatting the table
     max_star_name_length = get_max_star_name_length(all_stars)
 
-    print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<9}", end="")
-    if house_positions and not notime:
-        print(f" | {'Star in House':<5}", end='')
-    print("\n" + "-" * (47+max_star_name_length)) 
+    # print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<9}", end="")
+    # if house_positions and not notime:
+    #     print(f" | {'Star in House':<5}", end='')
+    print("=" * (27)) 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
         else:
             angle = f"{angle:.2f}°"
-        print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:<9}", end='')
+        # print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:<9}", end='')
+        row = [planet, aspect_name, star_name, angle]
 
         if house_positions and not notime:
-            print(f" | {house:<5}", end='')
+            # print(f" | {house:<5}", end='')
+            row.append(house)
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
-            print(f" ±{OFF_BY[planet]}°", end='')
-        print()
+            # print(f" ±{OFF_BY[planet]}°", end='')
+            row.append(f" ±{OFF_BY[planet]}°")
+        # print()
+        star_aspects_table_data.append(row)
 
-    print()
+    headers = ["Planet", "Aspect", "Star", "Margin"]
+
+    if house_positions and not notime:
+        headers.append("Star in House")
+    if planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+        headers.append("Off by")
+
+    table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple")
+    to_return = table
+    if output == 'text':
+        print(table + "\n")
+
+    return to_return
 
 # Function to check if there is an entry for a specified name in the JSON file
 def load_event(filename, name):
@@ -761,8 +838,32 @@ def load_event(filename, name):
         print(f"No entry found for {name}.")
         return False
 
-def called_by_gui():
-    pass
+def called_by_gui(name, date, location, latitude, longitude, timezone, place, imprecise_aspects,
+                  minor_aspects, orb, degree_in_minutes, all_stars, house_system, hide_planetary_positions,
+                  hide_planetary_aspects, hide_fixed_star_aspects):
+    arguments = {
+        "Name": name,
+        "Date": date,
+        "Location": location,
+        "Latitude": latitude,
+        "Longitude": longitude,
+        "Timezone": timezone,
+        "Place": place,
+        "Imprecise Aspects": imprecise_aspects,
+        "Minor Aspects": minor_aspects,
+        "Orb": orb,
+        "Degree in Minutes": degree_in_minutes,
+        "All Stars": all_stars,
+        "House System": house_system,
+        "Hide Planetary Positions": hide_planetary_positions,
+        "Hide Planetary Aspects": hide_planetary_aspects,
+        "Hide Fixed Star Aspects": hide_fixed_star_aspects,
+        "Output": "return text"
+    }
+
+    print(arguments) 
+    main(arguments)
+    return name, date
 
 def argparser():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
@@ -788,14 +889,36 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
 
-    # Parse the arguments
     args = parser.parse_args()
-    return args
 
-def main():    
-    args = argparser()
+    arguments = {
+    "Name": args.name,
+    "Date": args.date,
+    "Location": args.location,
+    "Latitude": args.latitude,
+    "Longitude": args.longitude,
+    "Timezone": args.timezone,
+    "Place": args.place,
+    "Imprecise Aspects": args.imprecise_aspects,
+    "Minor Aspects": args.minor_aspects,
+    "Orb": args.orb,
+    "Degree in Minutes": args.degree_in_minutes,
+    "All Stars": args.all_stars,
+    "House System": args.house_system,
+    "Hide Planetary Positions": args.hide_planetary_positions,
+    "Hide Planetary Aspects": args.hide_planetary_aspects,
+    "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
+    "Output": "text"}
+
+    return arguments
+
+def main(gui_arguments=None):    
+    if gui_arguments:
+        args = gui_arguments
+    else:
+        args = argparser()
     # Check if name was provided as argument
-    name = args.name if args.name else None
+    name = args["Name"] if args["Name"] else None
 
     ######### Default settings if no arguments are passed #########
     def_date = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
@@ -818,8 +941,7 @@ def main():
 
 
     #################### Load event ####################
-    if not name: name = def_name  # Default name to to load from file unless name passed as argument
-    exists = load_event(FILENAME, name)
+    exists = load_event(FILENAME, name) if name else None
     if exists:
         local_datetime = datetime.fromisoformat(exists[0]['datetime'])
         latitude = exists[0]['latitude']
@@ -828,47 +950,56 @@ def main():
         place = exists[0]['location']
     else:
         try:
-            local_datetime = datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S") if args.date else def_date
+            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S") if args["Date"] else def_date
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
             local_datetime = None
 
-    if args.location: 
-        place = args.location
-        latitude, longitude = get_coordinates(args.location)
-    elif args.place:
-        place = args.place_name
+    if args["Location"]: 
+        place = args["Location"]
+        latitude, longitude = get_coordinates(args["Location"])
+    elif args["Place"]:
+        place = args["Place"]
     elif not exists:
         place = def_place_name
 
-    if not args.location:
-        latitude = args.latitude if args.latitude is not None else def_lat
-        longitude = args.longitude if args.longitude is not None else def_long
-    local_timezone = args.timezone if args.timezone else def_tz
+    if not args["Location"]:
+        latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
+        longitude = args["Longitude"] if args["Longitude"] is not None else def_long
+    local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
     # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
-    imprecise_aspects = args.imprecise_aspects if args.imprecise_aspects else def_imprecise_aspects
+    imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects
-    minor_aspects = True if args.minor_aspects and args.minor_aspects.lower() in ["true", "yes", "1"] else def_minor_aspects
-    orb = float(args.orb) if args.orb else def_orb
+    minor_aspects = True if args["Minor Aspects"] and args["Minor Aspects"].lower() in ["true", "yes", "1"] else def_minor_aspects
+    orb = float(args["Orb"]) if args["Orb"] else def_orb
     # If True, the script will show the positions in degrees and minutes
-    degree_in_minutes = True if args.degree_in_minutes and args.degree_in_minutes.lower() in ["true", "yes", "1"] else def_degree_in_minutes
+    degree_in_minutes = True if args["Degree in Minutes"] and args["Degree in Minutes"].lower() in ["true", "yes", "1"] else def_degree_in_minutes
     # If True, the script will include all roughly 700 fixed stars
-    all_stars = True if args.all_stars and args.all_stars.lower() in ["true", "yes", "1"] else def_all_stars
-    if args.house_system and args.house_system not in HOUSE_SYSTEMS:
+    all_stars = True if args["All Stars"] and args["All Stars"].lower() in ["true", "yes", "1"] else def_all_stars
+    if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
         h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
-    h_sys = HOUSE_SYSTEMS[args.house_system] if args.house_system else def_house_system
+    h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
 
-    if args.hide_planetary_positions:
-        if args.hide_planetary_positions.lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
-    if args.hide_planetary_aspects:
-        if args.hide_planetary_aspects.lower() in ["true", "yes", "1"]: hide_planetary_aspects = True
-    if args.hide_fixed_star_aspects:
-        if args.hide_fixed_star_aspects.lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
+    if args["Hide Planetary Positions"]:
+        if args["Hide Planetary Positions"].lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
+    if args["Hide Planetary Aspects"]:
+        if args["Hide Planetary Aspects"].lower() in ["true", "yes", "1"]: hide_planetary_aspects = True
+    if args["Hide Fixed Star Aspects"]:
+        if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
     utc_datetime = convert_to_utc(local_datetime, local_timezone)
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
+
+    # Save event if name given
+    if name:
+        new_data = {name: {"location": place,
+                           "datetime": local_datetime.isoformat(),
+                           'timezone': str(local_timezone),
+                           "latitude": latitude,
+                           "longitude": longitude}}
+        save_event.update_json_file(saved_events_file,new_data)
 
     #################### Main Script ####################    
     print("\nAstroScript Chart\n------------------")
@@ -902,11 +1033,11 @@ def main():
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
-    print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
+    to_return = print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
     # if hide_planetary_aspects:
-    print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
+    to_return += print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
     # if hide_fixed_star_aspects:
-    print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
+    to_return += print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:

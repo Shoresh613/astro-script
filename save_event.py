@@ -26,31 +26,31 @@ def update_json_file(filename, new_data):
         json.dump(data, file, indent=4)
 
 # Example new data to add/update
-new_people_data = {
-    "John Doe": {
-        "location": "Gothenburg, Sweden",
-        "datetime": datetime(1990, 5, 24, 14, 30).isoformat(),
-        "latitude": 57.7089,
-        "longitude": 11.9746
-    },
-    "Alice Johnson": {
-        "location": "Malmö, Sweden",
-        "datetime": datetime(1992, 11, 5, 8, 45).isoformat(),
-        "latitude": 55.6050,
-        "longitude": 13.0038
-    },
-    "Pelle Hansson": {
-        "location": "Stockholm, Sweden",
-        "datetime": datetime(1932, 3, 12, 10, 45).isoformat(),
-        "latitude": 555.6050,
-        "longitude": 13.0038
-    },
-}
+# new_people_data = {
+#     "John Doe": {
+#         "location": "Gothenburg, Sweden",
+#         "datetime": datetime(1990, 5, 24, 14, 30).isoformat(),
+#         "latitude": 57.7089,
+#         "longitude": 11.9746
+#     },
+#     "Alice Johnson": {
+#         "location": "Malmö, Sweden",
+#         "datetime": datetime(1992, 11, 5, 8, 45).isoformat(),
+#         "latitude": 55.6050,
+#         "longitude": 13.0038
+#     },
+#     "Pelle Hansson": {
+#         "location": "Stockholm, Sweden",
+#         "datetime": datetime(1932, 3, 12, 10, 45).isoformat(),
+#         "latitude": 555.6050,
+#         "longitude": 13.0038
+#     },
+# }
 
 # Specify the filename where you want to save/update the JSON data
-filename = 'saved_events.json'  # Adjust the path as necessary
+# filename = 'saved_events.json'  # Adjust the path as necessary
 
-# Update the JSON file with new data
-update_json_file(filename, new_people_data)
+# # Update the JSON file with new data
+# update_json_file(filename, new_people_data)
 
-print(f"Data updated in {filename}")
+# print(f"Data updated in {filename}")

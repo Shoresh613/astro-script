@@ -1,0 +1,157 @@
+WindowManager:
+    Home:
+        name: 'home'
+        # Your widgets here
+
+        <MainLayout@FloatLayout>:
+            # Background Image
+            Image:
+                source: 'AstroScript_background.webp'
+                allow_stretch: True
+                keep_ratio: False
+                size_hint: 1, 1
+
+            # Timezone Spinner using KivyMD's MDDropdownMenu triggered by an MDTextField
+            MDTextField:
+                id: timezone_field
+                hint_text: "Select Timezone"
+                pos_hint: {'center_x': 0.5, 'top': 0.95}
+                size_hint_x: None
+                width: 200
+                on_focus: if self.focus: app.show_timezone_menu()
+
+            # Checkbox for Minor Aspects using KivyMD's MDCheckbox
+            MDFloatLayout:
+                MDLabel:
+                    text: "Include Minor Aspects:"
+                    halign: "right"
+                    size_hint: None, None
+                    size: 200, 30
+                    pos_hint: {'x': 0.1, 'top': 0.8}
+
+                MDCheckbox:
+                    id: checkbox_minor_aspects
+                    size_hint: None, None
+                    size: 48, 48
+                    pos_hint: {'x': 0.35, 'top': 0.8}
+                    active: False
+
+            # Place Name Input
+            MDTextField:
+                id: place_name_field
+                hint_text: "Enter Place Name"
+                helper_text: "Example: Sahlgrenska"
+                helper_text_mode: "on_focus"
+                pos_hint: {'center_x': 0.5, 'top': 0.75}
+                size_hint_x: None
+                width: 300
+
+            # Latitude Input
+            MDTextField:
+                id: latitude_field
+                hint_text: "Enter Latitude"
+                helper_text: "Example: 57.6828"
+                helper_text_mode: "on_focus"
+                input_filter: 'float'
+                pos_hint: {'center_x': 0.5, 'top': 0.7}
+                size_hint_x: None
+                width: 300
+
+            # Longitude Input
+            MDTextField:
+                id: longitude_field
+                hint_text: "Enter Longitude"
+                helper_text: "Example: 11.9624"
+                helper_text_mode: "on_focus"
+                input_filter: 'float'
+                pos_hint: {'center_x': 0.5, 'top': 0.65}
+                size_hint_x: None
+                width: 300
+
+            # Imprecise Aspects Selector
+            MDFloatLayout:
+                MDLabel:
+                    text: "Imprecise Aspects:"
+                    size_hint: None, None
+                    size: 200, 30
+                    pos_hint: {'x': 0.1, 'top': 0.6}
+
+                MDCheckbox:
+                    id: imprecise_aspects_warn
+                    group: "imprecise_aspects"
+                    size_hint: None, None
+                    size: 48, 48
+                    pos_hint: {'x': 0.35, 'top': 0.6}
+                    active: False
+
+                MDCheckbox:
+                    id: imprecise_aspects_off
+                    group: "imprecise_aspects"
+                    size_hint: None, None
+                    size: 48, 48
+                    pos_hint: {'x': 0.45, 'top': 0.6}
+                    active: True
+
+                MDLabel:
+                    text: "Warn"
+                    size_hint: None, None
+                    size: 50, 30
+                    pos_hint: {'x': 0.35, 'top': 0.58}
+
+                MDLabel:
+                    text: "Off"
+                    size_hint: None, None
+                    size: 50, 30
+                    pos_hint: {'x': 0.45, 'top': 0.58}
+
+            # Orb Size Input
+            MDTextField:
+                id: orb_size_field
+                hint_text: "Enter Orb Size"
+                helper_text: "Default: 1"
+                helper_text_mode: "on_focus"
+                input_filter: 'int'
+                pos_hint: {'center_x': 0.5, 'top': 0.5}
+                size_hint_x: None
+                width: 300
+
+            # Degree in Minutes Checkbox
+            MDFloatLayout:
+                MDLabel:
+                    text: "Display Degrees in Minutes:"
+                    halign: "right"
+                    size_hint: None, None
+                    size: 200, 30
+                    pos_hint: {'x': 0.1, 'top': 0.45}
+
+                MDCheckbox:
+                    id: degree_in_minutes
+                    size_hint: None, None
+                    size: 48, 48
+                    pos_hint: {'x': 0.35, 'top': 0.45}
+                    active: False
+
+            # All Stars Checkbox
+            MDFloatLayout:
+                MDLabel:
+                    text: "Include All Stars:"
+                    halign: "right"
+                    size_hint: None, None
+                    size: 200, 30
+                    pos_hint: {'x': 0.1, 'top': 0.4}
+
+                MDCheckbox:
+                    id: all_stars
+                    size_hint: None, None
+                    size: 48, 48
+                    pos_hint: {'x': 0.35, 'top': 0.4}
+                    active: False
+
+            # House System Dropdown using KivyMD's MDDropdownMenu triggered by an MDTextField
+            MDTextField:
+                id: house_system_field
+                hint_text: "Select House System"
+                pos_hint: {'center_x': 0.5, 'top': 0.35}
+                size_hint_x: None
+                width: 200
+                on_focus: if self.focus: app.show_house_system_menu()

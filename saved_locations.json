@@ -2,5 +2,13 @@
     "Barbados": {
         "latitude": 13.1500331,
         "longitude": -59.5250305
+    },
+    "Sahlgrenska, G\u00f6teborg, Sverige": {
+        "latitude": 57.6816661,
+        "longitude": 11.961011433976063
+    },
+    "Sahlgrenska": {
+        "latitude": 57.6816661,
+        "longitude": 11.961011433976063
     }
 }
