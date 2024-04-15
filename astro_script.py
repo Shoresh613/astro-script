@@ -717,7 +717,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
         if imprecise_aspects == "warning" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
             # print(" (uncertain)", end='')
-            row.apped(" (uncertain)")
+            row.append(" (uncertain)")
         # print()
         planetary_aspects_table_data.append(row)
 
@@ -728,6 +728,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
 
     print("\n")
+
+    print("\nModality Counts\n-------------------")
+    for aspect, info in aspect_counts.items():
+        print(f"{aspect:<8}: {info['count']}")
+
     if not house_positions:
         print("* No time of day specified. Houses cannot be calculated. ")
         print("  Aspects to the Ascendant and Midheaven are not available.")
