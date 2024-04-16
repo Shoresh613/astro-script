@@ -924,8 +924,24 @@ def main(gui_arguments=None):
     # Check if name was provided as argument
     name = args["Name"] if args["Name"] else None
 
+    #################### Load event ####################
+    exists = load_event(FILENAME, name) if name else None
+    if exists:
+        local_datetime = datetime.fromisoformat(exists[0]['datetime'])
+        latitude = exists[0]['latitude']
+        longitude = exists[0]['longitude']
+        local_timezone = pytz.timezone(exists[0]['timezone'])
+        place = exists[0]['location']
+    else:
+        try:
+            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S") if args["Date"] else None
+        except ValueError:
+            print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
+            local_datetime = None
+
     ######### Default settings if no arguments are passed #########
-    def_date = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
+    if not args["Date"] and not exists:
+        local_datetime = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
@@ -942,22 +958,6 @@ def main(gui_arguments=None):
     hide_planetary_positions = False  # Default hide planetary positions
     hide_planetary_aspects = False  # Default hide planetary aspects
     hide_fixed_star_aspects = False  # Default hide fixed star aspects
-
-
-    #################### Load event ####################
-    exists = load_event(FILENAME, name) if name else None
-    if exists:
-        local_datetime = datetime.fromisoformat(exists[0]['datetime'])
-        latitude = exists[0]['latitude']
-        longitude = exists[0]['longitude']
-        local_timezone = pytz.timezone(exists[0]['timezone'])
-        place = exists[0]['location']
-    else:
-        try:
-            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S") if args["Date"] else def_date
-        except ValueError:
-            print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
-            local_datetime = None
 
     if args["Location"]: 
         place = args["Location"]
