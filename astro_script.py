@@ -712,6 +712,8 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     print(":\n" + "=" * 49)
 
     for planets, aspect_details in aspects.items():
+        if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
+            continue
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
         else:
