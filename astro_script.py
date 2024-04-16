@@ -724,8 +724,9 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
 
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
-            off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
-            row.append(" ∓ " + off_by)
+            if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
+                off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
+                row.append(" ∓ " + off_by)
         planetary_aspects_table_data.append(row)
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple")
@@ -864,8 +865,8 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, place, im
     }
 
     print(arguments) 
-    main(arguments)
-    return name, date
+    text = main(arguments)
+    return text
 
 def argparser():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
@@ -940,10 +941,12 @@ def main(gui_arguments=None):
             place = exists[0]['location']
     else:
         try:
-            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S") if args["Date"] else None
+            if args["Date"]:
+                local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S")
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
             local_datetime = None
+            return "Invalid date format. Please use YYYY-MM-DD HH:MM:SS."
     if args["Date"]:
         local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S")
 
@@ -1017,7 +1020,7 @@ def main(gui_arguments=None):
     if place:
         print(f"Place: {place}")
     print(f"\nLocal Time: {local_datetime} {local_timezone}")
-    print(f"UTC Time: {utc_datetime} UTC")
+    print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     if degree_in_minutes:
         print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
     else:
@@ -1051,8 +1054,11 @@ def main(gui_arguments=None):
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
+            to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
     else:
         print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
+        to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+    return to_return
 
 if __name__ == "__main__":
     main()

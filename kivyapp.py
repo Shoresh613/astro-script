@@ -1,14 +1,13 @@
 from kivy.app import App
-from kivy.lang import Builder
-from kivymd.uix.menu import MDDropdownMenu
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
-from kivy.uix.checkbox import CheckBox
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.checkbox import CheckBox
 
 # Import your custom module if it's being used for house system values or any other function
 import astro_script
@@ -62,65 +61,74 @@ class AstroApp(App):
         bg_image = Image(source='AstroScript_background.webp', allow_stretch=True, keep_ratio=False, size_hint=(1, 1))
         layout.add_widget(bg_image)
 
-        # Timezone Spinner
-        timezone_label = Label(text='Select Timezone:', size_hint=(None, None), size=(200, 30), pos_hint={'x': 0.1, 'top': 0.9})
-        self.spinner_tz = Spinner(
-            text='Europe/Stockholm',
-            values=('Europe/Stockholm', 'UTC', 'US/Eastern', 'Asia/Tokyo'),
-            size_hint=(None, None),
-            size=(200, 44),
-            pos_hint={'x': 0.1, 'top': 0.85}
-        )
-        layout.add_widget(timezone_label)
-        layout.add_widget(self.spinner_tz)
+        # Create a Grid Layout for the form elements
+        form_layout = GridLayout(rows=5, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6})
 
-        # Minor Aspects Checkbox
-        minor_aspects_label = Label(text='Include Minor Aspects:', size_hint=(None, None), size=(200, 30), pos_hint={'x': 0.1, 'top': 0.8})
-        self.checkbox_minor_aspects = CheckBox(active=False, size_hint=(None, None), size=(50, 30), pos_hint={'x': 0.35, 'top': 0.8})
-        layout.add_widget(minor_aspects_label)
-        layout.add_widget(self.checkbox_minor_aspects)
+        # Date and Location Inputs in the same row
+        form_layout.add_widget(Label(text='Date:', halign='right'))
+        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD', size_hint_x=None, width=200)
+        form_layout.add_widget(self.date_input)
+        form_layout.add_widget(Label(text='Location:', halign='right'))
+        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200)
+        form_layout.add_widget(self.location_input)
+
+        # Timezone Spinner
+        form_layout.add_widget(Label(text='Select Timezone:', halign='right'))
+        self.spinner_tz = Spinner(text='Europe/Stockholm', values=('Europe/Stockholm', 'UTC', 'US/Eastern', 'Asia/Tokyo'), size_hint_x=None, width=200)
+        form_layout.add_widget(self.spinner_tz)
+
+        # Include Minor Aspects Checkbox
+        form_layout.add_widget(Label(text='Include Minor Aspects:', halign='right'))
+        self.checkbox_minor_aspects = CheckBox(size_hint_x=None, width=200)
+        form_layout.add_widget(self.checkbox_minor_aspects)
 
         # House System Spinner
-        house_system_label = Label(text='Select House System:', size_hint=(None, None), size=(200, 30), pos_hint={'x': 0.1, 'top': 0.75})
-        self.spinner_house_system = Spinner(
-            text='Placidus',
-            values=tuple(astro_script.HOUSE_SYSTEMS.keys()),
-            size_hint=(None, None),
-            size=(200, 44),
-            pos_hint={'x': 0.1, 'top': 0.7}
-        )
-        layout.add_widget(house_system_label)
-        layout.add_widget(self.spinner_house_system)
+        form_layout.add_widget(Label(text='Select House System:', halign='right'))
+        self.spinner_house_system = Spinner(text='Placidus', values=('Placidus', 'Koch', 'Regiomontanus', 'Campanus'), size_hint_x=None, width=200)
+        form_layout.add_widget(self.spinner_house_system)
 
-        # Imprecise Aspects Radio Buttons
-        imprecise_aspects_label = Label(text='Imprecise Aspects:', size_hint=(None, None), size=(200, 30), pos_hint={'x': 0.1, 'top': 0.65})
-        layout.add_widget(imprecise_aspects_label)
-        self.radio_imprecise_aspects_off = CheckBox(group='imprecise_aspects', active=True, size_hint=(None, None), size=(50, 30), pos_hint={'x': 0.35, 'top': 0.65})
-        self.radio_imprecise_aspects_warn = CheckBox(group='imprecise_aspects', active=False, size_hint=(None, None), size=(50, 30), pos_hint={'x': 0.45, 'top': 0.65})
-        off_label = Label(text='Off', size_hint=(None, None), size=(50, 30), pos_hint={'x': 0.35, 'top': 0.6})
-        warn_label = Label(text='Warn', size_hint=(None, None), size=(50, 30), pos_hint={'x': 0.45, 'top': 0.6})
-        layout.add_widget(self.radio_imprecise_aspects_off)
-        layout.add_widget(self.radio_imprecise_aspects_warn)
-        layout.add_widget(off_label)
-        layout.add_widget(warn_label)
+        # Imprecise Aspects Checkboxes
+        form_layout.add_widget(Label(text='Imprecise Aspects:', halign='right'))
+        aspects_layout = GridLayout(cols=2, size_hint_x=None, width=200)
+        self.radio_imprecise_aspects_off = CheckBox(group='imprecise_aspects', active=True)
+        aspects_layout.add_widget(self.radio_imprecise_aspects_off)
+        aspects_layout.add_widget(Label(text='Off'))
+        self.radio_imprecise_aspects_warn = CheckBox(group='imprecise_aspects', active=False)
+        aspects_layout.add_widget(self.radio_imprecise_aspects_warn)
+        aspects_layout.add_widget(Label(text='Warn'))
+        form_layout.add_widget(aspects_layout)
 
-        # Date Input
-        self.date_input = TextInput(size_hint=(0.8, 0.06), pos_hint={'x': 0.1, 'top': 0.9}, multiline=False, hint_text='YYYY-MM-DD')
-        layout.add_widget(self.date_input)
-
-        # Location Input
-        self.location_input = TextInput(size_hint=(0.8, 0.06), pos_hint={'x': 0.1, 'top': 0.82}, multiline=False, hint_text='City, Country')
-        layout.add_widget(self.location_input)
+        # Add the form layout to the main layout
+        layout.add_widget(form_layout)
 
         # Calculate Button
-        self.calc_button = Button(text='Calculate', size_hint=(0.8, 0.08), pos_hint={'x': 0.1, 'top': 0.75})
+        self.calc_button = Button(text='Calculate', size_hint=(0.8, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
         self.calc_button.bind(on_press=self.on_button_press)
         layout.add_widget(self.calc_button)
 
-        # Scrollable Results Container
-        self.results_input = TextInput(readonly=True, background_color=(1, 1, 1, 0.3), foreground_color=(0, 0, 0, 1), size_hint=(0.8, 0.4), pos_hint={'x': 0.1, 'top': 0.65})
-        scroll_view = ScrollView(size_hint=(1, None), size=(200, 200))
-        scroll_view.add_widget(self.results_input)
+        # Scrollable Results Container 
+        self.results_input = TextInput(
+            readonly=True, 
+            font_name='./font/RobotoMono-Regular.ttf',  # Specify the monospaced font here
+            font_size='16sp',  # Adjust the size as needed
+            background_color=(1, 1, 1, 0.3), 
+            foreground_color=(0, 0, 0, 1), 
+            size_hint=(0.8, 0.3), 
+            pos_hint={'center_x': 0.5, 'y': 0.2}
+        )
+
+        # Make sure the height adjusts to the text length
+        self.results_label.bind(texture_size=self.results_label.setter('size'))
+        
+        # Define the ScrollView
+        scroll_view = ScrollView(size_hint=(0.8, 0.3), pos_hint={'center_x': 0.5, 'y': 0.2})
+        scroll_view.add_widget(self.results_label)
+
+        # Bind the on_scroll event
+        scroll_view.bind(on_scroll_start=self.on_scroll)
+        scroll_view.bind(on_scroll_move=self.on_scroll)
+        scroll_view.bind(on_scroll_stop=self.on_scroll)
+
         layout.add_widget(scroll_view)
 
         return layout
