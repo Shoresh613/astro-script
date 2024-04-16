@@ -619,7 +619,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             off_by = f"±{OFF_BY[planet]}°"
             row = [planet, zodiac, position, off_by, retrograde_status]
         else:
-            row = [planet, zodiac, position, retrograde_status]
+            if notime:
+                row = [planet, zodiac, position, "", retrograde_status]
+            else:
+                row = [planet, zodiac, position, retrograde_status]
 
 
         if house_positions and not notime:
