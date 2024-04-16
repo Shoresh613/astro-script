@@ -617,7 +617,6 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}°"
-        if notime:
             row = [planet, zodiac, position, off_by, retrograde_status]
         else:
             row = [planet, zodiac, position, retrograde_status]
