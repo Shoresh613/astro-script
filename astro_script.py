@@ -571,7 +571,7 @@ def moon_phase(date):
     elif phase_angle < 315:
         return "Last Quarter", illumination
     else:
-        return "Waning Crescent"
+        return "Waning Crescent", illumination
 
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output="text"):
     """

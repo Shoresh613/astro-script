@@ -13,9 +13,6 @@ from kivy.uix.scrollview import ScrollView
 # Import your custom module if it's being used for house system values or any other function
 import astro_script
 
-
-import astro_script
-
 from kivymd.app import MDApp
 from kivy.uix.screenmanager import ScreenManager, Screen
 
