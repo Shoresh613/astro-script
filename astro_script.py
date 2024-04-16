@@ -921,27 +921,35 @@ def main(gui_arguments=None):
         args = gui_arguments
     else:
         args = argparser()
+
+    local_datetime = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
+
     # Check if name was provided as argument
     name = args["Name"] if args["Name"] else None
 
     #################### Load event ####################
     exists = load_event(FILENAME, name) if name else None
     if exists:
-        local_datetime = datetime.fromisoformat(exists[0]['datetime'])
-        latitude = exists[0]['latitude']
-        longitude = exists[0]['longitude']
-        local_timezone = pytz.timezone(exists[0]['timezone'])
-        place = exists[0]['location']
+        if not args["Date"]:
+            local_datetime = datetime.fromisoformat(exists[0]['datetime'])
+        if not args["Latitude"]:
+            latitude = exists[0]['latitude']
+        if not args["Longitude"]:
+            longitude = exists[0]['longitude']
+        if not args["Timezone"]:
+            local_timezone = pytz.timezone(exists[0]['timezone'])
+        if not args["Place"]:
+            place = exists[0]['location']
     else:
         try:
             local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S") if args["Date"] else None
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
             local_datetime = None
+    if args["Date"]:
+        local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S")
 
     ######### Default settings if no arguments are passed #########
-    if not args["Date"] and not exists:
-        local_datetime = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
@@ -952,7 +960,6 @@ def main(gui_arguments=None):
     def_degree_in_minutes = False  # Default degree in minutes
     def_all_stars = False  # Default all stars
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
-    def_name = "Mikael"  # Default name
 
     # Default Output settings
     hide_planetary_positions = False  # Default hide planetary positions
@@ -996,8 +1003,8 @@ def main(gui_arguments=None):
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
 
-    # Save event if name given
-    if name:
+    # Save event if name given and not already given
+    if name and not exists:
         new_data = {name: {"location": place,
                            "datetime": local_datetime.isoformat(),
                            'timezone': str(local_timezone),
