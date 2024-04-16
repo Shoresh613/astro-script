@@ -599,9 +599,11 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     zodiac_table_data = []
 
     # Define headers based on whether house positions should be included
-    headers = ["Planet", "Zodiac", "Position", "Margin", "Retrograde"]
+    headers = ["Planet", "Zodiac", "Position", "Retrograde"]
     if house_positions:
         headers.append("House")
+    if notime:
+        headers.insert(3, "Off by")
 
     for planet, info in planet_positions.items():
         if notime and (planet in ALWAYS_EXCLUDE_IF_NO_TIME):
@@ -613,11 +615,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
 
-        if planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+        if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}°"
+        if notime:
+            row = [planet, zodiac, position, off_by, retrograde_status]
         else:
-            off_by=""
-        row = [planet, zodiac, position, off_by, retrograde_status]
+            row = [planet, zodiac, position, retrograde_status]
+
 
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
