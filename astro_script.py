@@ -726,7 +726,6 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
             off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
             row.append(" ∓ " + off_by)
-        # print()
         planetary_aspects_table_data.append(row)
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple")
@@ -771,9 +770,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     # For formatting the table
     max_star_name_length = get_max_star_name_length(all_stars)
 
-    # print(f"{'Planet':<10} | {'Aspect':<14} | {'Star':<{max_star_name_length}} | {'Margin':<9}", end="")
-    # if house_positions and not notime:
-    #     print(f" | {'Star in House':<5}", end='')
     print("=" * (27)) 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
@@ -789,7 +785,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             row.append(house)
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}°")
-        # print()
         star_aspects_table_data.append(row)
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
