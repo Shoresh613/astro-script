@@ -23,7 +23,8 @@ MINOR_ASPECT_TYPES = {
 # notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
-          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05}
+          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05,
+          "Ascendant": 360, "Midheaven": 360}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
 FILENAME = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
@@ -702,7 +703,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     """
 
     planetary_aspects_table_data = []
-    headers = ["Planet", "Aspect", "Planet", "Degree", "Margin"]
+    headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"] if notime else ["Planet", "Aspect", "Planet", "Degree"]
 
     print(f"\nPlanetary Aspects ({orb}° orb)", end="")
     print(" and minor aspects" if minor_aspects else "", end="")
@@ -718,12 +719,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
-            # print(f"{planets[0]:<10} | {aspect_details['aspect_name']:<14} | {planets[1]:<10} | {angle_with_degree:<7}", end='')
             row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
 
-        if imprecise_aspects == "warning" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
-            # print(" (uncertain)", end='')
-            row.apped(" (uncertain)")
+        if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
+            off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
+            row.append(" ∓ " + off_by)
         # print()
         planetary_aspects_table_data.append(row)
 
@@ -775,18 +775,17 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     print("=" * (27)) 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
+        if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
+            continue
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
         else:
             angle = f"{angle:.2f}°"
-        # print(f"{planet:<10} | {aspect_name:<14} | {star_name:<{max_star_name_length}} | {angle:<9}", end='')
         row = [planet, aspect_name, star_name, angle]
 
         if house_positions and not notime:
-            # print(f" | {house:<5}", end='')
             row.append(house)
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
-            # print(f" ±{OFF_BY[planet]}°", end='')
             row.append(f" ±{OFF_BY[planet]}°")
         # print()
         star_aspects_table_data.append(row)
