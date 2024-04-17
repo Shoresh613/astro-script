@@ -659,7 +659,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             sign_count_table_data.append(row)
 
     table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt="simple")
-    to_return += "\n" + table
+    to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
 
@@ -670,7 +670,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             row = [element, count]
             element_count_table_data.append(row)
     table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple")
-    to_return += "\n" + table
+    to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
 
@@ -680,7 +680,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         row = [modality, info['count'], ', '.join(info['planets'])]
         modality_count_table_data.append(row)
     table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt="simple")
-    to_return += "\n" + table
+    to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
 
@@ -1045,11 +1045,11 @@ def main(gui_arguments=None):
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
-    to_return = print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
+    to_return = "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
     # if hide_planetary_aspects:
-    to_return += print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
+    to_return += "\n\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
     # if hide_fixed_star_aspects:
-    to_return += print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
+    to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:

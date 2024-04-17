@@ -8,6 +8,10 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.checkbox import CheckBox
+from kivy.core.window import Window
+from kivy.metrics import dp
+from kivy.utils import platform
+
 
 # Import your custom module if it's being used for house system values or any other function
 import astro_script
@@ -52,24 +56,24 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 # if __name__=="__main__":
 #     MyApp().run()
 
-
-class AstroApp(App):
-    def build(self):
-        layout = FloatLayout()
+class InputScreen(Screen):
+    def __init__(self, **kwargs):
+        super(InputScreen, self).__init__(**kwargs)
+        self.layout = FloatLayout()
 
         # Background Image
         bg_image = Image(source='AstroScript_background.webp', allow_stretch=True, keep_ratio=False, size_hint=(1, 1))
-        layout.add_widget(bg_image)
+        self.layout.add_widget(bg_image)
 
         # Create a Grid Layout for the form elements
         form_layout = GridLayout(rows=5, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6})
 
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
-        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD', size_hint_x=None, width=200)
+        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm:ss', size_hint_x=None, width=200, height=dp(48))
         form_layout.add_widget(self.date_input)
         form_layout.add_widget(Label(text='Location:', halign='right'))
-        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200)
+        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200, height=dp(48))
         form_layout.add_widget(self.location_input)
 
         # Timezone Spinner
@@ -99,42 +103,22 @@ class AstroApp(App):
         form_layout.add_widget(aspects_layout)
 
         # Add the form layout to the main layout
-        layout.add_widget(form_layout)
+        self.layout.add_widget(form_layout)
 
         # Calculate Button
         self.calc_button = Button(text='Calculate', size_hint=(0.8, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
         self.calc_button.bind(on_press=self.on_button_press)
-        layout.add_widget(self.calc_button)
+        self.layout.add_widget(self.calc_button)
 
-        # Scrollable Results Container 
-        self.results_input = TextInput(
-            readonly=True, 
-            font_name='./font/RobotoMono-Regular.ttf',  # Specify the monospaced font here
-            font_size='16sp',  # Adjust the size as needed
-            background_color=(1, 1, 1, 0.3), 
-            foreground_color=(0, 0, 0, 1), 
-            size_hint=(0.8, 0.3), 
-            pos_hint={'center_x': 0.5, 'y': 0.2}
-        )
+        # Add the complete layout to the screen
+        self.add_widget(self.layout)
 
-        # Make sure the height adjusts to the text length
-        self.results_label.bind(texture_size=self.results_label.setter('size'))
-        
-        # Define the ScrollView
-        scroll_view = ScrollView(size_hint=(0.8, 0.3), pos_hint={'center_x': 0.5, 'y': 0.2})
-        scroll_view.add_widget(self.results_label)
-
-        # Bind the on_scroll event
-        scroll_view.bind(on_scroll_start=self.on_scroll)
-        scroll_view.bind(on_scroll_move=self.on_scroll)
-        scroll_view.bind(on_scroll_stop=self.on_scroll)
-
-        layout.add_widget(scroll_view)
-
-        return layout
 
     def on_button_press(self, instance):
-        # Collect inputs from the GUI elements
+        # Code to collect data, call processing functions, and manage screen transition
+        self.manager.current = 'results_screen'
+
+                # Collect inputs from the GUI elements
         name = self.date_input.text  # Assuming this should be the name; adjust as necessary
         date = self.date_input.text
         location = self.location_input.text
@@ -163,7 +147,77 @@ class AstroApp(App):
         # Format and display results
         result = f"Calculations for {date} at {location}\n\n"
         result += f"More details: {results}"
-        self.results_input.text = result
+        # Switch to the ResultsScreen
+        self.manager.current = 'results_screen'
+        
+        # Access the ResultsScreen instance from the ScreenManager and update its results_input
+        results_screen = self.manager.get_screen('results_screen')
+        results_screen.display_results(result)
 
+class ResultsScreen(Screen):
+    def __init__(self, **kwargs):
+        super(ResultsScreen, self).__init__(**kwargs)
+        self.layout = FloatLayout()
+        self.add_widget(self.layout)
+
+        # Scrollable container for results
+        self.results_input = TextInput(
+            readonly=True,
+            font_name='fonts/RobotoMono-Regular.ttf',  # Replace with the correct path to the font file
+            font_size='14sp',  # Adjust the size as needed
+            size_hint=(1, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            background_color=(0, 0, 0.5, 1),  # Dark blue background color
+            foreground_color=(1, 1, 1, 1),  # White text color
+            multiline=True,
+      )
+        scroll_view = ScrollView(size_hint=(1, 1), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        scroll_view.add_widget(self.results_input)
+        self.layout.add_widget(scroll_view)
+
+        # Back Button
+        back_button = Button(
+            text='Back',
+            size_hint=(0.2, 0.1),  # You can adjust the size as needed
+            pos_hint={'center_x': 0.8, 'y': 0.05}  # You can adjust the position as needed
+        )
+        back_button.bind(on_release=self.go_back)
+        self.layout.add_widget(back_button)
+
+        # Adding the layout to the screen
+        # self.add_widget(self.layout)
+
+    def display_results(self, results):
+        self.results_input.text = results
+    
+    def go_back(self, instance):
+        # This method changes the current screen to the input screen
+        self.manager.current = 'input_screen'
+
+class AstroApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(InputScreen(name='input_screen'))
+        sm.add_widget(ResultsScreen(name='results_screen'))
+        return sm
+
+    def on_start(self):
+        if platform == 'android':
+            from jnius import autoclass
+            # References to the Android classes
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            View = autoclass('android.view.View')
+            # Hook the Android onBackPressed event
+            PythonActivity.mActivity.onBackPressedListener = self.on_back_pressed
+
+    def on_back_pressed(self):
+        # Here you can define what happens when the back button is pressed.
+        # Let's say you want to go back to the input screen:
+        sm = self.root
+        if sm.current_screen.name != 'input_screen':
+            sm.current = 'input_screen'
+            return True  # To prevent closing the app
+        return False  # To allow the app to close
+    
 if __name__ == '__main__':
     AstroApp().run()
