@@ -925,6 +925,7 @@ def main(gui_arguments=None):
 
     # Check if name was provided as argument
     name = args["Name"] if args["Name"] else None
+    to_return = ""
 
     #################### Load event ####################
     exists = load_event(FILENAME, name) if name else None
@@ -1014,19 +1015,38 @@ def main(gui_arguments=None):
         save_event.update_json_file(saved_events_file,new_data)
 
     #################### Main Script ####################    
-    print("\nAstroScript Chart\n------------------")
-    if exists or name:
-        print(f"\nName: {name}")
-    if place:
-        print(f"Place: {place}")
-    print(f"\nLocal Time: {local_datetime} {local_timezone}")
-    print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
-    if degree_in_minutes:
-        print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
+    if args["Output"] == "text":
+        print("\nAstroScript Chart\n------------------")
+        if exists or name:
+            print(f"\nName: {name}")
+        if place:
+            print(f"Place: {place}")
+        print(f"\nLocal Time: {local_datetime} {local_timezone}")
+        print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
+        if degree_in_minutes:
+            print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
+        else:
+            print(f"Latitude: {latitude}, Longitude: {longitude}")
     else:
-        print(f"Latitude: {latitude}, Longitude: {longitude}")
+        to_return = "\nAstroScript Chart\n------------------"
+        if exists or name:
+            to_return += f"\nName: {name}"
+        if place:
+            to_return += f"\nPlace: {place}"
+        to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
+        if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
+        else: to_return += f"UTC Time: {utc_datetime} UTC"
+
+        if degree_in_minutes:
+            to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
+        else:
+            to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
+
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    print(f"House system: {house_system_name}\n")
+    if args["Output"] == "text":
+        print(f"House system: {house_system_name}\n")
+    else: to_return += f"\nHouse system: {house_system_name}\n"
+
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
@@ -1045,7 +1065,7 @@ def main(gui_arguments=None):
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
-    to_return = "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
+    to_return += "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
     # if hide_planetary_aspects:
     to_return += "\n\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
     # if hide_fixed_star_aspects:
