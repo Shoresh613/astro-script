@@ -15,6 +15,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.graphics import * # Not needed unless the darker transparent rectangle around the gridlayout starts working
 
 import astro_script
+import json
 
 def read_time_zones(filename):
     """
@@ -41,6 +42,35 @@ def read_time_zones(filename):
     
     return time_zones
 
+def read_saved_names(filename='saved_events.json'):
+    """
+    Reads a file containing a dictionary of saved events and returns a list of event names.
+
+    Args:
+    filename (str): The path to the file containing the saved events.
+
+    Returns:
+    list: A list of names of saved events.
+    """
+    try:
+        with open(filename, 'r') as file:
+            # Load the dictionary from the file
+            events_dict = json.load(file)
+            # Return the list of keys, which are the names of the events
+            return list(events_dict.keys())
+    except FileNotFoundError:
+        # If the file does not exist, return an empty list
+        print(f"No file found named '{filename}'. Returning an empty list.")
+        return []
+    except json.JSONDecodeError:
+        # Handle cases where the file content is not valid JSON
+        print(f"Error decoding JSON from file '{filename}'. Check file content.")
+        return []
+    except Exception as e:
+        # General exception handling, useful for debugging
+        print(f"An unexpected error occurred: {e}")
+        return []
+
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
@@ -61,7 +91,22 @@ class InputScreen(Screen):
         background_box.bind(pos=self.update_rect, size=self.update_rect)
 
         # Create a Grid Layout for the form elements
-        form_layout = GridLayout(cols=2, rows=7, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6}, row_default_height=dp(40), width=self.width)
+        form_layout = GridLayout(cols=2, rows=9, spacing=10, size_hint=(0.8, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.6}, row_default_height=dp(40), width=self.width)
+
+        # Sub GridLayout for Name Input and Spinner (occupying row 0)
+        name_sublayout = GridLayout(cols=4, size_hint=(1, None), height=dp(40))  # Adjust height as needed
+        form_layout.add_widget(name_sublayout)
+        name_sublayout.add_widget(Label(text='Name:', halign='right'))
+
+        # Name input
+        name_sublayout.add_widget(Label(text='Name:', halign='right'))
+        self.name_input = TextInput(multiline=False, size_hint_x=0.5)
+        name_sublayout.add_widget(self.name_input)
+
+        # Name Spinner
+        name_sublayout.add_widget(Label(text='Saved Names:', halign='right'))
+        self.spinner_name = Spinner(text='', values=read_saved_names(), size_hint_x=0.5)
+        name_sublayout.add_widget(self.spinner_name)
 
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
@@ -77,15 +122,20 @@ class InputScreen(Screen):
         self.spinner_tz = Spinner(text='Europe/Stockholm', values=read_time_zones('./timezones.txt'), size_hint_x=0.5)
         form_layout.add_widget(self.spinner_tz)
 
-        # Include Minor Aspects Checkbox
-        form_layout.add_widget(Label(text='Include Minor Aspects:', halign='right'))
-        self.checkbox_minor_aspects = CheckBox(size_hint_x=None, width=200)
-        form_layout.add_widget(self.checkbox_minor_aspects)
-
         # House System Spinner
         form_layout.add_widget(Label(text='Select House System:', halign='right'))
         self.spinner_house_system = Spinner(text='Placidus', values=astro_script.HOUSE_SYSTEMS, size_hint_x=0.5)
         form_layout.add_widget(self.spinner_house_system)
+
+        # Orb size
+        form_layout.add_widget(Label(text='Orb size:', halign='right'))
+        self.orb_input = TextInput(multiline=False, hint_text='1', size_hint_x=0.5)
+        form_layout.add_widget(self.orb_input)
+
+        # Include Minor Aspects Checkbox
+        form_layout.add_widget(Label(text='Minor Aspects:', halign='right'))
+        self.checkbox_minor_aspects = CheckBox(size_hint_x=None, width=200)
+        form_layout.add_widget(self.checkbox_minor_aspects)
 
         # Imprecise Aspects Checkboxes
         form_layout.add_widget(Label(text='Imprecise Aspects:', halign='right'))
@@ -121,8 +171,11 @@ class InputScreen(Screen):
         # Code to collect data, call processing functions, and manage screen transition
         self.manager.current = 'results_screen'
 
-                # Collect inputs from the GUI elements
-        name = self.date_input.text  # Assuming this should be the name; adjust as necessary
+        # Collect inputs from the GUI elements
+        if self.name_input.text:
+            name = self.name_input.text 
+        if self.spinner_name.text:  # Sets the name to the one in the spinner if selected
+            name = self.spinner_name.text 
         date = self.date_input.text
         location = self.location_input.text
         latitude = None  # Assuming you have a method or input to set this
@@ -131,7 +184,7 @@ class InputScreen(Screen):
         place = None  # Assuming you have a method or input to set this
         imprecise_aspects = 'warn' if self.radio_imprecise_aspects_warn.active else 'off'
         minor_aspects = "true" if self.checkbox_minor_aspects.active else "false"
-        orb = None  # Assuming you have a method or input to set this
+        orb = self.orb_input.text if self.orb_input.text else 1 # Default to 1
         degree_in_minutes = None  # Assuming you have a method or input to set this
         all_stars = None  # Assuming you have a method or input to set this
         house_system = self.spinner_house_system.text  # Get the selected item from the spinner
@@ -162,8 +215,8 @@ class ResultsScreen(Screen):
         # Scrollable container for results
         self.results_input = TextInput(
             readonly=True,
-            font_name='fonts/RobotoMono-Regular.ttf',  # Replace with the correct path to the font file
-            font_size='11sp',  # Adjust the size as needed
+            font_name='fonts/RobotoMono-Regular.ttf',
+            font_size='11sp', 
             size_hint=(1, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             background_color=(0, 0, 0.5, 1),  # Dark blue background color
@@ -174,17 +227,13 @@ class ResultsScreen(Screen):
         scroll_view.add_widget(self.results_input)
         self.layout.add_widget(scroll_view)
 
-        # Back Button
         back_button = Button(
             text='Back',
-            size_hint=(0.1, 0.1),  # You can adjust the size as needed
-            pos_hint={'center_x': 0.8, 'y': 0.02}  # You can adjust the position as needed
+            size_hint=(0.1, 0.1), 
+            pos_hint={'center_x': 0.8, 'y': 0.02}
         )
         back_button.bind(on_release=self.go_back)
         self.layout.add_widget(back_button)
-
-        # Adding the layout to the screen
-        # self.add_widget(self.layout)
 
     def display_results(self, results):
         self.results_input.text = results

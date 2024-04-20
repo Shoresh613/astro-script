@@ -1,4 +1,4 @@
 pyswisseph
 pytz
 geopy
-t
+tabulate

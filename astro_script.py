@@ -401,30 +401,6 @@ def read_fixed_stars(all_stars=False):
     
     return fixed_stars
 
-def get_max_star_name_length(all_stars=False):
-    """
-    Determine the length of the longest fixed star name from a predefined list. This function can
-    operate on either a comprehensive list of all fixed stars or a curated list of those known for
-    their astrological significance, depending on the input parameter.
-
-    Parameters:
-    - all_stars (bool): Determines which list of fixed stars to evaluate:
-                        if True, uses a comprehensive list;
-                        if False, uses a list of astrologically significant stars.
-
-    Returns:
-    - int: The length of the longest fixed star name in the selected list.
-
-    Raises:
-    - FileNotFoundError: If the specified file cannot be found. This is propagated from the
-                         `read_fixed_stars` function.
-    - IOError: If there is an issue reading from the file. This is also propagated from the
-               `read_fixed_stars` function.
-    """
-    fixed_stars = read_fixed_stars(all_stars)
-    max_length = max(len(star_name) for star_name in fixed_stars)
-    return max_length
-
 def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
@@ -651,10 +627,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     modality_count_table_data = list()
 
     # Print zodiac sign and element counts
-    print("\n")
+    if output == 'text':
+        print("\n")
     for sign, data in sign_counts.items():
         if data['count'] > 0:
-            # print(f"{sign}: {data['count']} ({', '.join(data['planets'])})")
             row = [sign, data['count'], ', '.join(data['planets'])]
             sign_count_table_data.append(row)
 
@@ -663,10 +639,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     if output == 'text':
         print(table + "\n")
 
-    # print("\nElement Counts\n--------------")
     for element, count in element_counts.items():
         if count > 0:
-            # print(f"{element}: {count}")
             row = [element, count]
             element_count_table_data.append(row)
     table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple")
@@ -704,12 +678,22 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     planetary_aspects_table_data = []
     headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"] if notime else ["Planet", "Aspect", "Planet", "Degree"]
+    to_return = ""
 
-    print(f"\nPlanetary Aspects ({orb}° orb)", end="")
-    print(" and minor aspects" if minor_aspects else "", end="")
-    if notime:
-        print(f" with imprecise aspects set to {imprecise_aspects}", end="")
-    print(":\n" + "=" * 49)
+    if output=='text':
+        print(f"\nPlanetary Aspects ({orb}° orb)", end="")
+        print(" and minor aspects" if minor_aspects else "", end="")
+        if notime:
+            print(f" with imprecise aspects set to {imprecise_aspects}", end="")
+        print(":\n" + "=" * 49)
+    else:
+        to_return = f"\nPlanetary Aspects ({orb}° orb)"
+        if minor_aspects:
+            to_return += " and minor aspects" 
+        if notime:
+            to_return += f" with imprecise aspects set to {imprecise_aspects}"
+        to_return += ":\n" + "=" * 49
+
 
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -730,17 +714,25 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         planetary_aspects_table_data.append(row)
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple")
-    to_return = table
+    to_return += "\n\n" + table
     if output == 'text':
         print(table)
 
 
-    print("\n")
-    if not house_positions:
-        print("* No time of day specified. Houses cannot be calculated. ")
-        print("  Aspects to the Ascendant and Midheaven are not available.")
-        print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
-        print("\n  Please specify the time of birth for a complete chart.\n")
+    if output == 'text':
+        print("\n")
+        if not house_positions:
+            print("* No time of day specified. Houses cannot be calculated. ")
+            print("  Aspects to the Ascendant and Midheaven are not available.")
+            print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
+            print("\n  Please specify the time of birth for a complete chart.\n")
+    else:
+        if not house_positions:
+            to_return += "\n* No time of day specified. Houses cannot be calculated. "
+            to_return += "  Aspects to the Ascendant and Midheaven are not available."
+            to_return += "  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n"
+            to_return += "\n  Please specify the time of birth for a complete chart.\n"
+
     return to_return
 
 def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False, output="text"):
@@ -759,17 +751,22 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     Outputs a formatted list of aspects to the console based on the provided parameters.
     """
+    to_return = ""
 
-    print(f"Fixed Star Aspects ({orb}° orb)", end="")
-    print(" including Minor Aspects" if minor_aspects else "", end="")
-    if notime:
-        print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
-    print()
-    
+    if output == 'text':
+        print(f"Fixed Star Aspects ({orb}° orb)", end="")
+        print(" including Minor Aspects" if minor_aspects else "", end="")
+        if notime:
+            print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
+        print()
+    else:
+        to_return += f"Fixed Star Aspects ({orb}° orb)"
+        if minor_aspects:
+            to_return += " including Minor Aspects"
+        if notime:
+            to_return += f" with Imprecise Aspects set to {imprecise_aspects}\n\n"
+
     star_aspects_table_data = []
-
-    # For formatting the table
-    max_star_name_length = get_max_star_name_length(all_stars)
 
     print("=" * (27)) 
     for aspect in aspects:
@@ -796,7 +793,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         headers.append("Off by")
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple")
-    to_return = table
+    to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
 
@@ -1016,7 +1013,7 @@ def main(gui_arguments=None):
 
     #################### Main Script ####################    
     if args["Output"] == "text":
-        print("\nAstroScript Chart\n------------------")
+        print("AstroScript Chart\n------------------")
         if exists or name:
             print(f"\nName: {name}")
         if place:
@@ -1047,6 +1044,7 @@ def main(gui_arguments=None):
         print(f"House system: {house_system_name}\n")
     else: to_return += f"\nHouse system: {house_system_name}\n"
 
+    to_return += f"Orb: {orb}°\n"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
@@ -1058,26 +1056,30 @@ def main(gui_arguments=None):
     if notime:
         moon_phase_name1, illumination1 = moon_phase(utc_datetime)
         moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
-        illumination = f"{illumination1:.2f}-{illumination2:.2f}%"  # Format the illumination percentage
+        illumination = f"{illumination1:.2f}-{illumination2:.2f}%"
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
-        illumination = f"{illumination:.2f}%"  # Format the illumination percentage
+        illumination = f"{illumination:.2f}%"
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
-    to_return += "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb)
+    to_return += "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, args["Output"])
     # if hide_planetary_aspects:
-    to_return += "\n\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime)
+    to_return += "\n\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, args["Output"])
     # if hide_fixed_star_aspects:
-    to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars=all_stars)
+    to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars, args["Output"])
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
-            print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
-            to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
+            if args["Output"] == "text":
+                print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
+            else:
+                to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
     else:
-        print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
-        to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+        if args["Output"] == "text":
+            print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
+        else:
+            to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
     return to_return
 
 if __name__ == "__main__":
