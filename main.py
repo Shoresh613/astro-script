@@ -90,24 +90,27 @@ class InputScreen(Screen):
         # Update rectangle position and size on updates *TIED TO THE ABOVE NOT WORKING DARK RECTANGLE
         background_box.bind(pos=self.update_rect, size=self.update_rect)
 
+        # A general layout to contain all elements
+        general_layout = GridLayout(cols=1, rows=4, spacing=10, size_hint=(0.9, 0.9), pos_hint={'center_x': 0.5, 'center_y': 0.5}, row_default_height=dp(40), width=self.width)
+
         # Create a Grid Layout for the form elements
         form_layout = GridLayout(cols=2, rows=9, spacing=10, size_hint=(0.8, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.6}, row_default_height=dp(40), width=self.width)
 
         # Sub GridLayout for Name Input and Spinner (occupying row 0)
-        name_sublayout = GridLayout(cols=4, size_hint=(1, None), height=dp(40))  # Adjust height as needed
-        form_layout.add_widget(name_sublayout)
-        name_sublayout.add_widget(Label(text='Name:', halign='right'))
+        name_sublayout = GridLayout(cols=4, size_hint=(0.8, None), height=dp(40), pos_hint={'center_x': 0.5, 'y': 0.9})
+        general_layout.add_widget(name_sublayout)
+        general_layout.add_widget(form_layout)
 
         # Name input
         name_sublayout.add_widget(Label(text='Name:', halign='right'))
-        self.name_input = TextInput(multiline=False, size_hint_x=0.5)
+        self.name_input = TextInput(multiline=False, size_hint_x=0.9)
         name_sublayout.add_widget(self.name_input)
 
         # Name Spinner
         name_sublayout.add_widget(Label(text='Saved Names:', halign='right'))
         self.spinner_name = Spinner(text='', values=read_saved_names(), size_hint_x=0.5)
         name_sublayout.add_widget(self.spinner_name)
-
+                
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
         self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm', size_hint_x=0.5)
@@ -149,18 +152,19 @@ class InputScreen(Screen):
         form_layout.add_widget(aspects_layout)
 
         # Add the form layout to the main layout
-        self.layout.add_widget(form_layout)
+        # self.layout.add_widget(form_layout)
 
         # Calculate Button
-        self.calc_button = Button(text='Calculate', size_hint=(0.8, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
-        self.calc_button.bind(on_press=self.on_button_press)
-        self.layout.add_widget(self.calc_button)
+        general_layout.calc_button = Button(text='Calculate', size_hint=(0.8, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
+        general_layout.calc_button.bind(on_press=self.on_button_press)
+        general_layout.add_widget(general_layout.calc_button)
         
         # Set next properties after creating the TextInput instances
         self.date_input.next = self.location_input
         self.location_input.next = self.spinner_tz
 
         # Add the complete layout to the screen
+        self.layout.add_widget(general_layout)
         self.add_widget(self.layout)
 
     def update_rect(self, instance, value):

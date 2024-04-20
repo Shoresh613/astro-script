@@ -693,7 +693,6 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if notime:
             to_return += f" with imprecise aspects set to {imprecise_aspects}"
 
-
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
