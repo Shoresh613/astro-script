@@ -12,7 +12,34 @@ from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
 from kivy.uix.screenmanager import ScreenManager, Screen
+
 import astro_script
+
+def read_time_zones(filename):
+    """
+    Reads a text file with one time zone per line and returns a list of time zones.
+
+    Args:
+    filename (str): The path to the file containing the time zones.
+
+    Returns:
+    list: A list of time zones read from the file.
+    """
+    time_zones = []
+    try:
+        with open(filename, 'r') as file:
+            for line in file:
+                # Strip any leading/trailing whitespace characters, including newline
+                time_zone = line.strip()
+                if time_zone:  # This checks if the line is not empty
+                    time_zones.append(time_zone)
+    except FileNotFoundError:
+        print(f"Error: The file '{filename}' does not exist.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
+    return time_zones
+
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
@@ -28,15 +55,16 @@ class InputScreen(Screen):
 
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
-        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm', size_hint_x=0.4)
+        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm', size_hint_x=0.5)
         form_layout.add_widget(self.date_input)
+
         form_layout.add_widget(Label(text='Location:', halign='right'))
-        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=0.4)
+        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=0.5)
         form_layout.add_widget(self.location_input)
 
         # Timezone Spinner
         form_layout.add_widget(Label(text='Select Timezone:', halign='right'))
-        self.spinner_tz = Spinner(text='Europe/Stockholm', values=('Europe/Stockholm', 'UTC', 'US/Eastern', 'Asia/Tokyo'), size_hint_x=0.4)
+        self.spinner_tz = Spinner(text='Europe/Stockholm', values=read_time_zones('./timezones.txt'), size_hint_x=0.5)
         form_layout.add_widget(self.spinner_tz)
 
         # Include Minor Aspects Checkbox
@@ -46,7 +74,7 @@ class InputScreen(Screen):
 
         # House System Spinner
         form_layout.add_widget(Label(text='Select House System:', halign='right'))
-        self.spinner_house_system = Spinner(text='Placidus', values=astro_script.HOUSE_SYSTEMS, size_hint_x=0.4)
+        self.spinner_house_system = Spinner(text='Placidus', values=astro_script.HOUSE_SYSTEMS, size_hint_x=0.5)
         form_layout.add_widget(self.spinner_house_system)
 
         # Imprecise Aspects Checkboxes
@@ -67,6 +95,10 @@ class InputScreen(Screen):
         self.calc_button = Button(text='Calculate', size_hint=(0.8, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
         self.calc_button.bind(on_press=self.on_button_press)
         self.layout.add_widget(self.calc_button)
+        
+        # Set next properties after creating the TextInput instances
+        self.date_input.next = self.location_input
+        self.location_input.next = self.spinner_tz
 
         # Add the complete layout to the screen
         self.add_widget(self.layout)
@@ -83,7 +115,6 @@ class InputScreen(Screen):
         latitude = None  # Assuming you have a method or input to set this
         longitude = None  # Assuming you have a method or input to set this
         timezone = self.spinner_tz.text  # Get the selected item from the spinner
-        print(f"###################{timezone}####################")
         place = None  # Assuming you have a method or input to set this
         imprecise_aspects = 'warn' if self.radio_imprecise_aspects_warn.active else 'off'
         minor_aspects = "true" if self.checkbox_minor_aspects.active else "false"
@@ -102,15 +133,12 @@ class InputScreen(Screen):
                                             all_stars, house_system, hide_planetary_positions, 
                                             hide_planetary_aspects, hide_fixed_star_aspects)
 
-        # Format and display results
-        result = f"Calculations for {date} at {location}\n\n"
-        result += f"More details: {results}"
         # Switch to the ResultsScreen
         self.manager.current = 'results_screen'
         
         # Access the ResultsScreen instance from the ScreenManager and update its results_input
         results_screen = self.manager.get_screen('results_screen')
-        results_screen.display_results(result)
+        results_screen.display_results(results)
 
 class ResultsScreen(Screen):
     def __init__(self, **kwargs):
@@ -136,8 +164,8 @@ class ResultsScreen(Screen):
         # Back Button
         back_button = Button(
             text='Back',
-            size_hint=(0.2, 0.1),  # You can adjust the size as needed
-            pos_hint={'center_x': 0.8, 'y': 0.05}  # You can adjust the position as needed
+            size_hint=(0.1, 0.1),  # You can adjust the size as needed
+            pos_hint={'center_x': 0.8, 'y': 0.02}  # You can adjust the position as needed
         )
         back_button.bind(on_release=self.go_back)
         self.layout.add_widget(back_button)
