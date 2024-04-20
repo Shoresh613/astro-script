@@ -1060,9 +1060,9 @@ def main(gui_arguments=None):
 
     # Ifs commented out as not working
     # if hide_planetary_positions:
-    to_return += "\n\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, args["Output"])
+    to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, args["Output"])
     # if hide_planetary_aspects:
-    to_return += "\n\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, args["Output"])
+    to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, args["Output"])
     # if hide_fixed_star_aspects:
     to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars, args["Output"])
     

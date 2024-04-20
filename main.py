@@ -230,7 +230,7 @@ class ResultsScreen(Screen):
         back_button = Button(
             text='Back',
             size_hint=(0.1, 0.1), 
-            pos_hint={'center_x': 0.8, 'y': 0.02}
+            pos_hint={'center_x': 0.9, 'y': 0.02}
         )
         back_button.bind(on_release=self.go_back)
         self.layout.add_widget(back_button)
