@@ -143,12 +143,12 @@ class InputScreen(Screen):
         # Imprecise Aspects Checkboxes
         form_layout.add_widget(Label(text='Imprecise Aspects:', halign='right'))
         aspects_layout = GridLayout(cols=2, size_hint_x=None, width=200)
-        self.radio_imprecise_aspects_off = CheckBox(group='imprecise_aspects', active=True)
-        aspects_layout.add_widget(self.radio_imprecise_aspects_off)
-        aspects_layout.add_widget(Label(text='Off'))
-        self.radio_imprecise_aspects_warn = CheckBox(group='imprecise_aspects', active=False)
+        self.radio_imprecise_aspects_warn = CheckBox(group='imprecise_aspects', active=True)
         aspects_layout.add_widget(self.radio_imprecise_aspects_warn)
         aspects_layout.add_widget(Label(text='Warn'))
+        self.radio_imprecise_aspects_off = CheckBox(group='imprecise_aspects', active=False)
+        aspects_layout.add_widget(self.radio_imprecise_aspects_off)
+        aspects_layout.add_widget(Label(text='Off'))
         form_layout.add_widget(aspects_layout)
 
         # Add the form layout to the main layout
