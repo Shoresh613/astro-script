@@ -1061,7 +1061,6 @@ def main(gui_arguments=None):
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
 
-    # Ifs commented out as not working
     if not hide_planetary_positions:
         to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, args["Output"])
     if not hide_planetary_aspects:
@@ -1071,7 +1070,7 @@ def main(gui_arguments=None):
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
-            if args["Output"] == "text":
+            if (args["Output"] == "text"):
                 print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
             else:
                 to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
