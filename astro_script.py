@@ -186,7 +186,7 @@ def load_location(filename, location_name):
         # If the file doesn't exist or there's an error reading it, return None
         return None
 
-def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False):
+def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False, h_sys='P'):
     """
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
 
@@ -206,11 +206,10 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
     - ValueError: If the time component of the date is exactly midnight, which may result in less accurate calculations.
     """
     # Validate input date has a time component (convention to use 00:00:00 for unknown time )
-    if date.hour == 0 and date.minute == 0 and date.second == 0:
+    if date.hour == 0 and date.minute == 0:
         print("Warning: Time is not set. Calculations may be less accurate.")
 
-    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600)
-    h_sys = 'P'  # Placidus house system; consider making this a parameter if flexibility is needed
+    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
     houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
 
     ascendant_long = ascmc[0]  # Ascendant is the first item in ascmc list
@@ -222,15 +221,39 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
         'Midheaven': {'longitude': midheaven_long, 'house': 10}  # Midheaven is traditionally associated with the 10th house
     }
 
+    print(f"House cusps: {houses}")
+
     # Assign planets to houses
     for planet, planet_info in planets_positions.items():
-        planet_longitude = planet_info['longitude']
-        house_num = 1
-        for i, cusp in enumerate(houses[1:], start=1):  # Skip the 0th cusp as it represents the Ascendant
-            if planet_longitude < cusp:
+        planet_longitude = planet_info['longitude'] % 360
+        house_num = 1  # Starta som hus 1 ifall inget annat matchar
+        if planet == 'Saturn':
+            print(f"Saturn position: {planet_longitude}")
+        # Kontrollera för varje hus från 1 till 11 (hus 12 hanteras separat)
+        for i, cusp in enumerate(houses):
+            current_cusp = houses[i]
+            # next_cusp = houses[i + 1 if i < 11 else 0]  # Loopa tillbaka till första huset för hus 12
+            next_cusp = houses[(i + 1) % 12]
+            
+            # Om vi är vid sista huset och nästa kusp är mindre än aktuell på grund av wrap-around
+            if next_cusp < current_cusp:
+                next_cusp += 360
+
+            if cusp <= planet_longitude < next_cusp:
+                house_num = i + 1  # +1 eftersom index i Python börjar från 0
                 break
-            house_num = i + 1
+            elif i == 11 and (planet_longitude >= cusp or planet_longitude < houses[0]):
+                house_num = 12  # Tilldela till hus 12 om ingen annan matchning hittades
+                break
+
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
+
+
+        house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
+
+
+        house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
+
 
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
@@ -1050,7 +1073,7 @@ def main(gui_arguments=None):
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
-    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime)
+    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
     aspects = calculate_aspects(planet_positions, orb, aspect_types=ASPECT_TYPES)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
     if notime:
