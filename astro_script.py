@@ -231,12 +231,10 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
             print(f"Saturn position: {planet_longitude}")
         # Kontrollera för varje hus från 1 till 11 (hus 12 hanteras separat)
         for i, cusp in enumerate(houses):
-            current_cusp = houses[i]
-            # next_cusp = houses[i + 1 if i < 11 else 0]  # Loopa tillbaka till första huset för hus 12
             next_cusp = houses[(i + 1) % 12]
             
             # Om vi är vid sista huset och nästa kusp är mindre än aktuell på grund av wrap-around
-            if next_cusp < current_cusp:
+            if next_cusp < cusp:
                 next_cusp += 360
 
             if cusp <= planet_longitude < next_cusp:
