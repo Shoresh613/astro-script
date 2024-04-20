@@ -12,6 +12,7 @@ from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.graphics import * # Not needed unless the darker transparent rectangle around the gridlayout starts working
 
 import astro_script
 
@@ -49,6 +50,15 @@ class InputScreen(Screen):
         # Background Image
         bg_image = Image(source='AstroScript_background.webp', allow_stretch=True, keep_ratio=False, size_hint=(1, 1))
         self.layout.add_widget(bg_image)
+
+        # Create a background box for the form with a semi-transparent overlay *STILL NOT WORKING*
+        background_box = FloatLayout(size_hint=(0.8, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.6})
+        with background_box.canvas:
+            Color(0, 0, 0, 0.5)  # Black color with 50% opacity
+            self.rect = Rectangle(size=background_box.size, pos=background_box.pos)
+        
+        # Update rectangle position and size on updates *TIED TO THE ABOVE NOT WORKING DARK RECTANGLE
+        background_box.bind(pos=self.update_rect, size=self.update_rect)
 
         # Create a Grid Layout for the form elements
         form_layout = GridLayout(cols=2, rows=7, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6}, row_default_height=dp(40), width=self.width)
@@ -103,6 +113,9 @@ class InputScreen(Screen):
         # Add the complete layout to the screen
         self.add_widget(self.layout)
 
+    def update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
 
     def on_button_press(self, instance):
         # Code to collect data, call processing functions, and manage screen transition
