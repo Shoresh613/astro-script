@@ -1043,9 +1043,7 @@ def main(gui_arguments=None):
     if args["Output"] == "text":
         print(f"House system: {house_system_name}\n")
     else: to_return += f"\nHouse system: {house_system_name}\n"
-
-    to_return += f"Orb: {orb}°\n"
-
+    
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
 
