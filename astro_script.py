@@ -503,7 +503,6 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     # Update the aspects_found dictionary
                     angle_diff = angle_diff - aspect_angle # Just show the difference
 
-
                     aspects_found[planets_pair] = {
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
@@ -712,14 +711,13 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
                 off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
-                row.append(" ∓ " + off_by)
+                row.append(" ± " + off_by)
         planetary_aspects_table_data.append(row)
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table)
-
 
     if output == 'text':
         print("\n")
@@ -770,7 +768,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     star_aspects_table_data = []
 
-    print("=" * (27)) 
+    if output == 'text':
+        print("=" * (27)) 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
         if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -791,7 +790,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     if house_positions and not notime:
         headers.append("Star in House")
-    if planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+    if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
@@ -890,6 +889,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
+    parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print to stdout, return text or return html.', required=False)
 
     args = parser.parse_args()
 
@@ -1020,26 +1020,26 @@ def main(gui_arguments=None):
             print(f"\nName: {name}")
         if place:
             print(f"Place: {place}")
-        print(f"\nLocal Time: {local_datetime} {local_timezone}")
-        print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
         if degree_in_minutes:
             print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
         else:
             print(f"Latitude: {latitude}, Longitude: {longitude}")
+        print(f"\nLocal Time: {local_datetime} {local_timezone}")
+        print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
         to_return = "\nAstroScript Chart\n------------------"
         if exists or name:
             to_return += f"\nName: {name}"
         if place:
             to_return += f"\nPlace: {place}"
-        to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
-        if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
-        else: to_return += f"UTC Time: {utc_datetime} UTC"
-
         if degree_in_minutes:
             to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
         else:
             to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
+        to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
+        if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
+        else: to_return += f"UTC Time: {utc_datetime} UTC"
+
 
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     if args["Output"] == "text":
