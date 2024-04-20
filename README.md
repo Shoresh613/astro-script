@@ -15,7 +15,7 @@ AstroScript is a powerful astrology software tool designed to calculate and inte
 
 1. **Clone the repository:**
    ```bash
-   git clone [repository URL]
+   git clone https://github.com/Shoresh613/astro-script.git
    cd AstroScript
    ```
 
@@ -84,12 +84,3 @@ Contributions to AstroScript are welcome! Please fork the repository and submit 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details.
-```
-
-### Additional Considerations
-
-- **Repository URL**: Replace `[repository URL]` with the actual URL where the repository is hosted.
-- **Ephemeris Setup**: Ensure users know exactly where and how to download and place the ephemeris files.
-- **Dependencies**: Make sure `requirements.txt` is comprehensive and up-to-date.
-
-This README structure aims to provide clarity on what the script does, how to set it up, and how to use it, which is crucial for both new users and potential contributors.
