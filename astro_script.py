@@ -681,7 +681,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return = ""
 
     if output=='text':
-        print(f"\nPlanetary Aspects ({orb}° orb)", end="")
+        print(f"Planetary Aspects ({orb}° orb)", end="")
         print(" and minor aspects" if minor_aspects else "", end="")
         if notime:
             print(f" with imprecise aspects set to {imprecise_aspects}", end="")
