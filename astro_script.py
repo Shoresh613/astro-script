@@ -617,10 +617,14 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_counts[modality]['planets'].append(planet)
         element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
-    table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple")
-    to_return = table
+    to_return = ''
+    if output=='text' or 'return_text':
+        table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
     if output == 'text':
         print(table)
+    if output=='html':
+        table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+    to_return += table
 
     sign_count_table_data = list()
     element_count_table_data = list()
@@ -634,7 +638,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             row = [sign, data['count'], ', '.join(data['planets'])]
             sign_count_table_data.append(row)
 
-    table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt="simple")
+    table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
@@ -643,7 +647,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if count > 0:
             row = [element, count]
             element_count_table_data.append(row)
-    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple")
+    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
@@ -677,7 +681,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     """
 
     planetary_aspects_table_data = []
-    headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"] if notime else ["Planet", "Aspect", "Planet", "Degree"]
+    headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
     if output=='text':
@@ -705,13 +709,13 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         else:
             row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
 
-        if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())):
+        if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
                 off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
                 row.append(" ∓ " + off_by)
         planetary_aspects_table_data.append(row)
 
-    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple")
+    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table)
@@ -790,7 +794,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb:
         headers.append("Off by")
 
-    table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple")
+    table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
