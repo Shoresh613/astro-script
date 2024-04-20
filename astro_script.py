@@ -692,7 +692,6 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             to_return += " and minor aspects" 
         if notime:
             to_return += f" with imprecise aspects set to {imprecise_aspects}"
-        to_return += ":\n" + "=" * 49
 
 
     for planets, aspect_details in aspects.items():
@@ -1043,7 +1042,7 @@ def main(gui_arguments=None):
     if args["Output"] == "text":
         print(f"House system: {house_system_name}\n")
     else: to_return += f"\nHouse system: {house_system_name}\n"
-    
+
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
 
