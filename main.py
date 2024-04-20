@@ -28,15 +28,15 @@ class InputScreen(Screen):
 
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
-        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm:ss', size_hint_x=None, width=200)
+        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm', size_hint_x=0.4)
         form_layout.add_widget(self.date_input)
         form_layout.add_widget(Label(text='Location:', halign='right'))
-        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200)
+        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=0.4)
         form_layout.add_widget(self.location_input)
 
         # Timezone Spinner
         form_layout.add_widget(Label(text='Select Timezone:', halign='right'))
-        self.spinner_tz = Spinner(text='Europe/Stockholm', values=('Europe/Stockholm', 'UTC', 'US/Eastern', 'Asia/Tokyo'), size_hint_x=None, width=200)
+        self.spinner_tz = Spinner(text='Europe/Stockholm', values=('Europe/Stockholm', 'UTC', 'US/Eastern', 'Asia/Tokyo'), size_hint_x=0.4)
         form_layout.add_widget(self.spinner_tz)
 
         # Include Minor Aspects Checkbox
@@ -46,7 +46,7 @@ class InputScreen(Screen):
 
         # House System Spinner
         form_layout.add_widget(Label(text='Select House System:', halign='right'))
-        self.spinner_house_system = Spinner(text='Placidus', values=('Placidus', 'Koch', 'Regiomontanus', 'Campanus'), size_hint_x=None, width=200)
+        self.spinner_house_system = Spinner(text='Placidus', values=('Placidus', 'Koch', 'Regiomontanus', 'Campanus'), size_hint_x=0.4)
         form_layout.add_widget(self.spinner_house_system)
 
         # Imprecise Aspects Checkboxes

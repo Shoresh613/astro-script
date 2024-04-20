@@ -943,13 +943,13 @@ def main(gui_arguments=None):
     else:
         try:
             if args["Date"]:
-                local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S")
+                local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
         except ValueError:
-            print("Invalid date format. Please use YYYY-MM-DD HH:MM:SS.")
+            print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
             local_datetime = None
-            return "Invalid date format. Please use YYYY-MM-DD HH:MM:SS."
+            return "Invalid date format. Please use YYYY-MM-DD HH:MM."
     if args["Date"]:
-        local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M:%S")
+        local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
 
     ######### Default settings if no arguments are passed #########
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
