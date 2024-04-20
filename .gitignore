@@ -344,7 +344,6 @@ ephe/sat/sepm9905.se1
 ephe/sat/sepm9999.se1
 saved_events.json
 saved_locations.json
-saved_locations.json
 RobotoMono-Regular.ttf:Zone.Identifier
 .buildozer
 buildozer.spec.bak

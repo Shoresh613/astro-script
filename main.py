@@ -11,50 +11,8 @@ from kivy.uix.checkbox import CheckBox
 from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
-
-
-# Import your custom module if it's being used for house system values or any other function
-import astro_script
-
-from kivymd.app import MDApp
 from kivy.uix.screenmanager import ScreenManager, Screen
-
-# This whole commented section was for trying to build the GUI using Material Design Kivy and a separate .kv file,
-# but it only showed a black window, so reverted back to something that at least shows something.
-
-# Checking of OpenGL was the problem, as my computer doesn't support hardware acceleration in WSL2.
-# import os
-# os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
-
-# class WindowManager(ScreenManager):
-#     pass
-
-# class Home(Screen):
-#     pass
-
-# class MyApp(MDApp):
-#     def build(self):
-#         self.theme_cls.primary_palette = "Blue"
-#         sm = WindowManager()
-#         sm.add_widget(Home(name='home'))
-#         return sm
-
-#     def show_house_system_menu(self):
-#         menu_items = [{"text": hs} for hs in astro_script.HOUSE_SYSTEMS.keys()]
-#         self.house_system_menu = MDDropdownMenu(
-#             caller=self.root.ids.house_system_field,
-#             items=menu_items,
-#             width_mult=4,
-#             callback=self.set_house_system
-#         )
-#         self.house_system_menu.open()
-
-#     def set_house_system(self, menu_item):
-#         self.root.ids.house_system_field.text = menu_item.text
-#         self.house_system_menu.dismiss()
-
-# if __name__=="__main__":
-#     MyApp().run()
+import astro_script
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
@@ -66,14 +24,14 @@ class InputScreen(Screen):
         self.layout.add_widget(bg_image)
 
         # Create a Grid Layout for the form elements
-        form_layout = GridLayout(rows=5, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6})
+        form_layout = GridLayout(cols=2, rows=7, spacing=10, size_hint=(0.8, None), pos_hint={'center_x': 0.5, 'center_y': 0.6}, row_default_height=dp(40), width=self.width)
 
         # Date and Location Inputs in the same row
         form_layout.add_widget(Label(text='Date:', halign='right'))
-        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm:ss', size_hint_x=None, width=200, height=dp(48))
+        self.date_input = TextInput(multiline=False, hint_text='YYYY-MM-DD hh:mm:ss', size_hint_x=None, width=200)
         form_layout.add_widget(self.date_input)
         form_layout.add_widget(Label(text='Location:', halign='right'))
-        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200, height=dp(48))
+        self.location_input = TextInput(multiline=False, hint_text='City, Country', size_hint_x=None, width=200)
         form_layout.add_widget(self.location_input)
 
         # Timezone Spinner
