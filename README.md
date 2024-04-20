@@ -74,6 +74,47 @@ python main.py
 
 This starts the application, where you can navigate through the input screen to enter event details and view calculated results in real-time.
 
+## File Management
+
+AstroScript interacts with various files to store and retrieve data, enhancing functionality and user experience.
+
+### Ephemeris Files
+
+- **Location**: `./ephe/`
+- **Purpose**: Store astronomical data needed for precise planetary calculations.
+- **Setup**: Users must download these files from external sources (e.g., [http://www.astro.com/swisseph/](http://www.astro.com/swisseph/)) and place them in the designated directory.
+
+### Location Files
+
+- **Filename**: `saved_locations.json`
+- **Purpose**: Saves geographic coordinates of frequently used locations to minimize repeated API calls.
+- **Usage**: Automatically updated when users add new locations through the GUI or script.
+
+### Event Files
+
+- **Filename**: `saved_events.json`
+- **Purpose**: Stores details of astrological events, such as dates, times, and locations, for quick retrieval.
+- **Usage**: Users can save event details for future reference, which facilitates repeated analyses without re-entering data. This is done automatically whenever a name is given as an argument.
+
+### Time Zone Files
+
+- **Filename**: `timezones.txt`
+- **Purpose**: Lists available time zones used for accurate time conversions.
+- **Usage**: Read by the system to populate time zone options in the GUI, ensuring that users can select their appropriate time zone easily.
+
+These files are crucial for AstroScript's operation, allowing it to perform accurate calculations and provide a seamless user experience. Users are encouraged to back up these files regularly, especially if they store important event data.
+
+## Font Management
+
+AstroScript's GUI utilizes custom fonts to enhance the readability of the results. Here are details on the font used:
+
+### Roboto Mono
+
+- **Font Family**: Roboto Mono
+- **Usage**: This monospaced font is used when showing the results in the GUI, ensuring clear and consistent readability.
+- **Location**: Fonts are stored under the `fonts/` directory.
+- **Setup**: The Roboto Mono font files are included with the application (see licence information). Users do not need to install or manage these fonts separately.
+
 ## To do
 I'm working on getting Buildozer package it as an Android package for installing as an app. That's the big thing. Then there are smaller things.
 
