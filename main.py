@@ -86,7 +86,7 @@ class InputScreen(Screen):
         print(f"###################{timezone}####################")
         place = None  # Assuming you have a method or input to set this
         imprecise_aspects = 'warn' if self.radio_imprecise_aspects_warn.active else 'off'
-        minor_aspects = self.checkbox_minor_aspects.active  # This will be True or False, convert if needed
+        minor_aspects = "true" if self.checkbox_minor_aspects.active else "false"
         orb = None  # Assuming you have a method or input to set this
         degree_in_minutes = None  # Assuming you have a method or input to set this
         all_stars = None  # Assuming you have a method or input to set this
