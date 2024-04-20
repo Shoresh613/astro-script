@@ -46,7 +46,7 @@ class InputScreen(Screen):
 
         # House System Spinner
         form_layout.add_widget(Label(text='Select House System:', halign='right'))
-        self.spinner_house_system = Spinner(text='Placidus', values=('Placidus', 'Koch', 'Regiomontanus', 'Campanus'), size_hint_x=0.4)
+        self.spinner_house_system = Spinner(text='Placidus', values=astro_script.HOUSE_SYSTEMS, size_hint_x=0.4)
         form_layout.add_widget(self.spinner_house_system)
 
         # Imprecise Aspects Checkboxes
@@ -122,7 +122,7 @@ class ResultsScreen(Screen):
         self.results_input = TextInput(
             readonly=True,
             font_name='fonts/RobotoMono-Regular.ttf',  # Replace with the correct path to the font file
-            font_size='14sp',  # Adjust the size as needed
+            font_size='11sp',  # Adjust the size as needed
             size_hint=(1, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             background_color=(0, 0, 0.5, 1),  # Dark blue background color
