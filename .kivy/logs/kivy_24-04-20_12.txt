@@ -1,0 +1,179 @@
+[INFO   ] Logger: Record log in /storage/emulated/0/Documents/Pydroid3/astro-script/.kivy/logs/kivy_24-04-20_12.txt
+[INFO   ] Kivy: v2.2.1
+[INFO   ] Kivy: Installed at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/__init__.py"
+[INFO   ] Python: v3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
+[INFO   ] Python: Interpreter at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/bin/python3"
+[INFO   ] Logger: Purge log fired. Processing...
+[INFO   ] Logger: Purge finished!
+[INFO   ] Factory: 190 symbols loaded
+[INFO   ] Image: Providers: img_tex, img_dds, img_sdl2, img_pil (img_ffpyplayer ignored)
+[INFO   ] Text: Provider: sdl2
+[INFO   ] Window: Provider: sdl2
+[INFO   ] GL: Using the "OpenGL ES 2" graphics system
+[INFO   ] GL: Backend used <sdl2>
+[INFO   ] GL: OpenGL version <b'OpenGL ES 3.2 V@0502.0 (GIT@2f950bf, I802c3b73eb, 1623716683) (Date:06/14/21)'>
+[INFO   ] GL: OpenGL vendor <b'Qualcomm'>
+[INFO   ] GL: OpenGL renderer <b'Adreno (TM) 640'>
+[INFO   ] GL: OpenGL parsed version: 3, 2
+[INFO   ] GL: Texture max size <16384>
+[INFO   ] GL: Texture max units <16>
+[INFO   ] Window: auto add sdl2 input provider
+[INFO   ] Window: virtual keyboard not allowed, single mode, not docked
+[INFO   ] GL: NPOT texture support is available
+[WARNING] Deprecated property "<BooleanProperty name=allow_stretch>" of object "<kivy.uix.image.Image object at 0x7b576e5860>" has been set, it will be removed in a future version
+[WARNING] Deprecated property "<BooleanProperty name=keep_ratio>" of object "<kivy.uix.image.Image object at 0x7b576e5860>" was accessed, it will be removed in a future version
+[WARNING] Base: Unknown <android> provider
+[INFO   ] Base: Start application main loop
+[DEBUG  ] Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+[DEBUG  ] Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+[DEBUG  ] Nominatim.geocode: https://nominatim.openstreetmap.org/search?q=Sahlgrenska&format=json&limit=1
+[DEBUG  ] Starting new HTTPS connection (1): nominatim.openstreetmap.org:443
+[DEBUG  ] Incremented Retry for (url='/search?q=Sahlgrenska&format=json&limit=1'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+[WARNING] Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7b513ef690>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)")': /search?q=Sahlgrenska&format=json&limit=1
+[DEBUG  ] Starting new HTTPS connection (2): nominatim.openstreetmap.org:443
+[DEBUG  ] Incremented Retry for (url='/search?q=Sahlgrenska&format=json&limit=1'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+[WARNING] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7b513fc0d0>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)")': /search?q=Sahlgrenska&format=json&limit=1
+[DEBUG  ] Starting new HTTPS connection (3): nominatim.openstreetmap.org:443
+[INFO   ] Base: Leaving application in progress...
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+[WARNING] stderr:     sock = connection.create_connection(
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+[WARNING] stderr:     for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+[WARNING] stderr:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/socket.py", line 962, in getaddrinfo
+[WARNING] stderr:     for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+[WARNING] stderr:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr: socket.gaierror: [Errno 7] No address associated with hostname
+[WARNING] stderr: 
+[WARNING] stderr: The above exception was the direct cause of the following exception:
+[WARNING] stderr: 
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 790, in urlopen
+[WARNING] stderr:     response = self._make_request(
+[WARNING] stderr:                ^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 491, in _make_request
+[WARNING] stderr:     raise new_e
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 467, in _make_request
+[WARNING] stderr:     self._validate_conn(conn)
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1096, in _validate_conn
+[WARNING] stderr:     conn.connect()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+[WARNING] stderr:     self.sock = sock = self._new_conn()
+[WARNING] stderr:                        ^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+[WARNING] stderr:     raise NameResolutionError(self.host, self, e) from e
+[WARNING] stderr: urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7b513fca50>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)
+[WARNING] stderr: 
+[WARNING] stderr: The above exception was the direct cause of the following exception:
+[WARNING] stderr: 
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/requests/adapters.py", line 486, in send
+[WARNING] stderr:     resp = conn.urlopen(
+[WARNING] stderr:            ^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 874, in urlopen
+[WARNING] stderr:     return self.urlopen(
+[WARNING] stderr:            ^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 874, in urlopen
+[WARNING] stderr:     return self.urlopen(
+[WARNING] stderr:            ^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/connectionpool.py", line 844, in urlopen
+[WARNING] stderr:     retries = retries.increment(
+[WARNING] stderr:               ^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+[WARNING] stderr:     raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+[WARNING] stderr:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr: urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Max retries exceeded with url: /search?q=Sahlgrenska&format=json&limit=1 (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7b513fca50>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)"))
+[WARNING] stderr: 
+[WARNING] stderr: During handling of the above exception, another exception occurred:
+[WARNING] stderr: 
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/geopy/adapters.py", line 482, in _request
+[WARNING] stderr:     resp = self.session.get(url, timeout=timeout, headers=headers)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/requests/sessions.py", line 602, in get
+[WARNING] stderr:     return self.request("GET", url, **kwargs)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/requests/sessions.py", line 589, in request
+[WARNING] stderr:     resp = self.send(prep, **send_kwargs)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/requests/sessions.py", line 703, in send
+[WARNING] stderr:     r = adapter.send(request, **kwargs)
+[WARNING] stderr:         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/requests/adapters.py", line 519, in send
+[WARNING] stderr:     raise ConnectionError(e, request=request)
+[WARNING] stderr: requests.exceptions.ConnectionError: HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Max retries exceeded with url: /search?q=Sahlgrenska&format=json&limit=1 (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7b513fca50>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)"))
+[WARNING] stderr: 
+[WARNING] stderr: During handling of the above exception, another exception occurred:
+[WARNING] stderr: 
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/main.py", line 271, in <module>
+[WARNING] stderr:     AstroApp().run()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/app.py", line 956, in run
+[WARNING] stderr:     runTouchApp()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 574, in runTouchApp
+[WARNING] stderr:     EventLoop.mainloop()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 339, in mainloop
+[WARNING] stderr:     self.idle()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 383, in idle
+[WARNING] stderr:     self.dispatch_input()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 334, in dispatch_input
+[WARNING] stderr:     post_dispatch_input(*pop(0))
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 263, in post_dispatch_input
+[WARNING] stderr:     listener.dispatch('on_motion', etype, me)
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/core/window/__init__.py", line 1691, in on_motion
+[WARNING] stderr:     self.dispatch('on_touch_down', me)
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/core/window/__init__.py", line 1708, in on_touch_down
+[WARNING] stderr:     if w.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/screenmanager.py", line 1210, in on_touch_down
+[WARNING] stderr:     return super(ScreenManager, self).on_touch_down(touch)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/relativelayout.py", line 306, in on_touch_down
+[WARNING] stderr:     ret = super(RelativeLayout, self).on_touch_down(touch)
+[WARNING] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/behaviors/button.py", line 151, in on_touch_down
+[WARNING] stderr:     self.dispatch('on_press')
+[WARNING] stderr:   File "kivy/_event.pyx", line 727, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "kivy/_event.pyx", line 1307, in kivy._event.EventObservers.dispatch
+[WARNING] stderr:   File "kivy/_event.pyx", line 1231, in kivy._event.EventObservers._dispatch
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/main.py", line 197, in on_button_press
+[WARNING] stderr:     results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, place, 
+[WARNING] stderr:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 865, in called_by_gui
+[WARNING] stderr:     text = main(arguments)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 970, in main
+[WARNING] stderr:     latitude, longitude = get_coordinates(args["Location"])
+[WARNING] stderr:                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 128, in get_coordinates
+[WARNING] stderr:     location = geolocator.geocode(location_name)
+[WARNING] stderr:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/geopy/geocoders/nominatim.py", line 297, in geocode
+[WARNING] stderr:     return self._call_geocoder(url, callback, timeout=timeout)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/geopy/geocoders/base.py", line 368, in _call_geocoder
+[WARNING] stderr:     result = self.adapter.get_json(url, timeout=timeout, headers=req_headers)
+[WARNING] stderr:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/geopy/adapters.py", line 472, in get_json
+[WARNING] stderr:     resp = self._request(url, timeout=timeout, headers=headers)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/geopy/adapters.py", line 494, in _request
+[WARNING] stderr:     raise GeocoderUnavailable(message)
+[WARNING] stderr: geopy.exc.GeocoderUnavailable: HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Max retries exceeded with url: /search?q=Sahlgrenska&format=json&limit=1 (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7b513fca50>: Failed to resolve 'nominatim.openstreetmap.org' ([Errno 7] No address associated with hostname)"))

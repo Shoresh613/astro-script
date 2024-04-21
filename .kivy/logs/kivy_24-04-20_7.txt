@@ -1,0 +1,91 @@
+[INFO   ] Logger: Record log in /storage/emulated/0/Documents/Pydroid3/astro-script/.kivy/logs/kivy_24-04-20_7.txt
+[INFO   ] Kivy: v2.2.1
+[INFO   ] Kivy: Installed at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/__init__.py"
+[INFO   ] Python: v3.11.4 (main, Sep 30 2023, 10:54:38) [GCC 11.4.0]
+[INFO   ] Python: Interpreter at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/bin/python3"
+[INFO   ] Logger: Purge log fired. Processing...
+[INFO   ] Logger: Purge finished!
+[INFO   ] Factory: 190 symbols loaded
+[INFO   ] Image: Providers: img_tex, img_dds, img_sdl2, img_pil (img_ffpyplayer ignored)
+[INFO   ] Text: Provider: sdl2
+[INFO   ] Window: Provider: sdl2
+[INFO   ] GL: Using the "OpenGL ES 2" graphics system
+[INFO   ] GL: Backend used <sdl2>
+[INFO   ] GL: OpenGL version <b'OpenGL ES 3.2 V@0502.0 (GIT@2f950bf, I802c3b73eb, 1623716683) (Date:06/14/21)'>
+[INFO   ] GL: OpenGL vendor <b'Qualcomm'>
+[INFO   ] GL: OpenGL renderer <b'Adreno (TM) 640'>
+[INFO   ] GL: OpenGL parsed version: 3, 2
+[INFO   ] GL: Texture max size <16384>
+[INFO   ] GL: Texture max units <16>
+[INFO   ] Window: auto add sdl2 input provider
+[INFO   ] Window: virtual keyboard not allowed, single mode, not docked
+[INFO   ] GL: NPOT texture support is available
+[WARNING] Deprecated property "<BooleanProperty name=allow_stretch>" of object "<kivy.uix.image.Image object at 0x7b509a9080>" has been set, it will be removed in a future version
+[WARNING] Deprecated property "<BooleanProperty name=keep_ratio>" of object "<kivy.uix.image.Image object at 0x7b509a9080>" was accessed, it will be removed in a future version
+[WARNING] Base: Unknown <android> provider
+[INFO   ] Base: Start application main loop
+[DEBUG  ] Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+[DEBUG  ] Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+[DEBUG  ] Nominatim.geocode: https://nominatim.openstreetmap.org/search?q=Sahlgrenskq&format=json&limit=1
+[DEBUG  ] Starting new HTTPS connection (1): nominatim.openstreetmap.org:443
+[DEBUG  ] https://nominatim.openstreetmap.org:443 "GET /search?q=Sahlgrenskq&format=json&limit=1 HTTP/1.1" 200 2
+[INFO   ] Base: Leaving application in progress...
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/main.py", line 181, in <module>
+[WARNING] stderr:     AstroApp().run()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/app.py", line 956, in run
+[WARNING] stderr:     runTouchApp()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 574, in runTouchApp
+[WARNING] stderr:     EventLoop.mainloop()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 339, in mainloop
+[WARNING] stderr:     self.idle()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 383, in idle
+[WARNING] stderr:     self.dispatch_input()
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 334, in dispatch_input
+[WARNING] stderr:     post_dispatch_input(*pop(0))
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/base.py", line 263, in post_dispatch_input
+[WARNING] stderr:     listener.dispatch('on_motion', etype, me)
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/core/window/__init__.py", line 1691, in on_motion
+[WARNING] stderr:     self.dispatch('on_touch_down', me)
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/core/window/__init__.py", line 1708, in on_touch_down
+[WARNING] stderr:     if w.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/screenmanager.py", line 1210, in on_touch_down
+[WARNING] stderr:     return super(ScreenManager, self).on_touch_down(touch)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/relativelayout.py", line 306, in on_touch_down
+[WARNING] stderr:     ret = super(RelativeLayout, self).on_touch_down(touch)
+[WARNING] stderr:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/widget.py", line 589, in on_touch_down
+[WARNING] stderr:     if child.dispatch('on_touch_down', touch):
+[WARNING] stderr:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.11/site-packages/kivy/uix/behaviors/button.py", line 151, in on_touch_down
+[WARNING] stderr:     self.dispatch('on_press')
+[WARNING] stderr:   File "kivy/_event.pyx", line 727, in kivy._event.EventDispatcher.dispatch
+[WARNING] stderr:   File "kivy/_event.pyx", line 1307, in kivy._event.EventObservers.dispatch
+[WARNING] stderr:   File "kivy/_event.pyx", line 1231, in kivy._event.EventObservers._dispatch
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/main.py", line 100, in on_button_press
+[WARNING] stderr:     results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, place, 
+[WARNING] stderr:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 868, in called_by_gui
+[WARNING] stderr:     text = main(arguments)
+[WARNING] stderr:            ^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 973, in main
+[WARNING] stderr:     latitude, longitude = get_coordinates(args["Location"])
+[WARNING] stderr:                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/storage/emulated/0/Documents/Pydroid3/astro-script/astro_script.py", line 129, in get_coordinates
+[WARNING] stderr:     save_location(saved_locations_file, location_name, location.latitude, location.longitude)
+[WARNING] stderr:                                                        ^^^^^^^^^^^^^^^^^
+[WARNING] stderr: AttributeError: 'NoneType' object has no attribute 'latitude'
