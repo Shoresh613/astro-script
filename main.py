@@ -192,6 +192,7 @@ class InputScreen(Screen):
         degree_in_minutes = None  # Assuming you have a method or input to set this
         all_stars = None  # Assuming you have a method or input to set this
         house_system = self.spinner_house_system.text  # Get the selected item from the spinner
+        house_cusps = None  # Not yet implemented in GUI
         hide_planetary_positions = None  # Assuming you have a method or input to set this
         hide_planetary_aspects = None  # Assuming you have a method or input to set this
         hide_fixed_star_aspects = None  # Assuming you have a method or input to set this
@@ -200,7 +201,7 @@ class InputScreen(Screen):
         # Adjust the function call based on actual parameters it needs
         results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, place, 
                                             imprecise_aspects, minor_aspects, orb, degree_in_minutes, 
-                                            all_stars, house_system, hide_planetary_positions, 
+                                            all_stars, house_system, house_cusps, hide_planetary_positions, 
                                             hide_planetary_aspects, hide_fixed_star_aspects)
 
         # Switch to the ResultsScreen

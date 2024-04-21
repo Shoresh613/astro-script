@@ -8,6 +8,7 @@ from math import cos, radians
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
 import save_event
+from version import __version__
 
 
 swe.set_ephe_path('./ephe/')
@@ -221,27 +222,23 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
         'Midheaven': {'longitude': midheaven_long, 'house': 10}  # Midheaven is traditionally associated with the 10th house
     }
 
-    print(f"House cusps: {houses}")
-
     # Assign planets to houses
     for planet, planet_info in planets_positions.items():
         planet_longitude = planet_info['longitude'] % 360
-        house_num = 1  # Starta som hus 1 ifall inget annat matchar
-        if planet == 'Saturn':
-            print(f"Saturn position: {planet_longitude}")
-        # Kontrollera för varje hus från 1 till 11 (hus 12 hanteras separat)
+        house_num = 1  # Begin as house 1 in case nothing else matches
+        # Check for each house from 1 to 11 (12 handled separately)
         for i, cusp in enumerate(houses):
             next_cusp = houses[(i + 1) % 12]
             
-            # Om vi är vid sista huset och nästa kusp är mindre än aktuell på grund av wrap-around
+            # If at last house and next cusp is less than the current because of wrap-around
             if next_cusp < cusp:
                 next_cusp += 360
 
             if cusp <= planet_longitude < next_cusp:
-                house_num = i + 1  # +1 eftersom index i Python börjar från 0
+                house_num = i + 1
                 break
             elif i == 11 and (planet_longitude >= cusp or planet_longitude < houses[0]):
-                house_num = 12  # Tilldela till hus 12 om ingen annan matchning hittades
+                house_num = 12  # Assign to house 12 if nothing else matches
                 break
 
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
@@ -861,7 +858,7 @@ def load_event(filename, name):
         return False
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, place, imprecise_aspects,
-                  minor_aspects, orb, degree_in_minutes, all_stars, house_system, hide_planetary_positions,
+                  minor_aspects, orb, degree_in_minutes, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects):
     arguments = {
         "Name": name,
@@ -877,6 +874,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, place, im
         "Degree in Minutes": degree_in_minutes,
         "All Stars": all_stars,
         "House System": house_system,
+        "House Cusps": house_cusps,
         "Hide Planetary Positions": hide_planetary_positions,
         "Hide Planetary Aspects": hide_planetary_aspects,
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
@@ -907,6 +905,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--degree_in_minutes',choices=['true','false'], help='Show degrees in arch minutes and seconds', required=False)
     parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars.', required=False)
     parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc).', required=False)
+    parser.add_argument('--house_cusps', choices=['true','false'], help='Whether to show house cusps or not', required=False)
     parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
@@ -928,10 +927,11 @@ If no record is found, default values will be used.''')
     "Degree in Minutes": args.degree_in_minutes,
     "All Stars": args.all_stars,
     "House System": args.house_system,
+    "House Cusps": args.house_cusps,
     "Hide Planetary Positions": args.hide_planetary_positions,
     "Hide Planetary Aspects": args.hide_planetary_aspects,
     "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
-    "Output": "text"}
+    "Output": args.output_type}
 
     return arguments
 
@@ -982,6 +982,8 @@ def main(gui_arguments=None):
     def_degree_in_minutes = False  # Default degree in minutes
     def_all_stars = False  # Default all stars
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
+    def_house_cusps = None  # Default do not show house cusps
+    def_output_type = "text"  # Default output type
 
     # Default Output settings
     hide_planetary_positions = False  # Default hide planetary positions
@@ -1013,6 +1015,9 @@ def main(gui_arguments=None):
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
         h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
+    house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
+    
+    output_type = args["Output"] if args["Output"] else def_output_type
 
     if args["Hide Planetary Positions"]:
         if args["Hide Planetary Positions"].lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
@@ -1023,7 +1028,7 @@ def main(gui_arguments=None):
 
     utc_datetime = convert_to_utc(local_datetime, local_timezone)
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
-    notime = (local_datetime.hour == 0 and local_datetime.minute == 0 and local_datetime.second == 0)
+    notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
     # Save event if name given and not already given
     if name and not exists:
@@ -1035,8 +1040,8 @@ def main(gui_arguments=None):
         save_event.update_json_file(saved_events_file,new_data)
 
     #################### Main Script ####################    
-    if args["Output"] == "text":
-        print("AstroScript Chart\n------------------")
+    if output_type == "text":
+        print(f"AstroScript v.{__version__} Chart\n--------------------------")
         if exists or name:
             print(f"\nName: {name}")
         if place:
@@ -1048,7 +1053,7 @@ def main(gui_arguments=None):
         print(f"\nLocal Time: {local_datetime} {local_timezone}")
         print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
-        to_return = "\nAstroScript Chart\n------------------"
+        to_return = f"AstroScript v.{__version__} Chart\n--------------------------"
         if exists or name:
             to_return += f"\nName: {name}"
         if place:
@@ -1063,7 +1068,7 @@ def main(gui_arguments=None):
 
 
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    if args["Output"] == "text":
+    if output_type == "text":
         print(f"House system: {house_system_name}\n")
     else: to_return += f"\nHouse system: {house_system_name}\n"
 
@@ -1072,6 +1077,12 @@ def main(gui_arguments=None):
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
+    if house_cusps:
+        if output_type == 'text':
+            print(f"\nHouse cusps: {house_cusps}\n")
+        else:
+            to_return += f"\nHouse cusps: {house_cusps}\n"
+
     aspects = calculate_aspects(planet_positions, orb, aspect_types=ASPECT_TYPES)
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
     if notime:
@@ -1083,20 +1094,20 @@ def main(gui_arguments=None):
         illumination = f"{illumination:.2f}%"
 
     if not hide_planetary_positions:
-        to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, args["Output"])
+        to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, args["Output"])
+        to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type)
     if not hide_fixed_star_aspects:
-        to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars, args["Output"])
+        to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars, output_type)
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
-            if (args["Output"] == "text"):
+            if (output_type == "text"):
                 print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
             else:
                 to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
     else:
-        if args["Output"] == "text":
+        if output_type == "text":
             print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
         else:
             to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
