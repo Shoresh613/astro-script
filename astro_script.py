@@ -8,6 +8,7 @@ from math import cos, radians
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
 import save_event
+from version import __version__
 
 
 swe.set_ephe_path('./ephe/')
@@ -1036,7 +1037,7 @@ def main(gui_arguments=None):
 
     #################### Main Script ####################    
     if args["Output"] == "text":
-        print("AstroScript Chart\n------------------")
+        print("AstroScript v. {__version__} Chart\n------------------")
         if exists or name:
             print(f"\nName: {name}")
         if place:
@@ -1048,7 +1049,7 @@ def main(gui_arguments=None):
         print(f"\nLocal Time: {local_datetime} {local_timezone}")
         print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
-        to_return = "\nAstroScript Chart\n------------------"
+        to_return = f"\nAstroScript v. {__version__} Chart\n------------------"
         if exists or name:
             to_return += f"\nName: {name}"
         if place:
