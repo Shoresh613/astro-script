@@ -1,6 +1,6 @@
 # AstroScript
 
-AstroScript is a powerful astrology software tool designed to calculate and interpret astrological charts. It leverages the Swiss Ephemeris for precise planetary and house calculations, and offers extensive features including planet positions, house positions, aspect calculations, and fixed star conjunctions.
+AstroScript is a powerful astrology software tool designed to calculate astrological data that can be used for interpretations. It leverages the Swiss Ephemeris for precise planetary and house calculations, and offers extensive features including planet positions, house positions, aspect calculations, and fixed star conjunctions.
 
 ## Features
 
