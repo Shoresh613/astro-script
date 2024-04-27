@@ -458,6 +458,14 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0]).split()[0], 'retrograde': ''}
     positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1]).split()[0], 'retrograde': ''}
 
+    # Fix south node
+    PLANETS.update({"South Node": None})  # Add South Node to the list of planets
+    positions["South Node"] = {
+        'longitude': (positions["North Node"]['longitude'] + 180) % 360,
+        'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360).split()[0],
+        'retrograde': ''
+    }
+
     return positions
 
 def coord_in_minutes(longitude):
