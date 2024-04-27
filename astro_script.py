@@ -118,12 +118,16 @@ def get_coordinates(location_name:str):
     - Ensure compliance with Nominatim's usage policy when using this function.
     """
     
-    location_details = load_location('locations.json', 'Sahlgrenska')
+    location_details = load_location('locations.json', location_name)
     if location_details:
         return location_details.latutude, location_details.longitude 
     else:
         # Initialize Nominatim API
-        geolocator = Nominatim(user_agent="AstroScript")
+        try:
+            geolocator = Nominatim(user_agent="AstroScript")
+        except Exception as e:
+            print(f"Error initializing geolocator (check your internet connection): {e}")
+            return None
 
         # Get location
         location = geolocator.geocode(location_name)
