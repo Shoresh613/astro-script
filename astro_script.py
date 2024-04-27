@@ -126,11 +126,15 @@ def get_coordinates(location_name:str):
         try:
             geolocator = Nominatim(user_agent="AstroScript")
         except Exception as e:
-            print(f"Error initializing geolocator (check your internet connection): {e}")
+            print(f"Error initializing geolocator: {e}")
             return None, None
 
         # Get location
-        location = geolocator.geocode(location_name)
+        try:
+            location = geolocator.geocode(location_name)
+        except Exception as e:
+            print(f"Error getting location, check internet connection: {e}")
+            return None, None
         save_location(saved_locations_file, location_name, location.latitude, location.longitude)
 
         return location.latitude, location.longitude
