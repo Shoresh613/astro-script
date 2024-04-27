@@ -24,7 +24,7 @@ MINOR_ASPECT_TYPES = {
 # notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
-          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05,
+          "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
           "Ascendant": 360, "Midheaven": 360}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
@@ -51,7 +51,7 @@ PLANETS = {
     'Sun': swe.SUN, 'Moon': swe.MOON, 'Mercury': swe.MERCURY, 'Venus': swe.VENUS,
     'Mars': swe.MARS, 'Jupiter': swe.JUPITER, 'Saturn': swe.SATURN,
     'Uranus': swe.URANUS, 'Neptune': swe.NEPTUNE, 'Pluto': swe.PLUTO,
-    'Chiron': swe.CHIRON, 'North Node': swe.MEAN_NODE
+    'Chiron': swe.CHIRON, 'North Node': swe.TRUE_NODE, 
 }
 
 ZODIAC_ELEMENTS = {
@@ -448,11 +448,27 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
             'zodiac_sign': longitude_to_zodiac(pos[0]).split()[0],
             'retrograde': 'R' if pos[3] < 0 else ''
         }
+        if planet == "North Node":
+            # Calculate the South Node
+            south_node_longitude = (pos[0] + 180) % 360
+            positions["South Node"] = {
+                'longitude': south_node_longitude,
+                'zodiac_sign': longitude_to_zodiac(south_node_longitude).split()[0],
+                'retrograde': ''  # South Node does not have retrograde motion
+            }
 
     # Calculate Ascendant and Midheaven
     asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
     positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0]).split()[0], 'retrograde': ''}
     positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1]).split()[0], 'retrograde': ''}
+
+    # Fix south node
+    PLANETS.update({"South Node": None})  # Add South Node to the list of planets
+    positions["South Node"] = {
+        'longitude': (positions["North Node"]['longitude'] + 180) % 360,
+        'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360).split()[0],
+        'retrograde': ''
+    }
 
     return positions
 
@@ -722,9 +738,9 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
         if degree_in_minutes:
-            angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
+            angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
+            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°".strip("-")
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
@@ -799,7 +815,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
         else:
-            angle = f"{angle:.2f}°"
+            angle = f"{angle:.2f}°".strip("-")
         row = [planet, aspect_name, star_name, angle]
 
         if house_positions and not notime:
@@ -862,7 +878,7 @@ def load_event(filename, name):
         return False
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, place, imprecise_aspects,
-                  minor_aspects, orb, degree_in_minutes, all_stars, house_system, house_cusps, hide_planetary_positions,
+                  minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects):
     arguments = {
         "Name": name,
@@ -876,6 +892,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, place, im
         "Minor Aspects": minor_aspects,
         "Orb": orb,
         "Degree in Minutes": degree_in_minutes,
+        "Node": node,
         "All Stars": all_stars,
         "House System": house_system,
         "House Cusps": house_cusps,
@@ -907,6 +924,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
     parser.add_argument('--orb', type=float, help='Orb size in degrees.', required=False)
     parser.add_argument('--degree_in_minutes',choices=['true','false'], help='Show degrees in arch minutes and seconds', required=False)
+    parser.add_argument('--node',choices=['mean','true'], help='Whether to use the moon mean node or true node', required=False)
     parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars.', required=False)
     parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc).', required=False)
     parser.add_argument('--house_cusps', choices=['true','false'], help='Whether to show house cusps or not', required=False)
@@ -929,6 +947,7 @@ If no record is found, default values will be used.''')
     "Minor Aspects": args.minor_aspects,
     "Orb": args.orb,
     "Degree in Minutes": args.degree_in_minutes,
+    "Node": args.node,
     "All Stars": args.all_stars,
     "House System": args.house_system,
     "House Cusps": args.house_cusps,
@@ -984,9 +1003,10 @@ def main(gui_arguments=None):
     def_minor_aspects = False  # Default minor aspects
     def_orb = 1  # Default orb size
     def_degree_in_minutes = False  # Default degree in minutes
+    def_node = "true"  # Default mean node (true node is more accurate)
     def_all_stars = False  # Default all stars
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
-    def_house_cusps = None  # Default do not show house cusps
+    def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
 
     # Default Output settings
@@ -1013,12 +1033,17 @@ def main(gui_arguments=None):
     orb = float(args["Orb"]) if args["Orb"] else def_orb
     # If True, the script will show the positions in degrees and minutes
     degree_in_minutes = True if args["Degree in Minutes"] and args["Degree in Minutes"].lower() in ["true", "yes", "1"] else def_degree_in_minutes
+    node = "mean" if args["Node"] and args["Node"].lower() in ["mean"] else def_node
+    if node == "mean":
+        PLANETS["North Node"] = swe.MEAN_NODE
+    if node == "true":
+        PLANETS["North Node"] = swe.TRUE_NODE
     # If True, the script will include all roughly 700 fixed stars
     all_stars = True if args["All Stars"] and args["All Stars"].lower() in ["true", "yes", "1"] else def_all_stars
+    h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
-        h_sys = HOUSE_SYSTEMS["Placidus"]  # Default house system
-    h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
+        h_sys = HOUSE_SYSTEMS["Placidus"]  # Reverting to default house system
     house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
     output_type = args["Output"] if args["Output"] else def_output_type
@@ -1073,8 +1098,8 @@ def main(gui_arguments=None):
 
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     if output_type == "text":
-        print(f"House system: {house_system_name}\n")
-    else: to_return += f"\nHouse system: {house_system_name}\n"
+        print(f"House system: {house_system_name}, Moon: {node} node\n")
+    else: to_return += f"\nHouse system: {house_system_name}, Moon: {node} node\n"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
