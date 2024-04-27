@@ -221,7 +221,7 @@ class ResultsScreen(Screen):
         self.results_input = TextInput(
             readonly=True,
             font_name='fonts/RobotoMono-Regular.ttf',
-            font_size='11sp', 
+            font_size='10sp', 
             size_hint=(1, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             background_color=(0, 0, 0.5, 1),  # Dark blue background color

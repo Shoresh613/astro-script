@@ -73,7 +73,44 @@ ZODIAC_SIGN_TO_MODALITY = {
     'Capricorn': 'Cardinal', 'Aquarius': 'Fixed', 'Pisces': 'Mutable',
 }
 
+# Dictionary definitions for planet dignity
+exaltation = {
+    'Sun': 'Aries', 'Moon': 'Taurus', 'Mercury': 'Virgo', 'Venus': 'Pisces',
+    'Mars': 'Capricorn', 'Jupiter': 'Cancer', 'Saturn': 'Libra'
+}
+detriment = {
+    'Sun': 'Libra', 'Moon': 'Scorpio', 'Mercury': 'Pisces', 'Venus': 'Virgo',
+    'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
+}
+fall = {
+    'Sun': 'Libra', 'Moon': 'Scorpio', 'Mercury': 'Pisces', 'Venus': 'Virgo',
+    'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
+}
+
 ############### Functions ###############
+
+# Function to assess the strength of planets based on sign placement
+def assess_planet_strength(planet_signs):
+    strength_status = {}
+    for planet, sign in planet_signs.items():
+        if planet in exaltation and sign == exaltation[planet]:
+            strength_status[planet] = 'Exalted (Strong)'
+        elif planet in detriment and sign == detriment[planet]:
+            strength_status[planet] = 'In Detriment (Weak)'
+        elif planet in fall and sign == fall[planet]:
+            strength_status[planet] = 'In Fall (Very Weak)'
+        else:
+            strength_status[planet] = ''
+    
+    return strength_status
+
+# Function to check elevation based on house
+def is_planet_elevated(planet_positions):
+    elevated_status = {}
+    for planet, house in planet_positions.items():
+        elevated_status[planet] = 'Elevated' if house == 10 else ''
+    return elevated_status
+
 def convert_to_utc(local_datetime, local_timezone):
     """
     Convert a naive datetime object to UTC using a specified timezone.
@@ -250,13 +287,6 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
                 break
 
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
-
-
-        house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
-
-
-        house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
-
 
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
@@ -620,9 +650,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     headers = ["Planet", "Zodiac", "Position", "Retrograde"]
     if house_positions:
         headers.append("House")
+    if not notime:
+        headers.append("Dignity")
     if notime:
         headers.insert(3, "Off by")
 
+    planet_signs = {}
+    
     for planet, info in planet_positions.items():
         if notime and (planet in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
@@ -633,6 +667,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
 
+        planet_signs[planet] = zodiac
+        if not notime:  # assuming that we have the house positions if not notime
+            house_num = house_positions.get(planet, {}).get('house', 'Unknown')
+            planet_positions[planet] = house_num
+            strength_check = assess_planet_strength(planet_signs)
+            elevation_check = is_planet_elevated(planet_positions)
+
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}°"
             row = [planet, zodiac, position, off_by, retrograde_status]
@@ -640,15 +681,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             if notime:
                 row = [planet, zodiac, position, "", retrograde_status]
             else:
-                row = [planet, zodiac, position, retrograde_status]
-
+                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + " " + strength_check[planet]) ]
 
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
-            row.append(house_num)
+            row.insert(4, house_num)
             pass
         zodiac_table_data.append(row)
-
 
         # Count zodiac signs, elements and modalities
         sign_counts[zodiac]['count'] += 1
@@ -738,6 +777,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if notime:
             to_return += f" with imprecise aspects set to {imprecise_aspects}"
 
+    aspect_type_counts = {}
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
@@ -755,14 +795,30 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
                 off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
                 row.append(" ± " + off_by)
         planetary_aspects_table_data.append(row)
+        # Add or update the count of the aspect type
+        aspect_name = aspect_details['aspect_name']
+        if aspect_name in aspect_type_counts:
+            aspect_type_counts[aspect_name] += 1
+        else:
+            aspect_type_counts[aspect_name] = 1
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
-    to_return += "\n\n" + table
+    to_return += "\n" + table
+
     if output == 'text':
         print(table)
 
+    # Convert dictionary to a list of tuples
+    aspect_data = list(aspect_type_counts.items())
+    headers = ["Aspect Type", "Count"]
+    table = tabulate(aspect_data, headers=headers, tablefmt="simple")
+    to_return += "\n" + table
+
+    # Print counts of each aspect type
     if output == 'text':
-        print("\n")
+        print('\n'+table)
+
+    if output == 'text':
         if not house_positions:
             print("* No time of day specified. Houses cannot be calculated. ")
             print("  Aspects to the Ascendant and Midheaven are not available.")
@@ -796,7 +852,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     to_return = ""
 
     if output == 'text':
-        print(f"Fixed Star Aspects ({orb}° orb)", end="")
+        print(f"\nFixed Star Aspects ({orb}° orb)", end="")
         print(" including Minor Aspects" if minor_aspects else "", end="")
         if notime:
             print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
@@ -812,6 +868,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     if output == 'text':
         print("=" * (27)) 
+
+    aspect_type_counts = {}
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house = aspect
         if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -827,6 +885,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}°")
         star_aspects_table_data.append(row)
+        # Add or update the count of the aspect type
+        if aspect_name in aspect_type_counts:
+            aspect_type_counts[aspect_name] += 1
+        else:
+            aspect_type_counts[aspect_name] = 1
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
@@ -839,6 +902,16 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
+
+    # Convert dictionary to a list of tuples
+    aspect_data = list(aspect_type_counts.items())
+    headers = ["Aspect Type", "Count"]
+    table = tabulate(aspect_data, headers=headers, tablefmt="simple")
+    to_return += "\n" + table
+
+    #Print counts of each aspect type
+    if output == 'text':
+        print(table +'\n')
 
     return to_return
 
@@ -1051,7 +1124,7 @@ def main(gui_arguments=None):
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
         h_sys = HOUSE_SYSTEMS["Placidus"]  # Reverting to default house system
-    house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
+    show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
     output_type = args["Output"] if args["Output"] else def_output_type
 
@@ -1087,33 +1160,33 @@ def main(gui_arguments=None):
         else:
             print(f"Latitude: {latitude}, Longitude: {longitude}")
         print(f"\nLocal Time: {local_datetime} {local_timezone}")
-        print(f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
+        print(f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
         to_return = f"AstroScript v.{__version__} Chart\n--------------------------"
         if exists or name:
             to_return += f"\nName: {name}"
         if place:
-            to_return += f"\nPlace: {place}"
+            to_return += f", Place: {place}"
         if degree_in_minutes:
             to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
         else:
             to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
         to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
         if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
-        else: to_return += f"UTC Time: {utc_datetime} UTC"
+        else: to_return += f", UTC Time: {utc_datetime} UTC"
 
 
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     if output_type == "text":
-        print(f"House system: {house_system_name}, Moon: {node} node\n")
-    else: to_return += f"\nHouse system: {house_system_name}, Moon: {node} node\n"
+        print(f"House system: {house_system_name}, Moon nodes: {node}\n")
+    else: to_return += f"\nHouse system: {house_system_name}, Moon nodes: {node}\n"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
-    if house_cusps:
+    if show_house_cusps:
         if output_type == 'text':
             print(f"\nHouse cusps: {house_cusps}\n")
         else:
