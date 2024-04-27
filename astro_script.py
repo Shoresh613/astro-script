@@ -127,7 +127,7 @@ def get_coordinates(location_name:str):
             geolocator = Nominatim(user_agent="AstroScript")
         except Exception as e:
             print(f"Error initializing geolocator (check your internet connection): {e}")
-            return None
+            return None, None
 
         # Get location
         location = geolocator.geocode(location_name)
@@ -1017,6 +1017,9 @@ def main(gui_arguments=None):
     if args["Location"]: 
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
+        if latitude is None or longitude is None:
+            print("Location not found. Please check the spelling and internet connection.")
+            return "Location not found. Please check the spelling and internet connection."
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
