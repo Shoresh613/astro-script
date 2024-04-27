@@ -200,7 +200,7 @@ class InputScreen(Screen):
         # Now pass these collected values to your astro_script function
         # Adjust the function call based on actual parameters it needs
         results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, place, 
-                                            imprecise_aspects, minor_aspects, orb, degree_in_minutes, 'true',
+                                            imprecise_aspects, minor_aspects, orb, degree_in_minutes, 'true', # change'true' to value of moon node selection when implemented
                                             all_stars, house_system, house_cusps, hide_planetary_positions, 
                                             hide_planetary_aspects, hide_fixed_star_aspects)
 

@@ -444,6 +444,14 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
             'zodiac_sign': longitude_to_zodiac(pos[0]).split()[0],
             'retrograde': 'R' if pos[3] < 0 else ''
         }
+        if planet == "North Node":
+            # Calculate the South Node
+            south_node_longitude = (pos[0] + 180) % 360
+            positions["South Node"] = {
+                'longitude': south_node_longitude,
+                'zodiac_sign': longitude_to_zodiac(south_node_longitude).split()[0],
+                'retrograde': ''  # South Node does not have retrograde motion
+            }
 
     # Calculate Ascendant and Midheaven
     asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
@@ -718,9 +726,9 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
         if degree_in_minutes:
-            angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}"
+            angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°"
+            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°".strip("-")
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
@@ -795,7 +803,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
         else:
-            angle = f"{angle:.2f}°"
+            angle = f"{angle:.2f}°".strip("-")
         row = [planet, aspect_name, star_name, angle]
 
         if house_positions and not notime:
@@ -1078,8 +1086,8 @@ def main(gui_arguments=None):
 
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     if output_type == "text":
-        print(f"House system: {house_system_name}, {node} node\n")
-    else: to_return += f"\nHouse system: {house_system_name}, {node} node\n"
+        print(f"House system: {house_system_name}, Moon: {node} node\n")
+    else: to_return += f"\nHouse system: {house_system_name}, Moon: {node} node\n"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
