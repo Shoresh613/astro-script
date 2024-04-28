@@ -813,6 +813,8 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     hard_count_score = 0
     soft_count_score = 0
 
+    all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
+
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
@@ -851,7 +853,12 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
-    headers = ["Aspect Type", "Count"]
+    aspect_data.sort(key=lambda x: x[1], reverse=True)
+    
+    # Convert aspect_data to a list of lists
+    aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
+
+    headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
     aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
     to_return += "\n" + table + aspect_count_text
@@ -916,6 +923,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     soft_count = 0
     hard_count_score = 0
     soft_count_score = 0
+    all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house, aspect_score, aspect_comment = aspect
@@ -958,7 +966,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     # Convert dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
-    headers = ["Aspect Type", "Count"]
+    aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
+    headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
     aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
     to_return += "\n" + table + '\n' + aspect_count_text
