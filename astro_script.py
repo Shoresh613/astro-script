@@ -21,7 +21,32 @@ MINOR_ASPECT_TYPES = {
     'Quincunx': 150, 'Semi-Sextile': 30, 'Semi-Square': 45, 'Quintile': 72, 'Bi-Quintile': 144,
     'Sesqui-Square': 135, 'Septile': 51.4285714, 'Novile': 40, 'Decile': 36,
 }
-# notime_imprecise_planets = ['Moon', 'Mercury', 'Venus', 'Sun', 'Mars']  # Aspects that are uncertain without time of day
+MAJOR_ASPECTS = {
+    'Conjunction': {'Degrees': 0, 'Score': 40, 'Comment': 'Impactful, varies by planets involved.'},
+    'Opposition': {'Degrees': 180, 'Score': 10, 'Comment': 'Polarities needing integration.'},
+    'Square': {'Degrees': 90, 'Score': 15, 'Comment': 'Tension and obstacles.'},
+    'Trine': {'Degrees': 120, 'Score': 90, 'Comment': 'Promotes ease and talents.'},
+    'Sextile': {'Degrees': 60, 'Score': 80, 'Comment': 'Opportunities and support.'},
+}
+
+MINOR_ASPECTS = {
+    'Semi-Square': {'Degrees': 45, 'Score': 25, 'Comment': 'Friction and minor challenges.'},
+    'Sesqui-Square': {'Degrees': 135, 'Score': 20, 'Comment': 'Less intense square, irritation.'},
+    'Semi-Sextile': {'Degrees': 30, 'Score': 70, 'Comment': 'Slightly beneficial, subtle.'},
+    'Quincunx': {'Degrees': 150, 'Score': 30, 'Comment': 'Adjustment and misunderstandings.'},
+    'Quintile': {'Degrees': 72, 'Score': 75, 'Comment': 'Creativity and talent.'},
+    'Bi-Quintile': {'Degrees': 144, 'Score': 75, 'Comment': 'Creative expression, like quintile.'},
+    'Septile': {'Degrees': 51.4285714, 'Score': 60, 'Comment': 'Spiritual insights, less tangible.'},
+    'Novile': {'Degrees': 40, 'Score': 65, 'Comment': 'Spiritual insights, harmonious.'},
+    'Decile': {'Degrees': 36, 'Score': 50, 'Comment': 'Growth opportunities, mild challenges.'},
+}
+
+ALL_ASPECTS = {**MAJOR_ASPECTS.copy(), **MINOR_ASPECTS}
+
+# Dictionaries for hard and soft aspects based on the scores
+HARD_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'] < 50}
+SOFT_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'] >= 50}
+
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
@@ -418,10 +443,11 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
 
             for planet, data in planet_positions.items():
                 planet_long = data['longitude']
-                for aspect_name, aspect_angle in aspect_types.items():
+                for aspect_name, aspect_details in aspect_types.items():
+                    aspect_angle, aspect_score, aspect_comment = aspect_details.values()
                     valid_aspect, angle_off = check_aspect(planet_long, star_long, aspect_angle, orb)
                     if valid_aspect:
-                        aspects.append((planet, star_name, aspect_name, angle_off, star_house))
+                        aspects.append((planet, star_name, aspect_name, angle_off, star_house, aspect_score, aspect_comment))
         except ValueError as e:
             print(f"Error processing star {star_name}: {e}")
 
@@ -561,7 +587,9 @@ def calculate_aspects(planet_positions, orb, aspect_types):
             angle_diff = abs(long1 - long2) % 360
             angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
 
-            for aspect_name, aspect_angle in aspect_types.items():
+            for aspect_name, aspect_values in aspect_types.items():
+                aspect_angle, aspect_score, aspect_comment = aspect_values.values()
+                
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
                     is_imprecise = any(
@@ -579,7 +607,9 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
                         'angle_diff_in_minutes': coord_in_minutes(angle_diff),
-                        'is_imprecise': is_imprecise
+                        'is_imprecise': is_imprecise,
+                        'aspect_score': aspect_score,
+                        'aspect_comment': aspect_comment
                     }
     return aspects_found
 
@@ -647,7 +677,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     zodiac_table_data = []
 
     # Define headers based on whether house positions should be included
-    headers = ["Planet", "Zodiac", "Position", "Retrograde"]
+    headers = ["Planet", "Zodiac", "Position", "R"]
     if house_positions:
         headers.append("House")
     if not notime:
@@ -778,6 +808,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             to_return += f" with imprecise aspects set to {imprecise_aspects}"
 
     aspect_type_counts = {}
+    hard_count = 0 
+    soft_count = 0
+    hard_count_score = 0
+    soft_count_score = 0
+
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
@@ -801,6 +836,12 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             aspect_type_counts[aspect_name] += 1
         else:
             aspect_type_counts[aspect_name] = 1
+        if aspect_name in HARD_ASPECTS:
+            hard_count += 1
+            hard_count_score += aspect_details['aspect_score']
+        elif aspect_name in SOFT_ASPECTS:
+            soft_count += 1
+            soft_count_score += aspect_details['aspect_score']
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
     to_return += "\n" + table
@@ -808,15 +849,16 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     if output == 'text':
         print(table)
 
-    # Convert dictionary to a list of tuples
+    # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
     headers = ["Aspect Type", "Count"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
-    to_return += "\n" + table
+    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    to_return += "\n" + table + aspect_count_text
 
     # Print counts of each aspect type
     if output == 'text':
-        print('\n'+table)
+        print('\n'+table + '\n' + aspect_count_text)
 
     if output == 'text':
         if not house_positions:
@@ -870,8 +912,13 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         print("=" * (27)) 
 
     aspect_type_counts = {}
+    hard_count = 0 
+    soft_count = 0
+    hard_count_score = 0
+    soft_count_score = 0
+
     for aspect in aspects:
-        planet, star_name, aspect_name, angle, house = aspect
+        planet, star_name, aspect_name, angle, house, aspect_score, aspect_comment = aspect
         if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
         if degree_in_minutes:
@@ -890,6 +937,12 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             aspect_type_counts[aspect_name] += 1
         else:
             aspect_type_counts[aspect_name] = 1
+        if aspect_name in HARD_ASPECTS:
+            hard_count += 1
+            hard_count_score += aspect_score
+        elif aspect_name in SOFT_ASPECTS:
+            soft_count += 1
+            soft_count_score += aspect_score
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
@@ -907,11 +960,12 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     aspect_data = list(aspect_type_counts.items())
     headers = ["Aspect Type", "Count"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
-    to_return += "\n" + table
+    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    to_return += "\n" + table + '\n' + aspect_count_text
 
     #Print counts of each aspect type
     if output == 'text':
-        print(table +'\n')
+        print(table + '\n' + aspect_count_text)
 
     return to_return
 
@@ -1183,6 +1237,7 @@ def main(gui_arguments=None):
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
+        MAJOR_ASPECTS.update(MINOR_ASPECTS)
 
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
@@ -1192,8 +1247,8 @@ def main(gui_arguments=None):
         else:
             to_return += f"\nHouse cusps: {house_cusps}\n"
 
-    aspects = calculate_aspects(planet_positions, orb, aspect_types=ASPECT_TYPES)
-    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, ASPECT_TYPES, all_stars)
+    aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
+    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if notime:
         moon_phase_name1, illumination1 = moon_phase(utc_datetime)
         moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
