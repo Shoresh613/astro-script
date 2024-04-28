@@ -966,6 +966,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     # Convert dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
+    aspect_data.sort(key=lambda x: x[1], reverse=True)
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
