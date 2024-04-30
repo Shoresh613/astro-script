@@ -12,7 +12,6 @@ Praesepe Cluster,3.7
 Polaris,2.02
 Messier 87,8.63
 Deneb,1.25
-Deneb Adige,1.25
 Rigel,0.13
 Mira,6.53
 Ain,3.53
@@ -20,10 +19,7 @@ Segin,3.37
 Alpheratz,2.06
 Sirrah,2.06
 Mirach,2.05
-Almaak,2.1
 Almak,2.1
-Almac,2.1
-Almach,2.1
 Adhil,4.868
 Adhab,4.1
 Titawin,4.1
@@ -45,10 +41,8 @@ Al Thalimaim Anterior,3.43
 Libertas,4.707
 Bered,4.02
 Sadalmelek,2.94
-Sadalmelik,2.94
 Sadalsuud,2.89
 Sadalachbia,3.834
-Sadachbia,3.834
 Skat,3.28
 Albali,3.77
 Altager,3.77
@@ -60,7 +54,6 @@ Situla,5.03
 Ekkhysis,3.79
 Hydor,3.79
 Shatabhishaj,3.79
-Shatabhishak,3.79
 Albulaan,4.52
 Seat,4.64
 Bunda,4.69
@@ -78,7 +71,6 @@ Brahmahridaya,0.08
 Menkalinan,1.9
 Prijipati,3.72
 Maaz,2.99
-Almaaz,2.99
 Al Anz,2.99
 Haedi,3.75
 Hoedus I,3.75
@@ -90,7 +82,6 @@ Bogardus,2.62
 Manus,2.62
 Mahasim,2.62
 Hasseleh,2.69
-Hassaleh,2.69
 Al Khabdhilinan,2.69
 Arcturus,-0.05
 Svati,-0.05
@@ -102,21 +93,17 @@ Izar,2.39
 Mirak,2.39
 Pulcherrima,2.39
 Mufrid,2.68
-Muphrid,2.68
 Asellus Primus,4.05
 Asellus Secundus,4.75
 Asellus Tertius,4.51
 Xuange,4.18
 Alkalurops,4.296
 Hemelein Prima,3.59
-Al Hamalain,3.59
 Hemelein Secunda,4.47
 Ceginus,5.254
 Merga,5.757
 Tonatiuh,5.785
-Algedi,4.27
 Giedi Prima,4.27
-Algedi,3.58
 Giedi Secunda,3.58
 Dabih,3.08
 Nashira,3.67
@@ -128,7 +115,6 @@ Dorsum,4.07
 Alshat,4.76
 Oculus,5.25
 Bos,4.803
-Pazan,4.122
 Pazhan,4.122
 Baten Algiedi,4.12
 Canopus,-0.74
@@ -139,13 +125,10 @@ Foramen,6.21
 Vathorz Posterior,2.76
 Scutulum,2.26
 Aspidiske,2.26
-Drus,3.431
 Drys,3.431
 Simiram,3.33
 Vathorz Prior,2.96
-Schedar,2.23
 Shedir,2.23
-Schedir,2.23
 Caph,2.27
 Tsih,2.39
 Cih,2.39
@@ -156,10 +139,8 @@ Achird,3.44
 Marfak,5.17
 Castula,4.622
 Rigil Kentaurus,-0.1
-Rigel Kentaurus,-0.1
 Toliman,-0.1
 Bungula,-0.1
-Proxima Centauri,-0.1
 Hadar,0.6
 Agena,0.6
 Muhlifain,2.17
@@ -168,19 +149,14 @@ Menkent,2.05
 Alhakim,2.73
 Ke Kwan,3.13
 Ma Ti,3.14
-Mati,3.14
 Kabkent Secunda,3.386
 Kabkent Tertia,3.802
 Proxima Centauri,11.13
 Alderamin,2.46
-Alphirk,3.23
 Alfirk,3.23
 Alrai,3.22
-Errai,3.22
 Alradif,3.75
-Alredif,3.75
 Phicares,4.19
-Phicareus,4.19
 Kurhah,3.35
 Alagemin,3.41
 Alkidr,4.22
@@ -191,7 +167,6 @@ Kurdah,6.5
 Alkurhah,6.5
 Al Kalb al Rai,5.46
 Menkar,2.53
-Diphda,2.01
 Difda,2.01
 Kaffaljidhma,3.47
 Phycochroma,4.07
@@ -207,13 +182,10 @@ Al Nitham,4.767
 Sirius,-1.46
 Lubdhaka,-1.46
 Mirzam,1.97
-Murzim,1.97
-Murzims,1.97
 Muliphein,4.12
 Isis,4.12
 Wezen,1.84
 Adara,1.5
-Adhara,1.5
 Furud,3.0
 Aludra,2.45
 Unurgunite,3.47
@@ -227,7 +199,6 @@ Asellus Australis,3.94
 Pushya,3.94
 Meleph,6.29
 Tegmen,4.67
-Tegmine,4.67
 Decapoda,4.018
 Copernicus,5.95
 Phact,2.65
@@ -239,12 +210,10 @@ Diadem,4.32
 Aldafirah,4.25
 Kissin,4.34
 Alphecca,2.24
-Alphekka,2.24
 Gemma,2.24
 Nusakan,3.68
 The Blaze Star,4.76
 Alfecca Meridiana,4.087
-Meridiana,4.087
 Alkes,4.07
 Alsharasif,4.449
 Labrum,3.56
@@ -270,7 +239,6 @@ Albireo,3.085
 Sador,2.23
 Sadir,2.23
 Sadr,2.23
-Ruc,2.87
 Rukh,2.87
 Urakhga,2.87
 Al Fawaris,2.87
@@ -299,15 +267,12 @@ Altais,3.07
 Tyl,3.84
 Nodus I,3.17
 Aldhibah,3.17
-Edasich,3.29
 Ed Asich,3.29
 Ketu,3.89
 Giansar,3.85
 Giausar,3.85
 Gianfar,3.85
-Arrakis,4.92
 Alrakis,4.92
-Kuma,4.867
 Kuma,4.833
 Grumium,3.75
 Alsafi,4.68
@@ -346,24 +311,19 @@ Wasat,3.53
 Mebsuta,2.98
 Mekbuda,3.79
 Propus,3.28
-Propus etaGem,3.28
 Nageba,3.6
 Propus iotGem,3.79
 Al Krikab,3.57
 Kebash,3.581
-Alkibash,3.581
 Tejat,2.87
 Alzirr,3.36
 Jishui,4.9
 Alnair,1.71
 Gruid,2.11
 Tiaki,2.11
-Aldhanab,3.01
 Al Dhanab,3.01
 Ras Alkurki,3.01
 Ras Algethi,3.06
-Rasalgethi,3.06
-Rasalgethi,3.35
 Kornephoros,2.77
 Rutilicus,2.8
 Sarin,3.13
@@ -371,14 +331,11 @@ Kajam epsHer,3.92
 Sofian,3.5
 Rukbalgethi Genubi,3.88
 Al Jathiyah,3.8
-Marsik,4.994
 Marsic,4.994
-Masym,4.41
 Maasym,4.41
 Melkarth,3.42
 Fudail,3.18
 Rukbalgethi Shemali,3.9
-Kajam omeHer,4.58
 Cujam,4.58
 Ogma,8.14
 Alphard,1.97
@@ -392,9 +349,7 @@ Pleura,3.11
 Sataghni,3.28
 Al Minliar al Shuja,4.43
 Minchir,4.43
-Ukdah,4.6
 Ukdah prima,4.6
-Ukdah,4.548
 Ukdah secunda,4.548
 Zhang,4.11
 Magha,1.4
@@ -408,7 +363,6 @@ Ras Elased Australis,2.98
 Adhafera,3.41
 Al Jabhah,3.41
 Tse Tseng,4.0
-Tsze Tseang,4.0
 Alminhar,4.46
 Al Minliar al Asad,4.46
 Alterf,4.31
@@ -425,16 +379,10 @@ Arneb,2.57
 Nihal,2.84
 Sasin,3.18
 Zubenelgenubi,2.75
-Zuben Elgenubi,2.75
 Zubeneshamali,2.62
-Zuben Eschamali,2.62
-Zubenelakrab,3.91
-Zubenelhakrabi,3.91
 Zuben Elakrab,3.91
-Zubenelakribi,4.93
 Zuben Elakribi,4.93
 Vishakha,4.54
-Zubenhakrabi,5.2
 Zuben Hakrabi,5.2
 Brachium,3.21
 Praecipua,3.83
@@ -447,20 +395,15 @@ Alvashak,3.14
 Al Fahd,3.14
 Alsciaukat,4.25
 Mabsuthat,4.25
-Mabsuthat,4.258
 Maculosa,3.82
 Maculata,3.82
 Vega,0.03
-Abhijit,0.03
 Sheliak,3.42
-Sulaphat,3.25
 Sulafat,3.25
 Aladfar,4.398
-Alathfar,5.12
 Al Athfar,5.12
 Polaris Australis,5.42
 Rasalhague,2.07
-Celbalrai,2.75
 Cebalrai,2.75
 Kelb Alrai,2.75
 Al Durajah,3.75
@@ -474,16 +417,10 @@ Marfik,3.9
 Sinistra,3.34
 Barnard's star,9.511
 Betelgeuse,0.42
-Beteigeuse,0.42
-Ardra,0.42
 Bellatrix,1.64
-Durga,1.64
 Mintaka,2.41
-Kumara,2.41
 Alnilam,1.69
-Ganesha,1.69
 Alnitak,1.79
-Iyappa,1.79
 Ensis,3.35
 Trapezium,5.13
 Hatsya,2.77
@@ -491,7 +428,6 @@ Nair al Saif,2.77
 Saiph,2.06
 Meissa,3.66
 Heka,3.66
-Mrgashirsha,3.66
 Mrigashirsha,3.66
 Tabit,3.19
 Tabit,3.68
@@ -502,10 +438,8 @@ Peacock,1.918
 Ankaa,2.37
 Wurren,4.014
 Markab,2.48
-Purvabhadra,2.48
 Scheat,2.42
 Algenib,2.84
-Uttarabhadra,2.84
 Enif,2.39
 Homam,3.41
 Matar,2.95
@@ -518,7 +452,6 @@ Salm,4.58
 Alkarab,4.4
 Helvetios,5.46
 Mirfak,1.79
-Mirphak,1.79
 Algol,2.12
 Miram,3.79
 Misam,3.81
@@ -533,8 +466,6 @@ Fomalhaut,1.16
 Tien Kang,4.29
 Aboras,4.208
 Alrischa,3.82
-Alrescha,3.82
-Al Rescha,3.82
 Fum Alsamakah,4.52
 Samakah,4.52
 Simmah,3.7
@@ -552,12 +483,9 @@ Kaimana,3.17
 Azmidiske,3.3
 Ahadi,2.7
 Turais,2.81
-Tureis,2.81
 Al Rihla,2.93
-Rehla,2.93
 Anazitisi,2.93
 Antares,0.91
-Jyeshtha,0.91
 Graffias,2.62
 Akrab,2.62
 Acrab,2.62
@@ -584,11 +512,9 @@ Fuyue,3.21
 Pipirima,3.542
 Unukalhai,2.63
 Cor Serpentis,2.63
-Chow,3.67
 Zhou,3.67
 Ainalhai,3.84
 Qin,3.79
-Chin,3.79
 Nulla Pambu,3.693
 Tang,3.25
 Alya,4.62
@@ -610,27 +536,20 @@ Sephdar,3.11
 Ira Furoris,3.11
 Kaus Borealis,2.81
 Polis,3.85
-Ainalrami,4.845
 Ain al Rami,4.845
 Manubrium,3.77
 Albaldah,2.88
 Nunki,2.067
-Uttarashadha,2.067
 Hecatebolus,3.31
 Nanto,3.14
 Terebellium,4.7
 Facies,6.17
 Spiculum,4.6
 Aldebaran,0.86
-Elnath,1.65
 El Nath,1.65
-Alnath,1.65
 Prima Hyadum,3.65
-Hyadum I,3.65
 Secunda Hyadum,3.76
-Hyadum II,3.76
 Al Hecka,3.03
-Tianguan,3.03
 Alcyone,2.87
 Krttika,2.87
 Phaeo,3.84
@@ -642,7 +561,6 @@ Furibundus,3.883
 Ushakaron,3.75
 Atirsagne,3.6
 Celaeno,5.46
-Celeano,5.46
 Electra,3.7
 Taygeta,4.3
 Maia,3.87
@@ -655,25 +573,16 @@ Pleione,5.09
 Atria,1.92
 Ras Mutallah,3.42
 Metallah,3.42
-Mothallah,3.42
 Dubhe,1.79
-Kratu,1.79
 Merak,2.37
-Pulaha,2.37
 Phecda,2.44
-Pulastya,2.44
 Megrez,3.32
-Atri,3.32
 Alioth,1.77
-Angiras,1.77
 Mizar,2.27
-Miz0,2.27
-Vasishtha,2.27
 Alkaid,1.86
 Benetnash,1.86
 Marichi,1.86
 Al Haud,3.18
-Talitha,3.14
 Talitha Borealis,3.14
 Talitha Australis,3.55
 Alkaphrah,3.55
@@ -683,11 +592,8 @@ Alula Borealis,3.49
 Alula Australis,3.79
 Muscida,3.42
 El Kophrah,3.72
-Taiyangshou,3.72
 Chalawan,5.04
 Alcor,4.01
-Alc0,4.01
-Arundhati,4.01
 Saidak,4.01
 Intercrus,5.393
 Kochab,2.08
@@ -695,8 +601,6 @@ Pherkad,3.002
 Yildun,4.336
 Urodelus,4.212
 Alifa Al Farkadain,4.274
-Farkadain,4.274
-Pharkadain,4.274
 Anwar al Farkadain,4.95
 Pherkad Minor,5.015
 Suhail al Muhlif,1.83
@@ -705,7 +609,6 @@ Alsephina,1.95
 Koo She,1.95
 Markeb,2.473
 Alsuhail,2.21
-Suhail,2.21
 Peregrini,2.69
 Alherem,2.69
 Xestus,3.63
@@ -724,19 +627,6 @@ Syrma,4.08
 Kang,4.21
 Khambalia,4.52
 Rijl al Awwa,3.88
-Ril Alauva,3.88
 Messier 49,12.17
 Anser,4.45
-Gal.Pole,0.0
-Gal.Pole IAU1958,0.0
-Gal.Plane Pole,0.0
-Gal.Equ,0.0
-Infrared Dragon,0.0
-AA11_page_B73,0.0
-GCRS00,0.0
-Zero2000,0.0
-ZerL2000,0.0
-Sun Pole,0.0
-Test,0.0
-NGC 4194,0.0
 Gliese 710,9.656

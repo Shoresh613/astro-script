@@ -9,6 +9,7 @@ from geopy.geocoders import Nominatim
 from tabulate import tabulate
 import save_event
 from version import __version__
+import csv
 
 
 swe.set_ephe_path('./ephe/')
@@ -115,6 +116,30 @@ fall = {
 ############### Functions ###############
 
 # Function to assess the strength of planets based on sign placement
+def calculate_aspect_score(aspect, magnitude):
+    if aspect in MAJOR_ASPECTS:
+        base_score = MAJOR_ASPECTS[aspect]['Score']
+    elif aspect in MINOR_ASPECTS:
+        base_score = MINOR_ASPECTS[aspect]['Score']
+    else:
+        return None  # Aspect not found
+
+    # Adjust score based on magnitude
+    adjustment_factor = 1 + (10 - float(magnitude)) / 10
+    adjusted_score = base_score * adjustment_factor
+
+    # Normalize to 0-100 scale
+    final_score = min(max(0, adjusted_score), 100)
+
+    return final_score
+
+# Example usage:
+# aspect_name = 'Trine'
+# star_magnitude = 2.06
+# score = calculate_aspect_score(aspect_name, star_magnitude)
+# print(f"Score for {aspect_name} with magnitude {star_magnitude}: {score}")
+
+
 def assess_planet_strength(planet_signs):
     strength_status = {}
     for planet, sign in planet_signs.items():
@@ -436,7 +461,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
     jd = swe.julday(date.year, date.month, date.day, date.hour)  # Assumes date includes time information
     aspects = []
 
-    for star_name in fixed_stars:
+    for star_name in fixed_stars.keys():
         try:
             star_long = get_fixed_star_position(star_name, jd)
             star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
@@ -455,9 +480,9 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
 
 def read_fixed_stars(all_stars=False):
     """
-    Read and return a list of fixed star names from a predefined file. This function can select
-    between a comprehensive list of all fixed stars or a curated list of those known for their
-    astrological significance based on the input parameter.
+    Read and return a dictionary of fixed star names and their magnitudes from a predefined CSV file. 
+    This function can select between a comprehensive list of all fixed stars or a curated list of 
+    those known for their astrological significance based on the input parameter.
 
     Parameters:
     - all_stars (bool): Determines which list of fixed stars to read:
@@ -465,17 +490,18 @@ def read_fixed_stars(all_stars=False):
                         if False, reads a list of astrologically significant stars.
 
     Returns:
-    - list: A list containing the names of fixed stars.
+    - dict: A dictionary where keys are fixed star names and values are their magnitudes.
 
     Raises:
     - FileNotFoundError: If the specified file cannot be found.
     - IOError: If there is an issue reading from the file.
     """
-    filename = './ephe/fixed_stars_all.txt' if all_stars else './ephe/astrologically_known_fixed_stars.txt'
+    filename = './ephe/fixed_stars_all.csv' if all_stars else './ephe/astrologically_known_fixed_stars.csv'
     
     try:
-        with open(filename, 'r') as file:
-            fixed_stars = file.read().splitlines()
+        with open(filename, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            fixed_stars = {row['Name']: row['Magnitude'] for row in reader}
     except FileNotFoundError:
         raise FileNotFoundError(f"The file '{filename}' was not found.")
     except IOError as e:
@@ -882,7 +908,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     return to_return
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, all_stars=False, output="text"):
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text"):
     """
     Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
@@ -947,10 +973,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             aspect_type_counts[aspect_name] = 1
         if aspect_name in HARD_ASPECTS:
             hard_count += 1
-            hard_count_score += aspect_score
+            hard_count_score +=  calculate_aspect_score(aspect_name, stars[star_name])
         elif aspect_name in SOFT_ASPECTS:
             soft_count += 1
-            soft_count_score += aspect_score
+            # soft_count_score += aspect_score så här var det innan magnituden lades till
+            soft_count_score += calculate_aspect_score(aspect_name, stars[star_name])
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
@@ -970,8 +997,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
-    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n' 
     to_return += "\n" + table + '\n' + aspect_count_text
+
+    # Update scoring based on the magnitude and the new function for scoring.
 
     #Print counts of each aspect type
     if output == 'text':
@@ -1272,7 +1301,7 @@ def main(gui_arguments=None):
     if not hide_planetary_aspects:
         to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type)
     if not hide_fixed_star_aspects:
-        to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, all_stars, output_type)
+        to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
