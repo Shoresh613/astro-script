@@ -1277,13 +1277,16 @@ def main(gui_arguments=None):
     if args["Hide Fixed Star Aspects"]:
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
-    utc_datetime = convert_to_utc(local_datetime, local_timezone)
-
     if args["Composite"]:
         utc_datetime, longitude, latitude = get_composite_data(args["Composite"])
-        local_datetime = utc_datetime
+        utc_datetime = local_datetime
         place = "Composite chart"
         local_timezone = pytz.utc
+    if not args["Composite"]:
+        if place == "Composite chart":
+            utc_datetime = local_datetime
+        else:
+            utc_datetime = convert_to_utc(local_datetime, local_timezone)
 
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
@@ -1308,8 +1311,12 @@ def main(gui_arguments=None):
             print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
         else:
             print(f"Latitude: {latitude}, Longitude: {longitude}")
-        if args["Composite"]:
+        
+        if place == "Composite chart" and not args["Composite"]:
+                print(f"\nComposite chart.")
+        elif args["Composite"]:
             print(f"\nComposite chart of: {args['Composite']}")
+
         print(f"\nLocal Time: {local_datetime} {local_timezone}")
         print(f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
