@@ -1282,10 +1282,9 @@ def main(gui_arguments=None):
 
     if args["Composite"]:
         utc_datetime, longitude, latitude = get_composite_data(args["Composite"])
-        utc_datetime = local_datetime
         place = "Composite chart"
         local_timezone = pytz.utc
-    if not args["Composite"]:
+    else:
         if place == "Composite chart":
             utc_datetime = local_datetime
         else:
