@@ -133,12 +133,57 @@ def calculate_aspect_score(aspect, magnitude):
 
     return final_score
 
-# Example usage:
-# aspect_name = 'Trine'
-# star_magnitude = 2.06
-# score = calculate_aspect_score(aspect_name, star_magnitude)
-# print(f"Score for {aspect_name} with magnitude {star_magnitude}: {score}")
+def get_composite_data(names):
+    if not os.path.exists(saved_events_file):
+        print(f"No file named {saved_events_file} found.")
+        return False
+    try:
+        with open(saved_events_file, 'r') as file:
+            data_dict = json.load(file)
+    except json.JSONDecodeError:
+        print(f"Error reading JSON data from {saved_events_file}.")
+        return False
 
+    datetimes = []
+    longitudes = []
+    latitudes = []
+    
+    # Collect the data for each name in the list
+    names = names.split(',')    
+    for name in names:
+        name = name.strip()
+        if name in data_dict:
+            datetime_str = data_dict[name]['datetime']
+            timezone_str = data_dict[name]['timezone']
+            timezone = pytz.timezone(timezone_str)
+            dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
+            dt_with_tz = timezone.localize(dt)
+            datetimes.append(dt_with_tz)
+            longitudes.append(data_dict[name]['longitude'])
+            latitudes.append(data_dict[name]['latitude'])
+    
+    # Calculate the average datetime
+    if datetimes:
+        # Convert all datetimes to UTC for averaging
+        total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
+        avg_seconds = total_seconds / len(datetimes)
+        avg_datetime_utc = datetime(1970, 1, 1, tzinfo=pytz.utc) + timedelta(seconds=avg_seconds)
+        # avg_datetime_str = avg_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
+    else:
+        avg_datetime_str = 'No datetimes to average'
+    
+    # Calculate the average longitude and latitude
+    if longitudes:
+        avg_longitude = sum(longitudes) / len(longitudes)
+    else:
+        avg_longitude = 'No longitudes to average'
+    
+    if latitudes:
+        avg_latitude = sum(latitudes) / len(latitudes)
+    else:
+        avg_latitude = 'No latitudes to average'
+    
+    return avg_datetime_utc, avg_longitude, avg_latitude
 
 def assess_planet_strength(planet_signs):
     strength_status = {}
@@ -1047,7 +1092,7 @@ def load_event(filename, name):
         print(f"No entry found for {name}.")
         return False
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, composite, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects):
     arguments = {
@@ -1057,6 +1102,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, place, im
         "Latitude": latitude,
         "Longitude": longitude,
         "Timezone": timezone,
+        "Composite": composite,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
@@ -1089,6 +1135,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828.', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96.', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm").', required=False)
+    parser.add_argument('--composite', help='Create a composite chart out of many stored events (e.g. "John, Jane").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates.', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn.', required=False)
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
@@ -1112,6 +1159,7 @@ If no record is found, default values will be used.''')
     "Latitude": args.latitude,
     "Longitude": args.longitude,
     "Timezone": args.timezone,
+    "Composite": args.composite,
     "Place": args.place,
     "Imprecise Aspects": args.imprecise_aspects,
     "Minor Aspects": args.minor_aspects,
@@ -1169,6 +1217,7 @@ def main(gui_arguments=None):
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
     def_long = 11.9624  # Default longitude
+    def_composite = False  # Default composite chart
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
     def_orb = 1  # Default orb size
@@ -1229,6 +1278,10 @@ def main(gui_arguments=None):
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
     utc_datetime = convert_to_utc(local_datetime, local_timezone)
+
+    if args["Composite"]:
+        utc_datetime, longitude, latitude = get_composite_data(args["Composite"])
+
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
@@ -1252,6 +1305,8 @@ def main(gui_arguments=None):
             print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
         else:
             print(f"Latitude: {latitude}, Longitude: {longitude}")
+        if args["Composite"]:
+            print(f"\nComposite chart of: {args['Composite']}")
         print(f"\nLocal Time: {local_datetime} {local_timezone}")
         print(f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
@@ -1264,6 +1319,9 @@ def main(gui_arguments=None):
             to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
         else:
             to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
+        if args["Composite"]:
+            to_return += f"\nComposite chart of: {args['Composite']}"
+
         to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
         if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
         else: to_return += f", UTC Time: {utc_datetime} UTC"
