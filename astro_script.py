@@ -931,7 +931,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt="simple")
-    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    if hard_count+soft_count > 0:
+        aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    else:
+        aspect_count_text = "\nNo aspects found.\n"
     to_return += "\n" + table + aspect_count_text
 
     # Print counts of each aspect type
