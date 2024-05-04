@@ -54,7 +54,7 @@ OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "J
           "Ascendant": 360, "Midheaven": 360}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
-FILENAME = 'saved_events.json'  # Run save_event.py first to create this file and update with your preferred data
+FILENAME = 'saved_events.json' 
 HOUSE_SYSTEMS = {
     'Placidus': 'P',
     'Koch': 'K',
@@ -1281,6 +1281,9 @@ def main(gui_arguments=None):
 
     if args["Composite"]:
         utc_datetime, longitude, latitude = get_composite_data(args["Composite"])
+        local_datetime = utc_datetime
+        place = "Composite chart"
+        local_timezone = pytz.utc
 
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
