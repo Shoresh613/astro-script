@@ -26,5 +26,17 @@
     "M\u00f6lndals Sjukhus": {
         "latitude": 57.6614548,
         "longitude": 12.0136632
+    },
+    "Halmstad": {
+        "latitude": 56.6739826,
+        "longitude": 12.8574827
+    },
+    "K\u00f6ping": {
+        "latitude": 59.5137434,
+        "longitude": 15.9970475
+    },
+    "Kungsbacka": {
+        "latitude": 57.466667,
+        "longitude": 12.166667
     }
 }

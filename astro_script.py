@@ -133,7 +133,7 @@ def calculate_aspect_score(aspect, magnitude):
 
     return final_score
 
-def get_composite_data(names):
+def get_davison_data(names):
     if not os.path.exists(saved_events_file):
         print(f"No file named {saved_events_file} found.")
         return False
@@ -619,7 +619,7 @@ def coord_in_minutes(longitude):
     minutes = int((longitude - degrees) * 60)  # Extract whole minutes
     seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
 
-    return f"{degrees}°{minutes}'{seconds}''"  
+    return f"{degrees}°{minutes}'{seconds}\""  
 
 def calculate_aspects(planet_positions, orb, aspect_types):
     """
@@ -1095,7 +1095,7 @@ def load_event(filename, name):
         print(f"No entry found for {name}.")
         return False
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, composite, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects):
     arguments = {
@@ -1105,7 +1105,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, composite
         "Latitude": latitude,
         "Longitude": longitude,
         "Timezone": timezone,
-        "Composite": composite,
+        "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
@@ -1138,7 +1138,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828.', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96.', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm").', required=False)
-    parser.add_argument('--composite', help='Create a composite chart out of many stored events (e.g. "John, Jane").', required=False)
+    parser.add_argument('--davison', help='Create a Davison chart out of many stored events (e.g. "John, Jane").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates.', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn.', required=False)
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
@@ -1162,7 +1162,7 @@ If no record is found, default values will be used.''')
     "Latitude": args.latitude,
     "Longitude": args.longitude,
     "Timezone": args.timezone,
-    "Composite": args.composite,
+    "Davison": args.davison,
     "Place": args.place,
     "Imprecise Aspects": args.imprecise_aspects,
     "Minor Aspects": args.minor_aspects,
@@ -1220,7 +1220,7 @@ def main(gui_arguments=None):
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
     def_long = 11.9624  # Default longitude
-    def_composite = False  # Default composite chart
+    def_davison = False  # Default not a Davison relationship chart
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
     def_orb = 1  # Default orb size
@@ -1280,12 +1280,13 @@ def main(gui_arguments=None):
     if args["Hide Fixed Star Aspects"]:
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
-    if args["Composite"]:
-        utc_datetime, longitude, latitude = get_composite_data(args["Composite"])
-        place = "Composite chart"
+    if args["Davison"]:
+        utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
+        place = "Davison chart"
         local_timezone = pytz.utc
+        local_datetime = utc_datetime
     else:
-        if place == "Composite chart":
+        if place == "Davison chart":
             utc_datetime = local_datetime
         else:
             utc_datetime = convert_to_utc(local_datetime, local_timezone)
@@ -1314,12 +1315,13 @@ def main(gui_arguments=None):
         else:
             print(f"Latitude: {latitude}, Longitude: {longitude}")
         
-        if place == "Composite chart" and not args["Composite"]:
-                print(f"\nComposite chart.")
-        elif args["Composite"]:
-            print(f"\nComposite chart of: {args['Composite']}")
+        if place == "Davison chart" and not args["Davison"]:
+                print(f"\nDavison chart.")
+        elif args["Davison"]:
+            print(f"\nDavison chart of: {args['Davison']}")
 
-        print(f"\nLocal Time: {local_datetime} {local_timezone}")
+        if not args['Davison'] or place != "Davison chart":
+            print(f"\nLocal Time: {local_datetime} {local_timezone}")
         print(f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
     else:
         to_return = f"AstroScript v.{__version__} Chart\n--------------------------"
@@ -1331,8 +1333,8 @@ def main(gui_arguments=None):
             to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
         else:
             to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
-        if args["Composite"]:
-            to_return += f"\nComposite chart of: {args['Composite']}"
+        if args["Davison"]:
+            to_return += f"\nDavison chart of: {args['Davison']}"
 
         to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
         if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
