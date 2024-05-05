@@ -38,5 +38,13 @@
     "Kungsbacka": {
         "latitude": 57.466667,
         "longitude": 12.166667
+    },
+    "Karlstad": {
+        "latitude": 59.3809146,
+        "longitude": 13.5027631
+    },
+    "S\u00f6dra \u00c4lvsborgs Sjukhus, Bor\u00e5s": {
+        "latitude": 57.72606815,
+        "longitude": 12.962750285104228
     }
 }

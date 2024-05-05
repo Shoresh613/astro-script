@@ -836,7 +836,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     
     for house, count in sorted_planet_house_counts:
         if count > 0:
-            house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            if output == 'text':
+                house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            else:
+                house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
     to_return += "\n" + house_count_string
     if output == 'text':
@@ -1078,7 +1081,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     for house, count in sorted_star_house_counts:
         if count > 0:
-            house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            if output == 'text':
+                house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            else:
+                house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2]+"\n" # Remove the last comma and space
     to_return += "\n" + house_count_string
     if output == 'text':
