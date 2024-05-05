@@ -10,7 +10,7 @@ from tabulate import tabulate
 import save_event
 from version import __version__
 import csv
-
+from colorama import init, Fore, Style
 
 swe.set_ephe_path('./ephe/')
 saved_locations_file = 'saved_locations.json'  # File to save locations to
@@ -761,6 +761,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     sign_counts = {sign: {'count': 0, 'planets':[]} for sign in ZODIAC_ELEMENTS.keys()}
     modality_counts = {modality: {'count': 0, 'planets':[]} for modality in ZODIAC_MODALITIES.keys()}
     element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
+    planet_house_counts = {house: 0 for house in range(1, 13)}
 
     zodiac_table_data = []
 
@@ -789,6 +790,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if not notime:  # assuming that we have the house positions if not notime
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             planet_positions[planet] = house_num
+            planet_house_counts[house_num] += 1
             strength_check = assess_planet_strength(planet_signs)
             elevation_check = is_planet_elevated(planet_positions)
 
@@ -827,8 +829,20 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     sign_count_table_data = list()
     element_count_table_data = list()
     modality_count_table_data = list()
+    house_count_string = '\nHouse count  '
 
-    # Print zodiac sign and element counts
+    ## House counts
+    sorted_planet_house_counts = sorted(planet_house_counts.items(), key=lambda item: item[1], reverse=True)
+    
+    for house, count in sorted_planet_house_counts:
+        if count > 0:
+            house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+    house_count_string = house_count_string[:-2] # Remove the last comma and space
+    to_return += "\n" + house_count_string
+    if output == 'text':
+        print(house_count_string)
+
+    # Print zodiac sign, element and modality counts
     if output == 'text':
         print("\n")
     for sign, data in sign_counts.items():
@@ -845,14 +859,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if count > 0:
             row = [element, count]
             element_count_table_data.append(row)
+
     table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple", floatfmt=".2f")
     to_return += "\n\n" + table
     if output == 'text':
         print(table + "\n")
 
-    # print("\nModality Counts\n-------------------")
     for modality, info in modality_counts.items():
-        # print(f"{modality:<8}: {info['count']} | ({', '.join(info['planets'])})")
         row = [modality, info['count'], ', '.join(info['planets'])]
         modality_count_table_data.append(row)
     table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt="simple")
@@ -1015,6 +1028,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     hard_count_score = 0
     soft_count_score = 0
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
+    star_house_counts = {house: 0 for house in range(1, 13)}
+
 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house, aspect_score, aspect_comment = aspect
@@ -1028,6 +1043,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
         if house_positions and not notime:
             row.append(house)
+            star_house_counts[house] += 1
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}°")
         star_aspects_table_data.append(row)
@@ -1056,7 +1072,18 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output == 'text':
         print(table + "\n")
 
-    # Convert dictionary to a list of tuples
+    ## House counts
+    house_count_string = ''
+    sorted_star_house_counts = sorted(star_house_counts.items(), key=lambda item: item[1], reverse=True)
+
+    for house, count in sorted_star_house_counts:
+        if count > 0:
+            house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+    house_count_string = house_count_string[:-2]+"\n" # Remove the last comma and space
+    to_return += "\n" + house_count_string
+    if output == 'text':
+        print(house_count_string)
+
     aspect_data = list(aspect_type_counts.items())
     aspect_data.sort(key=lambda x: x[1], reverse=True)
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
@@ -1321,6 +1348,9 @@ def main(gui_arguments=None):
         save_event.update_json_file(saved_events_file,new_data)
 
     #################### Main Script ####################    
+    # Initialize Colorama
+    init()
+
     if output_type == "text":
         print(f"AstroScript v.{__version__} Chart\n--------------------------")
         if exists or name:

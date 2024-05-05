@@ -2,3 +2,4 @@ pyswisseph
 pytz
 geopy
 tabulate
+colorama
