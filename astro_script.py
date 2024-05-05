@@ -508,8 +508,25 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
 
     for star_name in fixed_stars.keys():
         try:
-            star_long = get_fixed_star_position(star_name, jd)
-            star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
+            star_long = get_fixed_star_position(star_name, jd) % 360
+            # star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
+
+            # Assign star to house
+            house_num = 1  # Begin as house 1 in case nothing else matches
+            # Check for each house from 1 to 11 (12 handled separately)
+            for i, cusp in enumerate(houses):
+                next_cusp = houses[(i + 1) % 12]
+                
+                # If at last house and next cusp is less than the current because of wrap-around
+                if next_cusp < cusp:
+                    next_cusp += 360
+
+                if cusp <= star_long < next_cusp:
+                    house_num = i + 1
+                    break
+                elif i == 11 and (star_long >= cusp or star_long < houses[0]):
+                    house_num = 12  # Assign to house 12 if nothing else matches
+                    break
 
             for planet, data in planet_positions.items():
                 planet_long = data['longitude']
@@ -517,7 +534,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
                     aspect_angle, aspect_score, aspect_comment = aspect_details.values()
                     valid_aspect, angle_off = check_aspect(planet_long, star_long, aspect_angle, orb)
                     if valid_aspect:
-                        aspects.append((planet, star_name, aspect_name, angle_off, star_house, aspect_score, aspect_comment))
+                        aspects.append((planet, star_name, aspect_name, angle_off, house_num, aspect_score, aspect_comment))
         except ValueError as e:
             print(f"Error processing star {star_name}: {e}")
 
