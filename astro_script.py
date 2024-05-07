@@ -115,7 +115,7 @@ fall = {
 
 ############### Functions ###############
 
-# Function to assess the strength of planets based on sign placement
+# Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
 def calculate_aspect_score(aspect, magnitude):
     if aspect in MAJOR_ASPECTS:
         base_score = MAJOR_ASPECTS[aspect]['Score']
@@ -203,7 +203,15 @@ def assess_planet_strength(planet_signs):
 def is_planet_elevated(planet_positions):
     elevated_status = {}
     for planet, house in planet_positions.items():
-        elevated_status[planet] = 'Elevated' if house == 10 else ''
+        if planet not in ['Ascendant', 'Midheaven']:
+            if house == 10:
+                elevated_status[planet] = 'Angular, Elevated'
+            elif house in [1, 4, 7]:
+                elevated_status[planet] = 'Angular'
+            else:
+                elevated_status[planet] = ''
+        else:
+            elevated_status[planet] = ''
     return elevated_status
 
 def convert_to_utc(local_datetime, local_timezone):
