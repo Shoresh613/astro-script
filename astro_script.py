@@ -1498,8 +1498,8 @@ def main(gui_arguments=None):
     transits_local_datetime = datetime.now()  # Add argument for transits date, default to now if not specified
     # local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz # Also add argument for transits timezone if different
     transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
-    transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+    transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
 
     transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
     print(transit_aspects)
