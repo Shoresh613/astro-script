@@ -596,6 +596,7 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     """
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
+    PLANETS.pop('South Node', None)  # None is the default value if the key doesn't exist
 
     for planet, id in PLANETS.items():
         pos, ret = swe.calc_ut(jd, id)
@@ -708,6 +709,52 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                         'aspect_comment': aspect_comment
                     }
     return aspects_found
+
+def calculate_transits(natal_positions, transit_positions, orb, aspect_types):
+    """
+    Calculate astrological aspects between natal and transit celestial bodies based on their positions,
+    excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
+    are included in aspect_types if necessary.
+
+    Parameters:
+    - natal_positions: A dictionary with natal celestial bodies as keys, each mapped to 
+      a dictionary containing 'longitude' and 'retrograde' status.
+    - transit_positions: A dictionary with transit celestial bodies as keys, each mapped to 
+      a dictionary containing 'longitude' and 'retrograde' status.
+    - orb: The maximum orb (in degrees) to consider an aspect valid.
+    - aspect_types: A dictionary of aspect names and their exact angles, possibly 
+      including minor aspects.
+
+    Returns:
+    - A list of tuples, each representing an aspect found between a natal and a transit celestial body.
+      Each tuple includes the names of the bodies, the aspect name, and the exact angle.
+    """
+    # Pairs to exclude from the aspect calculations
+    excluded_pairs = [
+        # {"Ascendant", "Midheaven"}, {"South Node", "North Node"} # Nothing to exclude for transits
+    ]
+
+    aspects_found = []
+    natal_names = list(natal_positions.keys())
+    transit_names = list(transit_positions.keys())
+
+    for natal_planet in natal_names:
+        for transit_planet in transit_names:
+            # Skip calculation if the pair is in the exclusion list
+            if {natal_planet, transit_planet} in excluded_pairs:
+                continue
+
+            natal_long = natal_positions[natal_planet]['longitude']
+            transit_long = transit_positions[transit_planet]['longitude']
+            angle_diff = abs(natal_long - transit_long) % 360
+            angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
+
+            for aspect_name, aspect_angle in aspect_types.items():
+                if abs(angle_diff - aspect_angle) <= orb:
+                    aspects_found.append((natal_planet, transit_planet, aspect_name, angle_diff))
+
+    return aspects_found
+
 
 def moon_phase(date):
     """
@@ -1068,7 +1115,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             hard_count_score +=  calculate_aspect_score(aspect_name, stars[star_name])
         elif aspect_name in SOFT_ASPECTS:
             soft_count += 1
-            # soft_count_score += aspect_score så här var det innan magnituden lades till
+            # soft_count_score += aspect_score # it was like this before magnitude was taken into account (keeping if adding switch)
             soft_count_score += calculate_aspect_score(aspect_name, stars[star_name])
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
@@ -1278,7 +1325,6 @@ def main(gui_arguments=None):
     def_place_name = "Sahlgrenska"  # Default place
     def_lat = 57.6828  # Default latitude
     def_long = 11.9624  # Default longitude
-    def_davison = False  # Default not a Davison relationship chart
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
     def_orb = 1  # Default orb size
@@ -1447,6 +1493,16 @@ def main(gui_arguments=None):
             print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
         else:
             to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+
+    # Testing transits calculation
+    transits_local_datetime = datetime.now()  # Add argument for transits date, default to now if not specified
+    # local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz # Also add argument for transits timezone if different
+    transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
+    transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+
+    transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
+    print(transit_aspects)
     return to_return
 
 if __name__ == "__main__":
