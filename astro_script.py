@@ -1074,10 +1074,14 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             soft_count += 1
             soft_count_score += aspect_details['aspect_score']
 
-    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+    if output == 'text' or output == 'return_text':
+        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+    if output == 'html':
+        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="html", floatfmt=".2f")
+    
     to_return += "\n" + table
 
-    if output == 'text':
+    if output == 'text' or output == 'html':
         print(table)
 
     # Convert aspect type dictionary to a list of tuples
