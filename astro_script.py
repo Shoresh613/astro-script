@@ -729,30 +729,41 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types):
     - A list of tuples, each representing an aspect found between a natal and a transit celestial body.
       Each tuple includes the names of the bodies, the aspect name, and the exact angle.
     """
-    # Pairs to exclude from the aspect calculations
-    excluded_pairs = [
-        # {"Ascendant", "Midheaven"}, {"South Node", "North Node"} # Nothing to exclude for transits
-    ]
+    aspects_found = {}
+    natal_planet_names = list(natal_positions.keys())
+    transit_planet_names = list(transit_positions.keys())
 
-    aspects_found = []
-    natal_names = list(natal_positions.keys())
-    transit_names = list(transit_positions.keys())
-
-    for natal_planet in natal_names:
-        for transit_planet in transit_names:
-            # Skip calculation if the pair is in the exclusion list
-            if {natal_planet, transit_planet} in excluded_pairs:
-                continue
-
-            natal_long = natal_positions[natal_planet]['longitude']
-            transit_long = transit_positions[transit_planet]['longitude']
-            angle_diff = abs(natal_long - transit_long) % 360
+    for i, planet1 in enumerate(natal_planet_names):
+        for planet2 in transit_planet_names[i+1:]:
+            long1 = natal_positions[planet1]['longitude']
+            long2 = transit_positions[planet2]['longitude']
+            angle_diff = abs(long1 - long2) % 360
             angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
 
-            for aspect_name, aspect_angle in aspect_types.items():
+            for aspect_name, aspect_values in aspect_types.items():
+                aspect_angle, aspect_score, aspect_comment = aspect_values.values()
+                
                 if abs(angle_diff - aspect_angle) <= orb:
-                    aspects_found.append((natal_planet, transit_planet, aspect_name, angle_diff))
+                    # Check if the aspect is imprecise based on the movement per day of the planets involved
+                    is_imprecise = any(
+                        planet in OFF_BY and OFF_BY[planet] > angle_diff
+                        for planet in (planet1, planet2)
+                    )
+                    
+                    # Create a tuple for the planets involved in the aspect
+                    planets_pair = (planet1, planet2)
+                    
+                    # Update the aspects_found dictionary
+                    angle_diff = angle_diff - aspect_angle # Just show the difference
 
+                    aspects_found[planets_pair] = {
+                        'aspect_name': aspect_name,
+                        'angle_diff': angle_diff,
+                        'angle_diff_in_minutes': coord_in_minutes(angle_diff),
+                        'is_imprecise': is_imprecise,
+                        'aspect_score': aspect_score,
+                        'aspect_comment': aspect_comment
+                    }
     return aspects_found
 
 
@@ -1202,7 +1213,7 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects):
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits):
     arguments = {
         "Name": name,
         "Date": date,
@@ -1223,6 +1234,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Planetary Positions": hide_planetary_positions,
         "Hide Planetary Aspects": hide_planetary_aspects,
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
+        "Transits": transits,
         "Output": "return text"
     }
 
@@ -1238,7 +1250,7 @@ If no record is found, default values will be used.''')
 
     # Add arguments
     parser.add_argument('--name', help='Name to look up the record for.', required=False)
-    parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM:SS local time).', required=False)
+    parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM local time).', required=False)
     parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden".', required=False)
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828.', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96.', required=False)
@@ -1256,6 +1268,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
+    parser.add_argument('--transits', help="Date of the transit event (YYYY-MM-DD HH:MM local time, now for current time)", required=False)
     parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print to stdout, return text or return html.', required=False)
 
     args = parser.parse_args()
@@ -1280,6 +1293,7 @@ If no record is found, default values will be used.''')
     "Hide Planetary Positions": args.hide_planetary_positions,
     "Hide Planetary Aspects": args.hide_planetary_aspects,
     "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
+    "Transits": args.transits,
     "Output": args.output_type}
 
     return arguments
@@ -1290,7 +1304,7 @@ def main(gui_arguments=None):
     else:
         args = argparser()
 
-    local_datetime = datetime.now()  # Default date now, for specific date e.g. "2024-11-11 12:35:00"
+    local_datetime = datetime.now()  # Default date now
 
     # Check if name was provided as argument
     name = args["Name"] if args["Name"] else None
@@ -1339,6 +1353,7 @@ def main(gui_arguments=None):
     hide_planetary_positions = False  # Default hide planetary positions
     hide_planetary_aspects = False  # Default hide planetary aspects
     hide_fixed_star_aspects = False  # Default hide fixed star aspects
+    show_transits = False
 
     if args["Location"]: 
         place = args["Location"]
@@ -1394,6 +1409,21 @@ def main(gui_arguments=None):
             utc_datetime = local_datetime
         else:
             utc_datetime = convert_to_utc(local_datetime, local_timezone)
+
+    if args["Transits"]:
+        if args["Transits"] == "now":
+            transits_local_datetime = datetime.now() # Defaulting to now
+            # transits_local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz # Also add argument for transits timezone if different
+            transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
+            show_transits = True
+        else:
+            try:
+                transits_local_datetime = datetime.strptime(args["Transits"], "%Y-%m-%d %H:%M")
+            except ValueError:
+                print("Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nLeave blank for current time (UTC")
+                return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nLeave blank for current time (UTC)"
+            transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
+            show_transits = True 
 
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
@@ -1494,15 +1524,17 @@ def main(gui_arguments=None):
         else:
             to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
 
-    # Testing transits calculation
-    transits_local_datetime = datetime.now()  # Add argument for transits date, default to now if not specified
-    # local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz # Also add argument for transits timezone if different
-    transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
-    transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
+    if show_transits:           
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
 
-    transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
-    print(transit_aspects)
+        transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
+        if output_type == "text":
+            print(f"\nTransits for {transits_local_datetime}\n===================================")
+        else:
+            to_return += f"\nTransits for {transits_local_datetime}\n===================================" 
+        to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type) # Transit True
+
     return to_return
 
 if __name__ == "__main__":
