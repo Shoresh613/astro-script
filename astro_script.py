@@ -113,6 +113,9 @@ fall = {
     'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
 }
 
+bold = "\033[1m"
+nobold = "\033[0m"
+
 ############### Functions ###############
 
 # Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
@@ -965,11 +968,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return = ""
 
     if output=='text':
-        print(f"Planetary Aspects ({orb}° orb)", end="")
-        print(" and minor aspects" if minor_aspects else "", end="")
+        print(f"{bold}Planetary Aspects ({orb}° orb){nobold}", end="")
+        print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
-            print(f" with imprecise aspects set to {imprecise_aspects}", end="")
-        print(":\n" + "=" * 49)
+            print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
+        print(":\n")
     else:
         to_return = f"\nPlanetary Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1074,10 +1077,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     to_return = ""
 
     if output == 'text':
-        print(f"\nFixed Star Aspects ({orb}° orb)", end="")
-        print(" including Minor Aspects" if minor_aspects else "", end="")
+        print(f"\n{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
-            print(f" with Imprecise Aspects set to {imprecise_aspects}", end="")
+            print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
         print()
     else:
         to_return += f"Fixed Star Aspects ({orb}° orb)"
@@ -1087,9 +1090,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             to_return += f" with Imprecise Aspects set to {imprecise_aspects}\n\n"
 
     star_aspects_table_data = []
-
-    if output == 'text':
-        print("=" * (27)) 
 
     aspect_type_counts = {}
     hard_count = 0 
@@ -1530,7 +1530,7 @@ def main(gui_arguments=None):
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type == "text":
-            print(f"\n\033[1m Transits for {transits_local_datetime}\033[0m\n===================================")
+            print(f"\n{bold}Transits for {transits_local_datetime}{nobold}")
         else:
             to_return += f"\nTransits for {transits_local_datetime}\n===================================" 
         to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type) # Transit True
