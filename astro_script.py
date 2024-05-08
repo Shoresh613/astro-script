@@ -1529,7 +1529,7 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"AstroScript v.{__version__} Chart{br}--------------------------"
+    string_heading = f"{h1}AstroScript v.{__version__} Chart{h1_}{br}--------------------------"
     string_name = f"Name: {name}"
     string_place = f"Place: {place}"
     string_latitude_in_minutes = f"Latitude: {coord_in_minutes(latitude)}"
