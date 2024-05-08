@@ -115,6 +115,8 @@ fall = {
 
 bold = "\033[1m"
 nobold = "\033[0m"
+newline_end = "\n"  # Changed to <br> for HTML output
+newline_begin = "\n"  # Changed to <p> for HTML output
 
 ############### Functions ###############
 
@@ -1435,6 +1437,10 @@ def main(gui_arguments=None):
     show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
     output_type = args["Output"] if args["Output"] else def_output_type
+    if output_type == 'html':
+        print(f"<!DOCTYPE html>\n<html>\n<head>\n<title>AstroScript Chart</title>\n</head>\n<body>")
+        newline_end = "\n<br>"
+        newline_begin = "\n<p>"
 
     if args["Hide Planetary Positions"]:
         if args["Hide Planetary Positions"].lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
@@ -1510,7 +1516,7 @@ def main(gui_arguments=None):
     string_house_system_moon_nodes = f"House system: {house_system_name}, Moon nodes: {node}"
     string_house_cusps = f"House cusps: {house_cusps}"
     string_moon_phase_imprecise = f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
-    string_moon_phase = f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+    string_moon_phase = f"Moon Phase: {moon_phase_name}{newline_end}Moon Illumination: {illumination}"
     string_transits = f"Transits for"
 
     if output_type == "text" or output_type == "html":
