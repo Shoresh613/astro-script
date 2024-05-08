@@ -1075,7 +1075,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             soft_count_score += aspect_details['aspect_score']
 
     if output == 'text' or output == 'return_text':
-        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f") # Don't tabulate twice, set a variable
     if output == 'html':
         table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="html", floatfmt=".2f")
     
