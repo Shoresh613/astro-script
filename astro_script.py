@@ -1268,7 +1268,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
-    parser.add_argument('--transits', help="Date of the transit event (YYYY-MM-DD HH:MM local time, now for current time)", required=False)
+    parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time)", required=False)
     parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print to stdout, return text or return html.', required=False)
 
     args = parser.parse_args()
@@ -1530,7 +1530,7 @@ def main(gui_arguments=None):
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type == "text":
-            print(f"\nTransits for {transits_local_datetime}\n===================================")
+            print(f"\n\033[1m Transits for {transits_local_datetime}\033[0m\n===================================")
         else:
             to_return += f"\nTransits for {transits_local_datetime}\n===================================" 
         to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type) # Transit True
