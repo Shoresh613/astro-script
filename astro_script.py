@@ -930,10 +930,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     to_return = ''
     if output=='text' or 'return_text':
         table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
-    if output == 'text':
-        print(table)
     if output=='html':
-        table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+        table = tabulate(zodiac_table_data, headers=headers, tablefmt="html", floatfmt=".2f")
+    if output == 'text' or output =='html':
+        print(table)
     to_return += table
 
     sign_count_table_data = list()
@@ -952,7 +952,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
     to_return += "\n" + house_count_string
-    if output == 'text':
+    if output == 'text' or output == 'html':
         print(house_count_string)
 
     # Print zodiac sign, element and modality counts
@@ -1482,72 +1482,92 @@ def main(gui_arguments=None):
         save_event.update_json_file(saved_events_file,new_data)
 
     #################### Main Script ####################    
-    # Initialize Colorama
+    # Initialize Colorama, calculations for strings
     init()
+    house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
+    moon_phase_name1, illumination1 = moon_phase(utc_datetime)
+    moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
+    if notime:
+        illumination = f"{illumination1:.2f}-{illumination2:.2f}%"
+    else:
+        moon_phase_name, illumination = moon_phase(utc_datetime)
+        illumination = f"{illumination:.2f}%"
 
-    if output_type == "text":
-        print(f"\nAstroScript v.{__version__} Chart\n--------------------------")
+    string_heading = f"AstroScript v.{__version__} Chart\n--------------------------"
+    string_name = f"Name: {name}"
+    string_place = f"Place: {place}"
+    string_latitude_in_minutes = f"Latitude: {coord_in_minutes(latitude)}"
+    string_longitude_in_minutes = f"Longitude: {coord_in_minutes(longitude)}"
+    string_latitude = f"Latitude: {latitude}"
+    string_longitude = f"Longitude: {longitude}"
+    string_davison_noname = "Davison chart"
+    string_davison = f"Davison chart of: {args['Davison']}"
+    string_local_time = f"Local Time: {local_datetime} {local_timezone}"
+    string_UTC_Time_imprecise = f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
+    string_UTC_Time = f"UTC Time: {utc_datetime} UTC"
+    string_house_system_moon_nodes = f"House system: {house_system_name}, Moon nodes: {node}"
+    string_house_cusps = f"House cusps: {house_cusps}"
+    string_moon_phase_imprecise = f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
+    string_moon_phase = f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+    string_transits = f"Transits for"
+
+    if output_type == "text" or output_type == "html":
+        print(f"\n{string_heading}")
         if exists or name:
-            print(f"\nName: {name}")
+            print(f"\n{string_name}")
         if place:
-            print(f"Place: {place}")
+            print(f"{string_place}")
         if degree_in_minutes:
-            print(f"Latitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}")
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}")
         else:
-            print(f"Latitude: {latitude}, Longitude: {longitude}")
+            print(f"{string_latitude}, {string_longitude}")
         
         if place == "Davison chart" and not args["Davison"]:
-                print(f"\nDavison chart.")
+                print(f"\{string_davison_noname}")
         elif args["Davison"]:
-            print(f"\nDavison chart of: {args['Davison']}")
+            print(f"\n{string_davison}")
 
         if not args['Davison'] or place != "Davison chart":
-            print(f"\nLocal Time: {local_datetime} {local_timezone}")
-        print(f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)") if notime else print(f"UTC Time: {utc_datetime} UTC")
+            print(f"\n{string_local_time}")
+        print(f"\n{string_UTC_Time_imprecise}") if notime else print(f"{string_UTC_Time}")
     else:
-        to_return = f"AstroScript v.{__version__} Chart\n--------------------------"
+        to_return = f"{string_heading}"
         if exists or name:
-            to_return += f"\nName: {name}"
+            to_return += f"\n{string_name}"
         if place:
-            to_return += f", Place: {place}"
+            to_return += f", {string_place}"
         if degree_in_minutes:
-            to_return += f"\nLatitude: {coord_in_minutes(latitude)}, Longitude: {coord_in_minutes(longitude)}"
+            to_return += f"\n{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
-            to_return += f"\nLatitude: {latitude}, Longitude: {longitude}"
+            to_return += f"\n{string_latitude}, {string_longitude}"
+        if place == "Davison chart" and not args["Davison"]:
+            to_return += f"\n{string_davison_noname}"
         if args["Davison"]:
-            to_return += f"\nDavison chart of: {args['Davison']}"
+            to_return += f"\n{string_davison}"
 
-        to_return += f"\nLocal Time: {local_datetime} {local_timezone}"
-        if notime: to_return += f"\nUTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
-        else: to_return += f", UTC Time: {utc_datetime} UTC"
+        to_return += f"\n{string_local_time}"
+        if notime: to_return += f"\n{string_UTC_Time_imprecise}"
+        else: to_return += f", {string_UTC_Time}"
 
 
-    house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    if output_type == "text":
-        print(f"House system: {house_system_name}, Moon nodes: {node}\n")
-    else: to_return += f"\nHouse system: {house_system_name}, Moon nodes: {node}\n"
+    if output_type == "text or html":
+        print(f"{string_house_system_moon_nodes}\n")
+    else: to_return += f"\n{string_house_system_moon_nodes}\n"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
         MAJOR_ASPECTS.update(MINOR_ASPECTS)
 
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
-    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
     if show_house_cusps:
         if output_type == 'text':
-            print(f"\nHouse cusps: {house_cusps}\n")
+            print(f"\n{string_house_cusps}\n")
         else:
-            to_return += f"\nHouse cusps: {house_cusps}\n"
+            to_return += f"\{string_house_cusps}\n"
 
     aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-    if notime:
-        moon_phase_name1, illumination1 = moon_phase(utc_datetime)
-        moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
-        illumination = f"{illumination1:.2f}-{illumination2:.2f}%"
-    else:
-        moon_phase_name, illumination = moon_phase(utc_datetime)
-        illumination = f"{illumination:.2f}%"
 
     if not hide_planetary_positions:
         to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
@@ -1559,14 +1579,14 @@ def main(gui_arguments=None):
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             if (output_type == "text"):
-                print(f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}")
+                print(f"{string_moon_phase_imprecise}")
             else:
-                to_return += f"\n\nMoon Phase: {moon_phase_name1} to {moon_phase_name2}\nMoon Illumination: {illumination}"
+                to_return += f"\n\n{string_moon_phase_imprecise}"
     else:
         if output_type == "text":
-            print(f"Moon Phase: {moon_phase_name}\nMoon Illumination: {illumination}")
+            print(f"{string_moon_phase}")
         else:
-            to_return += f"\n\nMoon Phase: {moon_phase_name}\nMoon Illumination: {illumination}"
+            to_return += f"\n\n{string_moon_phase_imprecise}"
 
     if show_transits:           
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
@@ -1574,9 +1594,9 @@ def main(gui_arguments=None):
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type == "text":
-            print(f"\n{bold}Transits for {transits_local_datetime}{nobold}")
+            print(f"\n{bold}{string_transits} {transits_local_datetime}{nobold}")
         else:
-            to_return += f"\nTransits for {transits_local_datetime}\n===================================" 
+            to_return += f"\n{string_transits} {transits_local_datetime}\n===================================" 
         to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
 
     return to_return
