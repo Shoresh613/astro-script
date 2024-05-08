@@ -582,6 +582,47 @@ def read_fixed_stars(all_stars=False):
     
     return fixed_stars
 
+def calculate_aspect_duration(planet_positions, planet1, planet2, degrees_to_travel):
+    """
+    Calculate the exact duration for which two planets are within a specified number of degrees of each other.
+    
+    Parameters:
+    - planet_positions (dict): Dictionary with each celestial body as keys, containing their
+      ecliptic longitude, zodiac sign, retrograde status, and speed.
+    - planet1 (str): The first planet involved in the transit.
+    - planet2 (str): The second planet involved in the transit.
+    - degrees_to_travel (float): The number of degrees representing the orb of the aspect.
+    
+    Returns:
+    - str: Duration of the aspect in days, hours, and minutes.
+    """
+    # Extract the speeds and consider retrograde status
+    speed1 = abs(planet_positions[planet1]['speed'])
+    speed2 = abs(planet_positions[planet2]['speed'])
+
+    # Determine relative speed based on their retrograde status and absolute speed
+    if planet_positions[planet1]['retrograde'] == planet_positions[planet2]['retrograde']:
+        relative_speed = abs(speed1 - speed2)
+    else:
+        relative_speed = speed1 + speed2
+
+    # Calculate the duration based on the relative speed
+    days = degrees_to_travel / relative_speed
+
+    # Return formatted duration
+    return f"{int(days)} days, {int((days % 1) * 24)} hours, {int(((days % 1) * 24 % 1) * 60)} minutes"
+
+# Example usage assuming planet_positions dictionary is populated accordingly
+example_planet_positions = {
+    'Mars': {'longitude': 120, 'zodiac_sign': 'Leo', 'retrograde': '', 'speed': 0.8},
+    'Venus': {'longitude': 125, 'zodiac_sign': 'Leo', 'retrograde': '', 'speed': 1.1}
+}
+
+# Calculate duration of a transit with a 3-degree separation
+# aspect_duration = calculate_aspect_duration(example_planet_positions, 'Mars', 'Venus', 3)
+# print(aspect_duration)  # Outputs the calculated duration
+
+
 def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
@@ -947,7 +988,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, notime=False, output="text"):
+def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, transits=False, notime=False, output="text"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
@@ -964,7 +1005,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     """
 
     planetary_aspects_table_data = []
-    headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
+    if transits:
+        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
+    else:
+        headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
     if output=='text':
@@ -1442,7 +1486,7 @@ def main(gui_arguments=None):
     init()
 
     if output_type == "text":
-        print(f"AstroScript v.{__version__} Chart\n--------------------------")
+        print(f"\nAstroScript v.{__version__} Chart\n--------------------------")
         if exists or name:
             print(f"\nName: {name}")
         if place:
@@ -1508,7 +1552,7 @@ def main(gui_arguments=None):
     if not hide_planetary_positions:
         to_return += "\n" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type)
+        to_return += "\n" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, False, notime, output_type) # False = these are not transits
     if not hide_fixed_star_aspects:
         to_return += "\n\n" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     
@@ -1533,7 +1577,7 @@ def main(gui_arguments=None):
             print(f"\n{bold}Transits for {transits_local_datetime}{nobold}")
         else:
             to_return += f"\nTransits for {transits_local_datetime}\n===================================" 
-        to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, notime, output_type) # Transit True
+        to_return += "\n" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
 
     return to_return
 
