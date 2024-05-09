@@ -1139,10 +1139,25 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output == 'html':
         bold = "<b>"
         nobold = "</b>"
+        br = "\n<br>"
+        p = "\n<p>"
+        h1 = "<h1>"
+        h2 = "<h2>"
+        h3 = "<h3>"
+        h1_= "</h1>"
+        h2_ = "</h2>"
+        h3_ = "</h3>"
     else:
         bold = "\033[1m"
         nobold = "\033[0m"
-
+        br = "\n"
+        p = "\n"
+        h1 = ""
+        h2 = ""
+        h3 = ""
+        h1_ = ""
+        h2_ = ""
+        h3_ = ""
     if output in ('text','html'):
         print(f"{p}{br}{h2}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
@@ -1532,11 +1547,9 @@ def main(gui_arguments=None):
         h1 = "<h1>"
         h2 = "<h2>"
         h3 = "<h3>"
-        h4 = "<h4>"
         h1_= "</h1>"
         h2_ = "</h2>"
         h3_ = "</h3>"
-        h4_ = "</h4>"
     else:
         bold = "\033[1m"
         nobold = "\033[0m"
@@ -1545,11 +1558,9 @@ def main(gui_arguments=None):
         h1 = ""
         h2 = ""
         h3 = ""
-        h4 = ""
         h1_ = ""
         h2_ = ""
         h3_ = ""
-        h4_ = ""
 
     if args["Hide Planetary Positions"]:
         if args["Hide Planetary Positions"].lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
