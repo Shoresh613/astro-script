@@ -946,7 +946,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     to_return = ''
     table = tabulate(zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
-    if output == 'text' or output =='html':
+    if output in ('text','html'):
         print(table)
     to_return += table
 
@@ -1137,7 +1137,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     """
     to_return = ""
 
-    if output == 'text':
+    if output in ('text','html'):
         print(f"\n{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
@@ -1656,7 +1656,7 @@ def main(gui_arguments=None):
         else: to_return += f", {string_UTC_Time}"
 
 
-    if output_type == "text or html":
+    if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}{br}")
     else: to_return += f"{br}{string_house_system_moon_nodes}{br}"
 
@@ -1665,7 +1665,7 @@ def main(gui_arguments=None):
         MAJOR_ASPECTS.update(MINOR_ASPECTS)
 
     if show_house_cusps:
-        if output_type == 'text':
+        if output_type in ('text','html'):
             print(f"{p}{string_house_cusps}{br}")
         else:
             to_return += f"\{string_house_cusps}{br}"
@@ -1682,12 +1682,12 @@ def main(gui_arguments=None):
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
-            if (output_type == "text"):
+            if (output_type in ("text", "html")):
                 print(f"{string_moon_phase_imprecise}")
             else:
                 to_return += f"{p}{string_moon_phase_imprecise}"
     else:
-        if output_type == "text":
+        if output_type in ("text", "html"):
             print(f"{string_moon_phase}")
         else:
             to_return += f"{p}{string_moon_phase_imprecise}"
@@ -1697,7 +1697,7 @@ def main(gui_arguments=None):
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
-        if output_type == "text":
+        if output_type in ("text",'html'):
             print(f"{p}{bold}{string_transits} {transits_local_datetime}{nobold}")
         else:
             to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
