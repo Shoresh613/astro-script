@@ -1139,6 +1139,9 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output == 'html':
         bold = "<b>"
         nobold = "</b>"
+    else:
+        bold = "\033[1m"
+        nobold = "\033[0m"
 
     if output in ('text','html'):
         print(f"{p}{br}{h2}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
@@ -1522,26 +1525,46 @@ def main(gui_arguments=None):
 
         </head>
         <body>''')
+        global br 
         br = "\n<br>"
+        global p 
         p = "\n<p>"
+        global h1 
         h1 = "<h1>"
+        global h2 
         h2 = "<h2>"
+        global h3 
         h3 = "<h3>"
+        global h4 
         h4 = "<h4>"
-        h1_ = "</h1>"
+        global h1_ 
+        h1_= "</h1>"
+        global h2_ 
         h2_ = "</h2>"
+        global h3_ 
         h3_ = "</h3>"
+        global h4_ 
         h4_ = "</h4>"
     else:
+        global br 
         br = "\n"
+        global p 
         p = "\n"  
+        global h1 
         h1 = ""
+        global h2 
         h2 = ""
+        global h3 
         h3 = ""
+        global h4 
         h4 = ""
+        global h1_ 
         h1_ = ""
+        global h2_ 
         h2_ = ""
+        global h3_ 
         h3_ = ""
+        global h4_ 
         h4_ = ""
 
     if args["Hide Planetary Positions"]:
@@ -1706,7 +1729,8 @@ def main(gui_arguments=None):
         else:
             to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
         to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
-
+    if output_type == "html":
+        print("</body>\n</html>")
     return to_return
 
 if __name__ == "__main__":
