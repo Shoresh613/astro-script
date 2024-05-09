@@ -1136,13 +1136,16 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     Outputs a formatted list of aspects to the console based on the provided parameters.
     """
     to_return = ""
+    if output == 'html':
+        bold = "<b>"
+        nobold = "</b>"
 
     if output in ('text','html'):
-        print(f"\n{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"\n{bold}{h2}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
-        print()
+        print({h2_})
     else:
         to_return += f"Fixed Star Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1599,7 +1602,8 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"{h1}AstroScript v.{__version__} Chart{h1_}{br}--------------------------"
+    string_heading = f"{h1}AstroScript v.{__version__} Chart{h1_}{br}"
+    string_planets_heading = f"Planetary Positions{br}"
     string_name = f"Name: {name}"
     string_place = f"Place: {place}"
     string_latitude_in_minutes = f"Latitude: {coord_in_minutes(latitude)}"
@@ -1657,7 +1661,7 @@ def main(gui_arguments=None):
 
 
     if output_type in ("text", "html"):
-        print(f"{string_house_system_moon_nodes}{br}")
+        print(f"{br}{string_house_system_moon_nodes}{br}")
     else: to_return += f"{br}{string_house_system_moon_nodes}{br}"
 
     if minor_aspects:
@@ -1672,7 +1676,7 @@ def main(gui_arguments=None):
 
     aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-
+    print(f"{h2}{string_planets_heading}{h2_}")
     if not hide_planetary_positions:
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
@@ -1683,12 +1687,12 @@ def main(gui_arguments=None):
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             if (output_type in ("text", "html")):
-                print(f"{string_moon_phase_imprecise}")
+                print(f"{p}{string_moon_phase_imprecise}")
             else:
                 to_return += f"{p}{string_moon_phase_imprecise}"
     else:
         if output_type in ("text", "html"):
-            print(f"{string_moon_phase}")
+            print(f"{p}{string_moon_phase}")
         else:
             to_return += f"{p}{string_moon_phase_imprecise}"
 
