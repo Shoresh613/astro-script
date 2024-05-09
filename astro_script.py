@@ -1452,7 +1452,62 @@ def main(gui_arguments=None):
     
     output_type = args["Output"] if args["Output"] else def_output_type
     if output_type == 'html':
-        print(f"<!DOCTYPE html>\n<html>\n<head>\n<title>AstroScript Chart</title>\n</head>\n<body>")
+        print('''
+<!DOCTYPE html>\n<html>\n<head>\n<title>AstroScript Chart</title>\n
+    <style>
+        /* CSS for an elegant and modern look */
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0px;
+            padding: 0;
+        }
+
+        h1, h2, h3 {
+            color: #35424a;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+
+        h1 {
+            font-size: 2.5em;
+        }
+        h2 {
+            font-size: 2.0em;
+        }
+        h3 {
+            font-size: 1.75em;
+        }
+
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 2px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            padding: 2px; 
+        }
+
+        th, td {
+            padding: 0px; 
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #35424a;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style></head>\n<body>''')
         br = "\n<br>"
         p = "\n<p>"
         h1 = "<h1>"
