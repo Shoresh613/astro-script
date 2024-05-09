@@ -939,11 +939,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_counts[modality]['planets'].append(planet)
         element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
+    if output == 'html':
+        table_format = 'html'
+    else:
+        table_format = 'simple'
+
     to_return = ''
-    if output=='text' or 'return_text':
-        table = tabulate(zodiac_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
-    if output=='html':
-        table = tabulate(zodiac_table_data, headers=headers, tablefmt="html", floatfmt=".2f")
+    table = tabulate(zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     if output == 'text' or output =='html':
         print(table)
     to_return += table
@@ -951,7 +953,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     sign_count_table_data = list()
     element_count_table_data = list()
     modality_count_table_data = list()
-    house_count_string = '\nHouse count  '
+    house_count_string = f'{p}House count  '
 
     ## House counts
     sorted_planet_house_counts = sorted(planet_house_counts.items(), key=lambda item: item[1], reverse=True)
@@ -964,39 +966,39 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
     to_return += "\n" + house_count_string
-    if output == 'text' or output == 'html':
+    if output in ('text', 'html'):
         print(house_count_string)
 
     # Print zodiac sign, element and modality counts
-    if output == 'text':
-        print("\n")
+    if output in ('text', 'html'):
+        print(f"{p}")
     for sign, data in sign_counts.items():
         if data['count'] > 0:
             row = [sign, data['count'], ', '.join(data['planets'])]
             sign_count_table_data.append(row)
 
-    table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt="simple", floatfmt=".2f")
+    table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
-    if output == 'text':
-        print(table + "\n")
+    if output in ('text', 'html'):
+        print(table + f"{br}")
 
     for element, count in element_counts.items():
         if count > 0:
             row = [element, count]
             element_count_table_data.append(row)
 
-    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt="simple", floatfmt=".2f")
+    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
-    if output == 'text':
-        print(table + "\n")
+    if output in ('text', 'html'):
+        print(table + f"{br}")
 
     for modality, info in modality_counts.items():
         row = [modality, info['count'], ', '.join(info['planets'])]
         modality_count_table_data.append(row)
-    table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt="simple")
+    table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt=table_format)
     to_return += "\n\n" + table
-    if output == 'text':
-        print(table + "\n")
+    if output in ('text', 'html'):
+        print(table + f"{br}")
 
     return to_return
 
@@ -1015,7 +1017,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     Directly prints formatted aspect information based on specified parameters.
     """
-
+    if output == 'html':
+        table_format = 'html'
+    else:
+        table_format = 'simple'
     planetary_aspects_table_data = []
     if transits:
         headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
@@ -1023,12 +1028,12 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
-    if output=='text':
+    if output=='text' or output == 'html':
         print(f"{bold}Planetary Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
-        print(":\n")
+        print(f"{br}")
     else:
         to_return = f"\nPlanetary Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1074,14 +1079,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
             soft_count += 1
             soft_count_score += aspect_details['aspect_score']
 
-    if output == 'text' or output == 'return_text':
-        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f") # Don't tabulate twice, set a variable
-    if output == 'html':
-        table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt="html", floatfmt=".2f")
-    
+    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")    
     to_return += "\n" + table
 
-    if output == 'text' or output == 'html':
+    if output in ('text', 'html'):
         print(table)
 
     # Convert aspect type dictionary to a list of tuples
@@ -1092,7 +1093,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
 
     headers = ["Aspect Type", "Count", "Meaning"]
-    table = tabulate(aspect_data, headers=headers, tablefmt="simple")
+    table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
     if hard_count+soft_count > 0:
         aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
     else:
@@ -1100,15 +1101,15 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return += "\n" + table + aspect_count_text
 
     # Print counts of each aspect type
-    if output == 'text':
-        print('\n'+table + '\n' + aspect_count_text)
+    if output in ('text','html'):
+        print(f'{br}'+table + f'{p}' + aspect_count_text)
 
-    if output == 'text':
+    if output in ('text', 'html'):
         if not house_positions:
-            print("* No time of day specified. Houses cannot be calculated. ")
+            print(f"{p}* No time of day specified. Houses cannot be calculated. ")
             print("  Aspects to the Ascendant and Midheaven are not available.")
             print("  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n")
-            print("\n  Please specify the time of birth for a complete chart.\n")
+            print(f"{p}  Please specify the time of birth for a complete chart.\n")
     else:
         if not house_positions:
             to_return += "\n* No time of day specified. Houses cannot be calculated. "
@@ -1196,10 +1197,15 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
 
-    table = tabulate(star_aspects_table_data, headers=headers, tablefmt="simple", floatfmt=".2f")
+    if output == 'html':
+        table_format = 'html'
+    else:
+        table_format = 'simple'
+
+    table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
-    if output == 'text':
-        print(table + "\n")
+    if output in ('text','html'):
+        print(table + f"{br}")
 
     ## House counts
     house_count_string = ''
@@ -1213,22 +1219,22 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2]+"\n" # Remove the last comma and space
     to_return += "\n" + house_count_string
-    if output == 'text':
+    if output in ('text', 'html'):
         print(house_count_string)
 
     aspect_data = list(aspect_type_counts.items())
     aspect_data.sort(key=lambda x: x[1], reverse=True)
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
-    table = tabulate(aspect_data, headers=headers, tablefmt="simple")
-    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n' 
+    table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
+    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
     to_return += "\n" + table + '\n' + aspect_count_text
 
     # Update scoring based on the magnitude and the new function for scoring.
 
     #Print counts of each aspect type
-    if output == 'text':
-        print(table + '\n' + aspect_count_text)
+    if output in ('text', 'html'):
+        print(table + f'{br}{p}' + aspect_count_text)
 
     return to_return
 
@@ -1329,7 +1335,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time)", required=False)
-    parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print to stdout, return text or return html.', required=False)
+    parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print text or html to stdout, or return text.', required=False)
 
     args = parser.parse_args()
 
@@ -1453,61 +1459,66 @@ def main(gui_arguments=None):
     output_type = args["Output"] if args["Output"] else def_output_type
     if output_type == 'html':
         print('''
-<!DOCTYPE html>\n<html>\n<head>\n<title>AstroScript Chart</title>\n
-    <style>
-        /* CSS for an elegant and modern look */
-        body {
-            font-family: Arial, sans-serif;
-            color: #333;
-            background-color: #f4f4f4;
-            margin: 0px;
-            padding: 0;
-        }
+<!DOCTYPE html>
+    <html>
+        <head>
+            <title>AstroScript Chart</title>\n
+            <style>
+                /* CSS for an elegant and modern look */
+                body {
+                    font-family: Arial, sans-serif;
+                    color: #333;
+                    background-color: #f4f4f4;
+                    margin: 0px;
+                    padding: 0;
+                }
 
-        h1, h2, h3 {
-            color: #35424a;
-            margin-bottom: 10px;
-            line-height: 1.3;
-        }
+                h1, h2, h3 {
+                    color: #35424a;
+                    margin-bottom: 10px;
+                    line-height: 1.3;
+                }
 
-        h1 {
-            font-size: 2.5em;
-        }
-        h2 {
-            font-size: 2.0em;
-        }
-        h3 {
-            font-size: 1.75em;
-        }
+                h1 {
+                    font-size: 2.5em;
+                }
+                h2 {
+                    font-size: 2.0em;
+                }
+                h3 {
+                    font-size: 1.75em;
+                }
 
-        p {
-            font-size: 1.2em;
-            line-height: 1.6;
-            margin-bottom: 2px;
-        }
+                p {
+                    font-size: 1.2em;
+                    line-height: 1.6;
+                    margin-bottom: 2px;
+                }
 
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            padding: 2px; 
-        }
+                table {
+                    width: auto; /* Changed from 100% to auto */
+                    margin-top: 20px;
+                    border-collapse: collapse;
+                }
 
-        th, td {
-            padding: 0px; 
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
+                th, td {
+                    padding: 8px 10px; /* Slightly increased padding for better readability */
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }
 
-        th {
-            background-color: #35424a;
-            color: white;
-        }
+                th {
+                    background-color: #35424a;
+                    color: white;
+                }
 
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-    </style></head>\n<body>''')
+                tr:hover {
+                    background-color: #f5f5f5;
+                }
+            </style>
+
+        </head>
+        <body>''')
         br = "\n<br>"
         p = "\n<p>"
         h1 = "<h1>"
