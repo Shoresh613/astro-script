@@ -114,11 +114,11 @@ fall = {
     'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
 }
 
+# Global formatting variables set in main depenting on output type
 bold = "\033[1m"
 nobold = "\033[0m"
-br = "\n"  # Changed to "\n<br>"" for HTML output
-p = "\n"  # Changed to <p> for HTML output
-
+br = "\n"
+p = "\n"
 h1 = ""
 h2 = ""
 h3 = ""
@@ -1525,46 +1525,30 @@ def main(gui_arguments=None):
 
         </head>
         <body>''')
-        global br 
+        bold = "<b>"
+        nobold = "</b>"
         br = "\n<br>"
-        global p 
         p = "\n<p>"
-        global h1 
         h1 = "<h1>"
-        global h2 
         h2 = "<h2>"
-        global h3 
         h3 = "<h3>"
-        global h4 
         h4 = "<h4>"
-        global h1_ 
         h1_= "</h1>"
-        global h2_ 
         h2_ = "</h2>"
-        global h3_ 
         h3_ = "</h3>"
-        global h4_ 
         h4_ = "</h4>"
     else:
-        global br 
+        bold = "\033[1m"
+        nobold = "\033[0m"
         br = "\n"
-        global p 
-        p = "\n"  
-        global h1 
+        p = "\n"
         h1 = ""
-        global h2 
         h2 = ""
-        global h3 
         h3 = ""
-        global h4 
         h4 = ""
-        global h1_ 
         h1_ = ""
-        global h2_ 
         h2_ = ""
-        global h3_ 
         h3_ = ""
-        global h4_ 
         h4_ = ""
 
     if args["Hide Planetary Positions"]:
