@@ -1141,7 +1141,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         nobold = "</b>"
 
     if output in ('text','html'):
-        print(f"\n{bold}{h2}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"{p}{br}{h2}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
