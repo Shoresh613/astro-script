@@ -1019,8 +1019,28 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     """
     if output == 'html':
         table_format = 'html'
+        bold = "<b>"
+        nobold = "</b>"
+        br = "\n<br>"
+        p = "\n<p>"
+        h1 = "<h1>"
+        h2 = "<h2>"
+        h3 = "<h3>"
+        h1_= "</h1>"
+        h2_ = "</h2>"
+        h3_ = "</h3>"
     else:
         table_format = 'simple'
+        bold = "\033[1m"
+        nobold = "\033[0m"
+        br = "\n"
+        p = "\n"
+        h1 = ""
+        h2 = ""
+        h3 = ""
+        h1_ = ""
+        h2_ = ""
+        h3_ = ""
     planetary_aspects_table_data = []
     if transits:
         headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
@@ -1028,7 +1048,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
-    if output=='text' or output == 'html':
+    if output in ('text','html'):
         print(f"{bold}Planetary Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
@@ -1163,7 +1183,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
-        print({h2_})
+        print(f"{br}{h2_}")
     else:
         to_return += f"Fixed Star Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1640,24 +1660,24 @@ def main(gui_arguments=None):
     string_transits = f"Transits for"
 
     if output_type == "text" or output_type == "html":
-        print(f"{p}{string_heading}")
+        print(f"{p}{string_heading}", end='')
         if exists or name:
-            print(f"{p}{string_name}")
+            print(f"{p}{string_name}", end='')
         if place:
-            print(f"{br}{string_place}")
+            print(f"{br}{string_place}", end='')
         if degree_in_minutes:
-            print(f"{br}{string_latitude_in_minutes}, {string_longitude_in_minutes}")
+            print(f"{br}{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
         else:
-            print(f"{br}{string_latitude}, {string_longitude}")
+            print(f"{br}{string_latitude}, {string_longitude}", end='')
         
         if place == "Davison chart" and not args["Davison"]:
-                print(f"\{br}{string_davison_noname}")
+                print(f"\{br}{string_davison_noname}", end='')
         elif args["Davison"]:
-            print(f"{br}{string_davison}")
+            print(f"{br}{string_davison}", end='')
 
         if not args['Davison'] or place != "Davison chart":
-            print(f"{br}{string_local_time}")
-        print(f"{br}{string_UTC_Time_imprecise}") if notime else print(f"{string_UTC_Time}")
+            print(f"{br}{string_local_time} ", end='')
+        print(f"{br}{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
     else:
         to_return = f"{string_heading}"
         if exists or name:
@@ -1694,7 +1714,7 @@ def main(gui_arguments=None):
 
     aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-    print(f"{h2}{string_planets_heading}{h2_}")
+    print(f"{h2}{bold}{string_planets_heading}{nobold}{h2_}")
     if not hide_planetary_positions:
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
