@@ -973,8 +973,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     sign_count_table_data = list()
     element_count_table_data = list()
     modality_count_table_data = list()
-    if output in ('text', 'html'):
-        house_count_string = f'{p}{bold}House count {nobold} '
+    house_count_string = f'{p}{bold}House count {nobold} '
 
     ## House counts
     sorted_planet_house_counts = sorted(planet_house_counts.items(), key=lambda item: item[1], reverse=True)
@@ -1187,9 +1186,16 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n<p>"
         h3 = "<h3>"
         h3_ = "</h3>"
-    else:
+    elif output == 'text':
         bold = "\033[1m"
         nobold = "\033[0m"
+        br = "\n"
+        p = "\n"
+        h3 = ""
+        h3_ = ""
+    else:
+        bold = ""
+        nobold = ""
         br = "\n"
         p = "\n"
         h3 = ""
@@ -1437,7 +1443,7 @@ def main(gui_arguments=None):
     local_datetime = datetime.now()  # Default date now
 
     # Check if name was provided as argument
-    name = args["Name"] if args["Name"] else None
+    name = args["Name"] if args["Name"] else ""
     to_return = ""
 
     #################### Load event ####################
@@ -1478,7 +1484,6 @@ def main(gui_arguments=None):
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
-    name=""
 
     # Default Output settings
     hide_planetary_positions = False  # Default hide planetary positions
@@ -1624,7 +1629,7 @@ def main(gui_arguments=None):
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
     if args["Davison"]:
-        utc_datetime, longitude, latitude = get_davison_data(args["Name"])
+        utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
         place = "Davison chart"
         local_timezone = pytz.utc
         local_datetime = utc_datetime
@@ -1709,7 +1714,7 @@ def main(gui_arguments=None):
 
         if not args['Davison'] or place != "Davison chart":
             print(f"{br}{string_local_time} ", end='')
-        print(f"{br}{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
+        print(f"{br}{string_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_UTC_Time}", end='')
     else:
         to_return = f"{string_heading}"
         if exists or name:
@@ -1727,7 +1732,7 @@ def main(gui_arguments=None):
 
         to_return += f"{br}{string_local_time}"
         if notime: to_return += f"{br}{string_UTC_Time_imprecise}"
-        else: to_return += f", {string_UTC_Time}"
+        else: to_return += f"{br}{string_UTC_Time}"
 
     if output_type in ("text", "html"):
         print(f"{br}{string_house_system_moon_nodes}{br}", end="")
