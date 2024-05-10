@@ -351,4 +351,4 @@ todo.txt
 to-do.txt
 clean_csv.ipynb
 cache/kerykeion_geonames_cache.sqlite
-IgniteNatalChart.svg
+*.svg

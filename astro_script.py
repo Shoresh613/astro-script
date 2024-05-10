@@ -476,8 +476,8 @@ def get_fixed_star_position(star_name, jd):
     try:
         star_info = swe.fixstar(star_name, jd)
         return star_info[0][0]  # Returning the longitude part of the position
-    except swe.SwissephException as e:
-        raise ValueError(f"Fixed star '{star_name}' not recognized: {e}")
+    except:
+        raise ValueError(f"Fixed star '{star_name}' not recognized.")
 
 def check_aspect(planet_long, star_long, aspect_angle, orb):
     """
@@ -1289,7 +1289,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
-    aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+    if hard_count+soft_count > 0:
+        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+    else:
+        aspect_count_text = f"{p}No aspects found.{br}"
     to_return += "\n" + table + '\n' + aspect_count_text
 
     # Update scoring based on the magnitude and the new function for scoring.
@@ -1693,13 +1696,18 @@ def main(gui_arguments=None):
 
     # Make SVG chart if output is html
     if output_type == "html":
-        if args["Name"]:
-            subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, lng=longitude, lat=latitude, tz_str=str(local_timezone), online=False)
-        else:
-            AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
-        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
+        # if args["Name"]:
+        subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
+                                         day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
+                                        tz_str=str(local_timezone), city = place, online=False)
+        # else:
+        #     subject = AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
 
+        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
         chart.makeSVG()
+        #include the chart in the html output
+        print(f'<img src="{chart.output_directory}/{name}NatalChart.svg" alt="Astrological Chart" width="100%" height="100%">')
+
 
 
     if output_type in ("text","html"):
