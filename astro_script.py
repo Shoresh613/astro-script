@@ -171,7 +171,7 @@ def get_davison_data(names):
             datetime_str = data_dict[name]['datetime']
             timezone_str = data_dict[name]['timezone']
             timezone = pytz.timezone(timezone_str)
-            dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
+            dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
             dt_with_tz = timezone.localize(dt)
             datetimes.append(dt_with_tz)
             longitudes.append(data_dict[name]['longitude'])
@@ -1638,7 +1638,7 @@ def main(gui_arguments=None):
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
     if args["Davison"]:
-        utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
+        utc_datetime, longitude, latitude = get_davison_data(args["Name"])
         place = "Davison chart"
         local_timezone = pytz.utc
         local_datetime = utc_datetime
@@ -1719,7 +1719,8 @@ def main(gui_arguments=None):
             print(f"{br}{string_latitude}, {string_longitude}", end='')
         
         if place == "Davison chart" and not args["Davison"]:
-                print(f"{br}{string_davison_noname}", end='')
+                print("")
+                # print(f"{br}{string_davison_noname}", end='')
         elif args["Davison"]:
             print(f"{br}{string_davison}", end='')
 
