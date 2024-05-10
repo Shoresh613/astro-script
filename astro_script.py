@@ -961,7 +961,9 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     for house, count in sorted_planet_house_counts:
         if count > 0:
             if output == 'text':
-                house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            elif output == 'html':
+                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
             else:
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
@@ -1179,7 +1181,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         h2_ = ""
         h3_ = ""
     if output in ('text','html'):
-        print(f"{p}{br}{h3}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
@@ -1564,10 +1566,8 @@ def main(gui_arguments=None):
         br = "\n<br>"
         p = "\n<p>"
         h1 = "<h1>"
-        h2 = "<h2>"
         h3 = "<h3>"
         h1_= "</h1>"
-        h2_ = "</h2>"
         h3_ = "</h3>"
     else:
         bold = "\033[1m"
@@ -1575,10 +1575,8 @@ def main(gui_arguments=None):
         br = "\n"
         p = "\n"
         h1 = ""
-        h2 = ""
         h3 = ""
         h1_ = ""
-        h2_ = ""
         h3_ = ""
 
     if args["Hide Planetary Positions"]:
@@ -1670,7 +1668,7 @@ def main(gui_arguments=None):
             print(f"{br}{string_latitude}, {string_longitude}", end='')
         
         if place == "Davison chart" and not args["Davison"]:
-                print(f"\{br}{string_davison_noname}", end='')
+                print(f"{br}{string_davison_noname}", end='')
         elif args["Davison"]:
             print(f"{br}{string_davison}", end='')
 
