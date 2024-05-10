@@ -1766,7 +1766,7 @@ def main(gui_arguments=None):
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type in ("text",'html'):
-            print(f"{p}{bold}{h2}{string_transits} {transits_local_datetime}{nobold}{h2_}")
+            print(f"{p}{bold}{h2}{string_transits} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
         to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
