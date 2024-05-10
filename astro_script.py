@@ -430,7 +430,7 @@ def longitude_to_zodiac(longitude, output):
     seconds = int((((longitude % 1) * 60) % 1) * 60)
     
     if output == 'html':
-        degree_symbol = "&deg;"
+        degree_symbol = ""
     else:
         degree_symbol = "°"
 
@@ -707,9 +707,9 @@ def coord_in_minutes(longitude, output_type):
     minutes = int((longitude - degrees) * 60)  # Extract whole minutes
     seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
 
-    degree_symbol = "&deg;" if output_type == 'html' else "°"
+    degree_symbol = "" if output_type == 'html' else "°"
 
-    return f"{degrees}{degree_symbol}{minutes}'{seconds}\""
+    return f"{degrees}°{minutes}'{seconds}\""
 
 def calculate_aspects(planet_positions, orb, output_type, aspect_types):
     """
@@ -914,7 +914,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         br = "\n"
         p = "\n"
 
-    degree_symbol = "&deg;" if output_type == 'html' else "°"
+    degree_symbol = "" if output_type == 'html' else "°"
 
     # Define headers based on whether house positions should be included
     headers = ["Planet", "Zodiac", "Position", "R"]
@@ -1077,7 +1077,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
-    degree_symbol = "&deg;" if output == 'html' else "°"
+    degree_symbol = "" if output == 'html' else "°"
 
     if output in ('text','html'):
         print(f"{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
@@ -1100,7 +1100,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
-    degree_symbol = "&deg;" if output == 'html' else "°"
+    degree_symbol = "" if output == 'html' else "°"
 
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -1210,7 +1210,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n"
         h3 = ""
         h3_ = ""
-    degree_symbol = "&deg;" if output == 'html' else "°"
+    degree_symbol = "" if output == 'html' else "°"
 
     if output in ('text','html'):
         print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
@@ -1553,7 +1553,8 @@ def main(gui_arguments=None):
                     color: #333;
                     background-color: #f4f4f4;
                     margin: 0px;
-                    padding: 0;
+                    padding-left: 8px;
+                    padding-right: 8px;
                 }
 
                 h1, h2, h3 {
@@ -1698,7 +1699,7 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}{br}"
+    string_heading = f"{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}"
     string_planets_heading = f"Planetary Positions{br}"
     string_name = f"{bold}Name:{nobold} {name}"
     string_place = f"{bold}Place:{nobold} {place}"
