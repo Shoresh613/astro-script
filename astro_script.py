@@ -12,6 +12,8 @@ import save_event
 from version import __version__
 import csv
 from colorama import init, Fore, Style
+from kerykeion import AstrologicalSubject, KerykeionChartSVG
+
 
 swe.set_ephe_path('./ephe/')
 saved_locations_file = 'saved_locations.json'  # File to save locations to
@@ -1688,6 +1690,17 @@ def main(gui_arguments=None):
     string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_transits = f"Transits for"
+
+    # Make SVG chart if output is html
+    if output_type == "html":
+        if args["Name"]:
+            subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, lng=longitude, lat=latitude, tz_str=str(local_timezone), online=False)
+        else:
+            AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
+        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
+
+        chart.makeSVG()
+
 
     if output_type in ("text","html"):
         print(f"{p}{string_heading}", end='')
