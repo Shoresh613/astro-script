@@ -1777,7 +1777,12 @@ def main(gui_arguments=None):
         else:
             to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
         to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
+
+    # Make SVG chart if output is html
     if output_type == "html":
+        from chart_output import chart_output
+        chart_output(name, utc_datetime, longitude, latitude, local_timezone, place)
+
         print("</body>\n</html>")
     return to_return
 
