@@ -1744,7 +1744,7 @@ def main(gui_arguments=None):
         # if args["Name"]:
         subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
                                          day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
-                                        tz_str=str(local_timezone), city = place, nation="", online=False)
+                                        tz_str=str(local_timezone), city = place, nation="GB", online=False)
         # else:
         #     subject = AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
 
