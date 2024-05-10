@@ -114,7 +114,7 @@ fall = {
     'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
 }
 
-# Global formatting variables set in main depenting on output type
+# Global formatting variables set in main depending on output type
 bold = "\033[1m"
 nobold = "\033[0m"
 br = "\n"
@@ -1049,11 +1049,11 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return = ""
 
     if output in ('text','html'):
-        print(f"{bold}Planetary Aspects ({orb}° orb){nobold}", end="")
+        print(f"{bold}{h3}Planetary Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
-        print(f"{br}")
+        print(f"{h3_}{br}")
     else:
         to_return = f"\nPlanetary Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1179,11 +1179,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         h2_ = ""
         h3_ = ""
     if output in ('text','html'):
-        print(f"{p}{br}{h2}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"{p}{br}{h3}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
-        print(f"{br}{h2_}")
+        print(f"{br}{h3_}")
     else:
         to_return += f"Fixed Star Aspects ({orb}° orb)"
         if minor_aspects:
@@ -1505,7 +1505,6 @@ def main(gui_arguments=None):
         <head>
             <title>AstroScript Chart</title>\n
             <style>
-                /* CSS for an elegant and modern look */
                 body {
                     font-family: Arial, sans-serif;
                     color: #333;
@@ -1537,13 +1536,13 @@ def main(gui_arguments=None):
                 }
 
                 table {
-                    width: auto; /* Changed from 100% to auto */
+                    width: auto;
                     margin-top: 20px;
                     border-collapse: collapse;
                 }
 
                 th, td {
-                    padding: 8px 10px; /* Slightly increased padding for better readability */
+                    padding: 8px 10px;
                     text-align: left;
                     border-bottom: 1px solid #ddd;
                 }
@@ -1714,7 +1713,7 @@ def main(gui_arguments=None):
 
     aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-    print(f"{h2}{bold}{string_planets_heading}{nobold}{h2_}")
+    print(f"{h3}{bold}{string_planets_heading}{nobold}{h3_}")
     if not hide_planetary_positions:
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
