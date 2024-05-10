@@ -1694,22 +1694,6 @@ def main(gui_arguments=None):
     string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_transits = f"Transits for"
 
-    # Make SVG chart if output is html
-    if output_type == "html":
-        # if args["Name"]:
-        subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
-                                         day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
-                                        tz_str=str(local_timezone), city = place, online=False)
-        # else:
-        #     subject = AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
-
-        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
-        chart.makeSVG()
-        #include the chart in the html output
-        print(f'<img src="{chart.output_directory}/{name}NatalChart.svg" alt="Astrological Chart" width="100%" height="100%">')
-
-
-
     if output_type in ("text","html"):
         print(f"{p}{string_heading}", end='')
         if exists or name:
@@ -1754,6 +1738,21 @@ def main(gui_arguments=None):
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
         MAJOR_ASPECTS.update(MINOR_ASPECTS)
+
+    # Make SVG chart if output is html
+    if output_type == "html":
+        # if args["Name"]:
+        subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
+                                         day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
+                                        tz_str=str(local_timezone), city = place, nation="", online=False)
+        # else:
+        #     subject = AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
+
+        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
+        chart.makeSVG()
+        #include the chart in the html output
+        if args["Name"]:
+            print(f'<img src="{chart.output_directory}/{args["Name"]}NatalChart.svg" alt="Astrological Chart" width="100%" height="100%">')
 
     if show_house_cusps:
         if output_type in ('text','html'):
