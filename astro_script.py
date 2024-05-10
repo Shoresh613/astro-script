@@ -887,6 +887,32 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     zodiac_table_data = []
 
+    if output == 'html':
+        table_format = 'html'
+        bold = "<b>"
+        nobold = "</b>"
+        br = "\n<br>"
+        p = "\n<p>"
+        h1 = "<h1>"
+        h2 = "<h2>"
+        h3 = "<h3>"
+        h1_= "</h1>"
+        h2_ = "</h2>"
+        h3_ = "</h3>"
+    else:
+        table_format = 'simple'
+        bold = "\033[1m"
+        nobold = "\033[0m"
+        br = "\n"
+        p = "\n"
+        h1 = ""
+        h2 = ""
+        h3 = ""
+        h1_ = ""
+        h2_ = ""
+        h3_ = ""
+
+
     # Define headers based on whether house positions should be included
     headers = ["Planet", "Zodiac", "Position", "R"]
     if house_positions:
