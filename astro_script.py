@@ -1625,7 +1625,7 @@ def main(gui_arguments=None):
         if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
 
     if args["Davison"]:
-        utc_datetime, longitude, latitude = get_davison_data(args["Name"])
+        utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
         place = "Davison chart"
         local_timezone = pytz.utc
         local_datetime = utc_datetime
