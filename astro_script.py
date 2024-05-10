@@ -1583,8 +1583,10 @@ def main(gui_arguments=None):
         br = "\n<br>"
         p = "\n<p>"
         h1 = "<h1>"
+        h2 = "<h2>"
         h3 = "<h3>"
         h1_= "</h1>"
+        h2_= "</h2>"
         h3_ = "</h3>"
     elif output_type == 'text':
         bold = "\033[1m"
@@ -1592,6 +1594,7 @@ def main(gui_arguments=None):
         br = "\n"
         p = "\n"
         h1 = ""
+        h2 = ""
         h3 = ""
         h1_ = ""
         h3_ = ""
@@ -1601,8 +1604,10 @@ def main(gui_arguments=None):
         br = "\n"
         p = "\n"
         h1 = ""
+        h2 = ""
         h3 = ""
         h1_ = ""
+        h2_ = ""
         h3_ = ""
 
     if args["Hide Planetary Positions"]:
