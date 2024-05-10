@@ -12,7 +12,6 @@ import save_event
 from version import __version__
 import csv
 from colorama import init, Fore, Style
-from kerykeion import AstrologicalSubject, KerykeionChartSVG
 
 swe.set_ephe_path('./ephe/')
 saved_locations_file = 'saved_locations.json'  # File to save locations to
@@ -409,7 +408,7 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
 
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
-def longitude_to_zodiac(longitude):
+def longitude_to_zodiac(longitude, output):
     """
     Convert ecliptic longitude to its corresponding zodiac sign and precise degree.
 
@@ -430,7 +429,13 @@ def longitude_to_zodiac(longitude):
     minutes = int((longitude % 1) * 60)
     seconds = int((((longitude % 1) * 60) % 1) * 60)
     
-    return f"{zodiac_signs[sign_index]} {degree}°{minutes}'{seconds}''"
+    if output == 'html':
+        degree_symbol = "&deg;"
+    else:
+        degree_symbol = "°"
+
+
+    return f"{zodiac_signs[sign_index]} {degree}{degree_symbol}{minutes}'{seconds}''"
 
 def is_planet_retrograde(planet, jd):
     """
@@ -636,7 +641,7 @@ example_planet_positions = {
 # print(aspect_duration)  # Outputs the calculated duration
 
 
-def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
+def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -659,7 +664,7 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
         pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
             'longitude': pos[0],
-            'zodiac_sign': longitude_to_zodiac(pos[0]).split()[0],
+            'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
             'retrograde': 'R' if pos[3] < 0 else ''
         }
         if planet == "North Node":
@@ -667,26 +672,26 @@ def calculate_planet_positions(date, latitude, longitude, h_sys='P'):
             south_node_longitude = (pos[0] + 180) % 360
             positions["South Node"] = {
                 'longitude': south_node_longitude,
-                'zodiac_sign': longitude_to_zodiac(south_node_longitude).split()[0],
+                'zodiac_sign': longitude_to_zodiac(south_node_longitude, output).split()[0],
                 'retrograde': ''  # South Node does not have retrograde motion
             }
 
     # Calculate Ascendant and Midheaven
     asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
-    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0]).split()[0], 'retrograde': ''}
-    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1]).split()[0], 'retrograde': ''}
+    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': ''}
+    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': ''}
 
     # Fix south node
     PLANETS.update({"South Node": None})  # Add South Node to the list of planets
     positions["South Node"] = {
         'longitude': (positions["North Node"]['longitude'] + 180) % 360,
-        'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360).split()[0],
+        'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
         'retrograde': ''
     }
 
     return positions
 
-def coord_in_minutes(longitude):
+def coord_in_minutes(longitude, output_type):
     """
     Convert a celestial longitude into degrees, minutes, and seconds format.
 
@@ -702,9 +707,11 @@ def coord_in_minutes(longitude):
     minutes = int((longitude - degrees) * 60)  # Extract whole minutes
     seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
 
-    return f"{degrees}°{minutes}'{seconds}\""  
+    degree_symbol = "&deg;" if output_type == 'html' else "°"
 
-def calculate_aspects(planet_positions, orb, aspect_types):
+    return f"{degrees}{degree_symbol}{minutes}'{seconds}\""
+
+def calculate_aspects(planet_positions, orb, output_type, aspect_types):
     """
     Calculate astrological aspects between celestial bodies based on their positions,
     excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
@@ -760,7 +767,7 @@ def calculate_aspects(planet_positions, orb, aspect_types):
                     aspects_found[planets_pair] = {
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
-                        'angle_diff_in_minutes': coord_in_minutes(angle_diff),
+                        'angle_diff_in_minutes': coord_in_minutes(angle_diff, output_type),
                         'is_imprecise': is_imprecise,
                         'aspect_score': aspect_score,
                         'aspect_comment': aspect_comment
@@ -862,7 +869,7 @@ def moon_phase(date):
     else:
         return "Waning Crescent", illumination
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output="text"):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text"):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -888,13 +895,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     zodiac_table_data = []
 
-    if output == 'html':
+    if output_type == 'html':
         table_format = 'html'
         bold = "<b>"
         nobold = "</b>"
         br = "\n<br>"
         p = "\n<p>"
-    elif output == 'text':
+    elif output_type == 'text':
         table_format = 'simple'
         bold = "\033[1m"
         nobold = "\033[0m"
@@ -906,6 +913,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         nobold = ""
         br = "\n"
         p = "\n"
+
+    degree_symbol = "&deg;" if output_type == 'html' else "°"
 
     # Define headers based on whether house positions should be included
     headers = ["Planet", "Zodiac", "Position", "R"]
@@ -923,7 +932,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             continue
         longitude = info['longitude']
         degrees_within_sign = longitude % 30
-        position = coord_in_minutes(degrees_within_sign) if degree_in_minutes else f"{degrees_within_sign:.2f}°"
+        position = coord_in_minutes(degrees_within_sign) if degree_in_minutes else f"{degrees_within_sign:.2f}{degree_symbol}"
         retrograde = info['retrograde']
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
@@ -937,7 +946,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             elevation_check = is_planet_elevated(planet_positions)
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
-            off_by = f"±{OFF_BY[planet]}°"
+            off_by = f"±{OFF_BY[planet]}{degree_symbol}"
             row = [planet, zodiac, position, off_by, retrograde_status]
         else:
             if notime:
@@ -959,14 +968,11 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_counts[modality]['planets'].append(planet)
         element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
-    if output == 'html':
-        table_format = 'html'
-    else:
-        table_format = 'simple'
+        table_format = 'html' if output_type == 'html' else 'simple'
 
     to_return = ''
     table = tabulate(zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
-    if output in ('text','html'):
+    if output_type in ('text','html'):
         print(table)
     to_return += table
 
@@ -980,19 +986,19 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     
     for house, count in sorted_planet_house_counts:
         if count > 0:
-            if output == 'text':
+            if output_type == 'text':
                 house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
-            elif output == 'html':
+            elif output_type == 'html':
                 house_count_string += f"{bold}{house}:{nobold} {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
     to_return += "\n" + house_count_string
-    if output in ('text', 'html'):
+    if output_type in ('text', 'html'):
         print(house_count_string)
 
     # Print zodiac sign, element and modality counts
-    if output in ('html'):
+    if output_type in ('html'):
         print(f"{p}")
     for sign, data in sign_counts.items():
         if data['count'] > 0:
@@ -1001,7 +1007,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
-    if output in ('text', 'html'):
+    if output_type in ('text', 'html'):
         print(f"{p}{table}{br}")
 
     for element, count in element_counts.items():
@@ -1011,7 +1017,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
-    if output in ('text', 'html'):
+    if output_type in ('text', 'html'):
         print(table + f"{br}")
 
     for modality, info in modality_counts.items():
@@ -1019,7 +1025,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_count_table_data.append(row)
     table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt=table_format)
     to_return += "\n\n" + table
-    if output in ('text', 'html'):
+    if output_type in ('text', 'html'):
         print(table + f"{br}")
 
     return to_return
@@ -1071,14 +1077,16 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
+    degree_symbol = "&deg;" if output == 'html' else "°"
+
     if output in ('text','html'):
-        print(f"{bold}{h3}Planetary Aspects ({orb}° orb){nobold}", end="")
+        print(f"{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
         print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
     else:
-        to_return = f"\nPlanetary Aspects ({orb}° orb)"
+        to_return = f"\nPlanetary Aspects ({orb}{degree_symbol} orb)"
         if minor_aspects:
             to_return += " and minor aspects" 
         if notime:
@@ -1092,13 +1100,15 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
+    degree_symbol = "&deg;" if output == 'html' else "°"
+
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            angle_with_degree = f"{aspect_details['angle_diff']:.2f}°".strip("-")
+            angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}".strip("-")
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
@@ -1200,8 +1210,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n"
         h3 = ""
         h3_ = ""
+    degree_symbol = "&deg;" if output == 'html' else "°"
+
     if output in ('text','html'):
-        print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
+        print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
@@ -1231,7 +1243,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         if degree_in_minutes:
             angle = coord_in_minutes(angle)
         else:
-            angle = f"{angle:.2f}°".strip("-")
+            angle = f"{angle:.2f}{degree_symbol}".strip("-")
         row = [planet, aspect_name, star_name, angle]
 
         if house_positions and not notime:
@@ -1240,7 +1252,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             house_counts[house] += 1
             house_counts[house_positions[planet].get('house', 'Unknown')] += 1
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
-            row.append(f" ±{OFF_BY[planet]}°")
+            row.append(f" ±{OFF_BY[planet]}{degree_symbol}")
         star_aspects_table_data.append(row)
         if aspect_name in aspect_type_counts:
             aspect_type_counts[aspect_name] += 1
@@ -1532,6 +1544,8 @@ def main(gui_arguments=None):
 <!DOCTYPE html>
     <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>AstroScript Chart</title>\n
             <style>
                 body {
@@ -1583,6 +1597,11 @@ def main(gui_arguments=None):
 
                 tr:hover {
                     background-color: #f5f5f5;
+                }
+
+                img {
+                    max-height: 90vh;   /* vh unit represents a percentage of the viewport height */
+                    width: auto;        /* Maintains the aspect ratio of the image */
                 }
             </style>
 
@@ -1670,7 +1689,7 @@ def main(gui_arguments=None):
     # Initialize Colorama, calculations for strings
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
@@ -1683,8 +1702,8 @@ def main(gui_arguments=None):
     string_planets_heading = f"Planetary Positions{br}"
     string_name = f"{bold}Name:{nobold} {name}"
     string_place = f"{bold}Place:{nobold} {place}"
-    string_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(latitude)}"
-    string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude)}"
+    string_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
+    string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude, output_type)}"
     string_latitude = f"{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
@@ -1742,28 +1761,13 @@ def main(gui_arguments=None):
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
         MAJOR_ASPECTS.update(MINOR_ASPECTS)
 
-    # Make SVG chart if output is html
-    if output_type == "html":
-        # if args["Name"]:
-        subject = AstrologicalSubject(args["Name"], utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
-                                         day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
-                                        tz_str=str(local_timezone), city = place, nation="GB", online=False)
-        # else:
-        #     subject = AstrologicalSubject("Jack", 1990, 6, 15, 15, 15, "Roma")
-
-        chart = KerykeionChartSVG(subject, chart_type="Natal", new_output_directory="./")
-        chart.makeSVG()
-        #include the chart in the html output
-        if args["Name"]:
-            print(f'<img src="{chart.output_directory}/{args["Name"]}NatalChart.svg" alt="Astrological Chart" width="100%" height="100%">')
-
     if show_house_cusps:
         if output_type in ('text','html'):
             print(f"{p}{string_house_cusps}{br}", end="")
         else:
             to_return += f"\{string_house_cusps}{br}"
 
-    aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
+    aspects = calculate_aspects(planet_positions, orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
     print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
     if not hide_planetary_positions:
@@ -1788,7 +1792,7 @@ def main(gui_arguments=None):
     name = f"{args['Name']} " if args["Name"] else ""
     if show_transits:           
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude, output_type, h_sys) # Also add argument for transits location if different
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type in ("text",'html'):
