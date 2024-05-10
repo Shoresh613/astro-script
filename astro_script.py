@@ -999,7 +999,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(house_count_string)
 
     # Print zodiac sign, element and modality counts
-    if output in ('text', 'html'):
+    if output in ('html'):
         print(f"{p}")
     for sign, data in sign_counts.items():
         if data['count'] > 0:
@@ -1009,7 +1009,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
     if output in ('text', 'html'):
-        print(table + f"{br}")
+        print(f"{p}{table}{br}")
 
     for element, count in element_counts.items():
         if count > 0:
@@ -1052,11 +1052,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         nobold = "</b>"
         br = "\n<br>"
         p = "\n<p>"
-        h1 = "<h1>"
-        h2 = "<h2>"
         h3 = "<h3>"
-        h1_= "</h1>"
-        h2_ = "</h2>"
         h3_ = "</h3>"
     elif output == 'text':
         table_format = 'simple'
@@ -1064,11 +1060,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         nobold = "\033[0m"
         br = "\n"
         p = "\n"
-        h1 = ""
-        h2 = ""
         h3 = ""
-        h1_ = ""
-        h2_ = ""
         h3_ = ""
     else:
         table_format = 'simple'
@@ -1076,11 +1068,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         nobold = ""
         br = "\n"
         p = "\n"
-        h1 = ""
-        h2 = ""
         h3 = ""
-        h1_ = ""
-        h2_ = ""
         h3_ = ""
 
     planetary_aspects_table_data = []
@@ -1145,7 +1133,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return += "\n" + table
 
     if output in ('text', 'html'):
-        print(table)
+        print(table, end="")
 
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
@@ -1164,7 +1152,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     # Print counts of each aspect type
     if output in ('text','html'):
-        print(f'{br}'+table + f'{p}' + aspect_count_text)
+        print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
 
     if output in ('text', 'html'):
         if not house_positions:
@@ -1203,22 +1191,14 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         nobold = "</b>"
         br = "\n<br>"
         p = "\n<p>"
-        h1 = "<h1>"
-        h2 = "<h2>"
         h3 = "<h3>"
-        h1_= "</h1>"
-        h2_ = "</h2>"
         h3_ = "</h3>"
     else:
         bold = "\033[1m"
         nobold = "\033[0m"
         br = "\n"
         p = "\n"
-        h1 = ""
-        h2 = ""
         h3 = ""
-        h1_ = ""
-        h2_ = ""
         h3_ = ""
     if output in ('text','html'):
         print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}° orb){nobold}", end="")
@@ -1241,7 +1221,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     hard_count_score = 0
     soft_count_score = 0
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
-    star_house_counts = {house: 0 for house in range(1, 13)}
+    house_counts = {house: 0 for house in range(1, 13)}
 
 
     for aspect in aspects:
@@ -1256,7 +1236,9 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
         if house_positions and not notime:
             row.append(house)
-            star_house_counts[house] += 1
+            row.append(house_positions[planet].get('house', 'Unknown'))
+            house_counts[house] += 1
+            house_counts[house_positions[planet].get('house', 'Unknown')] += 1
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}°")
         star_aspects_table_data.append(row)
@@ -1276,7 +1258,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
     if house_positions and not notime:
-        headers.append("Star in House")
+        headers.append("P House")
+        headers.append("S House") 
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
 
@@ -1288,11 +1271,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
     if output in ('text','html'):
-        print(table + f"{br}")
+        print(table + f"{br}", end="")
 
     ## House counts
-    house_count_string = ''
-    sorted_star_house_counts = sorted(star_house_counts.items(), key=lambda item: item[1], reverse=True)
+    house_count_string = 'House count  '
+    sorted_star_house_counts = sorted(house_counts.items(), key=lambda item: item[1], reverse=True)
 
     for house, count in sorted_star_house_counts:
         if count > 0:
@@ -1319,7 +1302,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
-        print(table + f'{br}{p}' + aspect_count_text)
+        print(table + f'{br}' + aspect_count_text, end="")
 
     return to_return
 
@@ -1718,10 +1701,7 @@ def main(gui_arguments=None):
         else:
             print(f"{br}{string_latitude}, {string_longitude}", end='')
         
-        if place == "Davison chart" and not args["Davison"]:
-                print("")
-                # print(f"{br}{string_davison_noname}", end='')
-        elif args["Davison"]:
+        if args["Davison"]:
             print(f"{br}{string_davison}", end='')
 
         if not args['Davison'] or place != "Davison chart":
@@ -1748,7 +1728,7 @@ def main(gui_arguments=None):
 
 
     if output_type in ("text", "html"):
-        print(f"{br}{string_house_system_moon_nodes}{br}")
+        print(f"{br}{string_house_system_moon_nodes}{br}", end="")
     else: to_return += f"{br}{string_house_system_moon_nodes}{br}"
 
     if minor_aspects:
@@ -1757,13 +1737,13 @@ def main(gui_arguments=None):
 
     if show_house_cusps:
         if output_type in ('text','html'):
-            print(f"{p}{string_house_cusps}{br}")
+            print(f"{p}{string_house_cusps}{br}", end="")
         else:
             to_return += f"\{string_house_cusps}{br}"
 
     aspects = calculate_aspects(planet_positions, orb, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-    print(f"{h3}{bold}{string_planets_heading}{nobold}{h3_}")
+    print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}")
     if not hide_planetary_positions:
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
