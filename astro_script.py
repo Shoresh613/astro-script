@@ -1474,6 +1474,7 @@ def main(gui_arguments=None):
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
+    name=""
 
     # Default Output settings
     hide_planetary_positions = False  # Default hide planetary positions
@@ -1597,6 +1598,7 @@ def main(gui_arguments=None):
         h2 = ""
         h3 = ""
         h1_ = ""
+        h2_ = ""
         h3_ = ""
     else:
         bold = ""
@@ -1760,13 +1762,14 @@ def main(gui_arguments=None):
         else:
             to_return += f"{p}{string_moon_phase_imprecise}"
 
+    name = f"{args['Name']} " if args["Name"] else ""
     if show_transits:           
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude) # Also add argument for transits location if different
 
         transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
         if output_type in ("text",'html'):
-            print(f"{p}{bold}{h2}{string_transits} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
+            print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
         to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
