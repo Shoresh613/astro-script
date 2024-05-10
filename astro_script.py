@@ -979,7 +979,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     sign_count_table_data = list()
     element_count_table_data = list()
     modality_count_table_data = list()
-    house_count_string = f'{p}House count  '
+    if output in ('text', 'html'):
+        house_count_string = f'{p}{bold}House count {nobold} '
 
     ## House counts
     sorted_planet_house_counts = sorted(planet_house_counts.items(), key=lambda item: item[1], reverse=True)
@@ -989,7 +990,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             if output == 'text':
                 house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
             elif output == 'html':
-                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
+                house_count_string += f"{bold}{house}:{nobold} {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
@@ -1057,7 +1058,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         h1_= "</h1>"
         h2_ = "</h2>"
         h3_ = "</h3>"
-    else:
+    elif output == 'text':
         table_format = 'simple'
         bold = "\033[1m"
         nobold = "\033[0m"
@@ -1069,6 +1070,19 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         h1_ = ""
         h2_ = ""
         h3_ = ""
+    else:
+        table_format = 'simple'
+        bold = ""
+        nobold = ""
+        br = "\n"
+        p = "\n"
+        h1 = ""
+        h2 = ""
+        h3 = ""
+        h1_ = ""
+        h2_ = ""
+        h3_ = ""
+
     planetary_aspects_table_data = []
     if transits:
         headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
@@ -1143,7 +1157,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
     if hard_count+soft_count > 0:
-        aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
     else:
         aspect_count_text = "\nNo aspects found.\n"
     to_return += "\n" + table + aspect_count_text
@@ -1283,10 +1297,12 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     for house, count in sorted_star_house_counts:
         if count > 0:
             if output == 'text':
-                house_count_string += f"{house}: {Fore.GREEN}{count}{Style.RESET_ALL}, "
+                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
+            elif output == 'html':
+                house_count_string += f"{bold}{house}:{nobold}: {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
-    house_count_string = house_count_string[:-2]+"\n" # Remove the last comma and space
+    house_count_string = house_count_string[:-2]+f"{br}" # Remove the last comma and space
     to_return += "\n" + house_count_string
     if output in ('text', 'html'):
         print(house_count_string)
@@ -1296,7 +1312,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
-    aspect_count_text = f"\nHard Aspects: {hard_count}, Soft Aspects: {soft_count}, Score: {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+    aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
     to_return += "\n" + table + '\n' + aspect_count_text
 
     # Update scoring based on the magnitude and the new function for scoring.
@@ -1595,9 +1611,18 @@ def main(gui_arguments=None):
         h3 = "<h3>"
         h1_= "</h1>"
         h3_ = "</h3>"
-    else:
+    elif output_type == 'text':
         bold = "\033[1m"
         nobold = "\033[0m"
+        br = "\n"
+        p = "\n"
+        h1 = ""
+        h3 = ""
+        h1_ = ""
+        h3_ = ""
+    else:
+        bold = ""
+        nobold = ""
         br = "\n"
         p = "\n"
         h1 = ""
@@ -1663,26 +1688,26 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"{h1}AstroScript v.{__version__} Chart{h1_}{br}"
+    string_heading = f"{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}{br}"
     string_planets_heading = f"Planetary Positions{br}"
-    string_name = f"Name: {name}"
-    string_place = f"Place: {place}"
-    string_latitude_in_minutes = f"Latitude: {coord_in_minutes(latitude)}"
-    string_longitude_in_minutes = f"Longitude: {coord_in_minutes(longitude)}"
-    string_latitude = f"Latitude: {latitude}"
-    string_longitude = f"Longitude: {longitude}"
+    string_name = f"{bold}Name:{nobold} {name}"
+    string_place = f"{bold}Place:{nobold} {place}"
+    string_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(latitude)}"
+    string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude)}"
+    string_latitude = f"{bold}Latitude:{nobold} {latitude}"
+    string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
-    string_davison = f"Davison chart of: {args['Davison']}"
-    string_local_time = f"Local Time: {local_datetime} {local_timezone}"
-    string_UTC_Time_imprecise = f"UTC Time: {utc_datetime} UTC (imprecise due to time of day missing)"
-    string_UTC_Time = f"UTC Time: {utc_datetime} UTC"
-    string_house_system_moon_nodes = f"House system: {house_system_name}, Moon nodes: {node}"
-    string_house_cusps = f"House cusps: {house_cusps}"
-    string_moon_phase_imprecise = f"Moon Phase: {moon_phase_name1} to {moon_phase_name2}{br}Moon Illumination: {illumination}"
-    string_moon_phase = f"Moon Phase: {moon_phase_name}{br}Moon Illumination: {illumination}"
+    string_davison = f"{bold}Davison chart of:{nobold} {args['Davison']}"
+    string_local_time = f"{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
+    string_UTC_Time_imprecise = f"{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
+    string_UTC_Time = f"{bold}UTC Time:{nobold} {utc_datetime} UTC"
+    string_house_system_moon_nodes = f"{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"
+    string_house_cusps = f"{bold}House cusps:{nobold} {house_cusps}"
+    string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
+    string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_transits = f"Transits for"
 
-    if output_type == "text" or output_type == "html":
+    if output_type in ("text","html"):
         print(f"{p}{string_heading}", end='')
         if exists or name:
             print(f"{p}{string_name}", end='')
