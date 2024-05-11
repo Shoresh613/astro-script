@@ -429,11 +429,7 @@ def longitude_to_zodiac(longitude, output):
     minutes = int((longitude % 1) * 60)
     seconds = int((((longitude % 1) * 60) % 1) * 60)
     
-    if output == 'html':
-        degree_symbol = "°"
-    else:
-        degree_symbol = "°"
-
+    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
 
     return f"{zodiac_signs[sign_index]} {degree}{degree_symbol}{minutes}'{seconds}''"
 
@@ -707,9 +703,9 @@ def coord_in_minutes(longitude, output_type):
     minutes = int((longitude - degrees) * 60)  # Extract whole minutes
     seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
 
-    degree_symbol = "" if output_type == 'html' else "°"
+    degree_symbol = " " if (os.name == 'nt' and output_type=='html') else "°"
 
-    return f"{degrees}°{minutes}'{seconds}\""
+    return f"{degrees}{degree_symbol}{minutes}'{seconds}\"".strip('-')
 
 def calculate_aspects(planet_positions, orb, output_type, aspect_types):
     """
@@ -914,7 +910,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         br = "\n"
         p = "\n"
 
-    degree_symbol = "" if output_type == 'html' else "°"
+    degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°" # If running on Windows, don't use degree symbol for html output
 
     # Define headers based on whether house positions should be included
     headers = ["Planet", "Zodiac", "Position", "R"]
@@ -1082,7 +1078,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
 
-    degree_symbol = "" if output == 'html' else "°"
+    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
 
     if output in ('text','html'):
         print(f"{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
@@ -1105,7 +1101,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
-    degree_symbol = "" if output == 'html' else "°"
+    degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°"
 
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -1220,7 +1216,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n"
         h3 = ""
         h3_ = ""
-    degree_symbol = "" if output == 'html' else "°"
+    degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°"
 
     if output in ('text','html'):
         print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
