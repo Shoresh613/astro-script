@@ -1251,7 +1251,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
         if degree_in_minutes:
-            angle = coord_in_minutes(angle)
+            angle = coord_in_minutes(angle, output)
         else:
             angle = f"{angle:.2f}{degree_symbol}".strip("-")
         row = [planet, aspect_name, star_name, angle]
