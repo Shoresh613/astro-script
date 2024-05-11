@@ -1101,7 +1101,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
-    degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°"
+    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
 
     for planets, aspect_details in aspects.items():
         if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
@@ -1216,7 +1216,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n"
         h3 = ""
         h3_ = ""
-    degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°"
+    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
 
     if output in ('text','html'):
         print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
