@@ -2,7 +2,7 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
     try:
         from kerykeion import AstrologicalSubject, KerykeionChartSVG
     except ImportError:
-        print("<br><p>Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.")
+        print("<br><p><h5>Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.</h5></p>")
         return
 
     subject = AstrologicalSubject(name, utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
