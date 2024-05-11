@@ -774,7 +774,7 @@ def calculate_aspects(planet_positions, orb, output_type, aspect_types):
                     }
     return aspects_found
 
-def calculate_transits(natal_positions, transit_positions, orb, aspect_types):
+def calculate_transits(natal_positions, transit_positions, orb, aspect_types, output_type):
     """
     Calculate astrological aspects between natal and transit celestial bodies based on their positions,
     excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
@@ -823,7 +823,7 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types):
                     aspects_found[planets_pair] = {
                         'aspect_name': aspect_name,
                         'angle_diff': angle_diff,
-                        'angle_diff_in_minutes': coord_in_minutes(angle_diff),
+                        'angle_diff_in_minutes': coord_in_minutes(angle_diff, output_type),
                         'is_imprecise': is_imprecise,
                         'aspect_score': aspect_score,
                         'aspect_comment': aspect_comment
@@ -999,7 +999,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     # Print zodiac sign, element and modality counts
     if output_type in ('html'):
-        print(f"{p}")
+        print(f"{p}<div class='table-container'>")
+
     for sign, data in sign_counts.items():
         if data['count'] > 0:
             row = [sign, data['count'], ', '.join(data['planets'])]
@@ -1027,6 +1028,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     to_return += "\n\n" + table
     if output_type in ('text', 'html'):
         print(table + f"{br}")
+        if output_type == 'html':
+            print('</div>')
 
     return to_return
 
@@ -1136,6 +1139,8 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return += "\n" + table
 
     if output in ('text', 'html'):
+        if output == 'html':
+            print('<div class="table-container">')
         print(f"{table}")
 
     # Convert aspect type dictionary to a list of tuples
@@ -1156,6 +1161,9 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     # Print counts of each aspect type
     if output in ('text','html'):
         print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
+        if output == 'html':
+            print('</div>')
+
 
     if output in ('text', 'html'):
         if not house_positions:
@@ -1282,7 +1290,29 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
     if output in ('text','html'):
+        if output == 'html':
+            print('<div class="table-container">')
         print(table + f"{br}", end="")
+
+    aspect_data = list(aspect_type_counts.items())
+    aspect_data.sort(key=lambda x: x[1], reverse=True)
+    aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
+    headers = ["Aspect Type", "Count", "Meaning"]
+    table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
+    if hard_count+soft_count > 0:
+        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+    else:
+        aspect_count_text = f"{p}No aspects found.{br}"
+    to_return += "\n" + table + '\n' + aspect_count_text
+
+    # Update scoring based on the magnitude and the new function for scoring.
+
+    #Print counts of each aspect type
+    if output in ('text', 'html'):
+        print(f"{p}{table}{br}{aspect_count_text}", end="")
+        if output == 'html':
+            print('</div>')
+
 
     ## House counts
     house_count_string = f'{p}{bold}House count{nobold}  '
@@ -1301,22 +1331,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output in ('text', 'html'):
         print(house_count_string)
 
-    aspect_data = list(aspect_type_counts.items())
-    aspect_data.sort(key=lambda x: x[1], reverse=True)
-    aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
-    headers = ["Aspect Type", "Count", "Meaning"]
-    table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
-    if hard_count+soft_count > 0:
-        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
-    else:
-        aspect_count_text = f"{p}No aspects found.{br}"
-    to_return += "\n" + table + '\n' + aspect_count_text
-
-    # Update scoring based on the magnitude and the new function for scoring.
-
-    #Print counts of each aspect type
-    if output in ('text', 'html'):
-        print(f"{p}{table}{br}{aspect_count_text}", end="")
 
     return to_return
 
@@ -1454,7 +1468,8 @@ def main(gui_arguments=None):
 
     local_datetime = datetime.now()  # Default date now
 
-    # Check if name was provided as argument
+    # Check if name was provided as argumentgit pull
+
     name = args["Name"] if args["Name"] else ""
     to_return = ""
 
@@ -1559,30 +1574,29 @@ def main(gui_arguments=None):
 
                 h1, h2, h3 {
                     color: #35424a;
-                    margin-bottom: 10px;
+                    margin-bottom: 1em;
                     line-height: 1.3;
                 }
 
                 h1 {
-                    font-size: 2.5em;
+                    font-size: 2.5rem; /* Responsive font size */
                 }
                 h2 {
-                    font-size: 2.0em;
+                    font-size: 2.0rem;
                 }
                 h3 {
-                    font-size: 1.75em;
+                    font-size: 1.75rem;
                 }
-
                 p {
-                    font-size: 1.2em;
+                    font-size: 1.2rem;
                     line-height: 1.6;
-                    margin-bottom: 2px;
                 }
 
                 table {
                     width: auto;
                     margin-top: 20px;
                     border-collapse: collapse;
+                    display: block;
                 }
 
                 th, td {
@@ -1596,16 +1610,47 @@ def main(gui_arguments=None):
                     color: white;
                 }
 
-                tr:hover {
+                th:hover {
                     background-color: #f5f5f5;
                 }
 
                 img {
                     max-height: 90vh;   /* vh unit represents a percentage of the viewport height */
                     width: auto;        /* Maintains the aspect ratio of the image */
+                    display: block;
+                }
+                .table-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-around; /* This will space out the tables evenly */
+                    align-items: flex-start; /* Aligns tables to the top */
+                }
+                .content-block {
+                    margin-bottom: 20px; /* Separation between different blocks */
+                }
+                table {
+                    flex: 1 1 300px; /* Flex-grow, flex-shrink, and base width */
+                    margin: 10px; /* Adds some space between tables */
+                    max-width: 100%; /* Ensures table does not overflow its container */
+                    overflow-x: auto; /* Allows horizontal scrolling if needed */
+                    display: block;
+                }
+                .stack-vertical {
+                    flex: 0 0 100%; /* Forces the table to take up 100% width of the flex container */
+                    margin: 10px 0; /* Vertical margin for spacing, no horizontal margins */
+                }
+
+                @media (max-width: 768px) {
+                    .table-container {
+                        flex-direction: column;
+                    }
+
+                    table {
+                        /* Ensures each table takes full width of the container on small screens */
+                        flex: 1 0 100%; 
+                    }
                 }
             </style>
-
         </head>
         <body>''')
         bold = "<b>"
@@ -1770,8 +1815,8 @@ def main(gui_arguments=None):
 
     aspects = calculate_aspects(planet_positions, orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
-    print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
     if not hide_planetary_positions:
+        print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, False, notime, output_type) # False = these are not transits
@@ -1792,10 +1837,10 @@ def main(gui_arguments=None):
 
     name = f"{args['Name']} " if args["Name"] else ""
     if show_transits:           
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude)
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude, output_type, h_sys) # Also add argument for transits location if different
 
-        transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS)
+        transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
             print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
@@ -1805,9 +1850,15 @@ def main(gui_arguments=None):
     # Make SVG chart if output is html
     if output_type == "html":
         from chart_output import chart_output
-        chart_output(name, utc_datetime, longitude, latitude, local_timezone, place)
+        chart_type = "Transit" if show_transits else "Natal"
 
-        print("</body>\n</html>")
+        if chart_type == "Natal":
+            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type)
+        elif chart_type == "Transit":
+            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, transits_utc_datetime)
+
+
+        print("</div></body>\n</html>")
     return to_return
 
 if __name__ == "__main__":
