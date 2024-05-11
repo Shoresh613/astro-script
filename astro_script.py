@@ -1735,7 +1735,10 @@ def main(gui_arguments=None):
                 synastry_local_timezone = pytz.timezone(exists[0]['timezone'])
                 synastry_place = exists[0]['location']
                 synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
-                show_synastry = True 
+                show_synastry = True
+                hide_planetary_positions = True  
+                hide_planetary_aspects = True  
+                hide_fixed_star_aspects = True
         except:
             print("Invalid second event for synastry", file=sys.stderr)
             return "Invalid second event for synastry."
@@ -1779,6 +1782,16 @@ def main(gui_arguments=None):
     string_local_time = f"{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
     string_UTC_Time_imprecise = f"{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
     string_UTC_Time = f"{bold}UTC Time:{nobold} {utc_datetime} UTC"
+    if show_synastry:
+        string_synastry_name = f"{bold}Name:{nobold} {args['Synastry']}"
+        string_synastry_place = f"{bold}Place:{nobold} {synastry_place}"
+        string_synastry_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(synastry_latitude if show_synastry else 11.12, output_type)}"
+        string_synastry_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(synastry_longitude if show_synastry else 22.33, output_type)}"
+        string_synastry_latitude = f"{bold}Latitude:{nobold} {synastry_latitude}"
+        string_synastry_longitude = f"{bold}Longitude:{nobold} {synastry_longitude}"
+        string_synastry_local_time = f"{bold}Local Time:{nobold} {synastry_local_datetime} {synastry_local_timezone}"
+        string_synastry_UTC_Time_imprecise = f"{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC (imprecise due to time of day missing)"
+        string_synastry_UTC_Time = f"{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC"
     string_house_system_moon_nodes = f"{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"
     string_house_cusps = f"{bold}House cusps:{nobold} {house_cusps}"
     string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
@@ -1802,7 +1815,18 @@ def main(gui_arguments=None):
 
         if not args['Davison'] or place != "Davison chart":
             print(f"{br}{string_local_time} ", end='')
+
         print(f"{br}{string_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_UTC_Time}", end='')
+
+        if show_synastry:
+            print(f"{p}{p}{string_synastry_name}", end='')
+            print(f"{br}{string_synastry_place}", end='')
+            if degree_in_minutes:
+                print(f"{br}{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}", end='')
+            else:
+                print(f"{br}{string_synastry_latitude}, {string_synastry_longitude}", end='')
+            print(f"{br}{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_synastry_UTC_Time}", end='')
+
     else:
         to_return = f"{string_heading}"
         if exists or name:
@@ -1884,12 +1908,19 @@ def main(gui_arguments=None):
     # Make SVG chart if output is html
     if output_type == "html":
         from chart_output import chart_output
-        chart_type = "Transit" if show_transits else "Natal"
+        if show_transits:
+            chart_type = "Transit"
+        elif show_synastry:
+            chart_type = "Synastry"
+        else: 
+            chart_type = "Natal"
 
         if chart_type == "Natal":
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type)
         elif chart_type == "Transit":
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, transits_utc_datetime)
+        elif chart_type == "Synastry":
+            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
 
 
         print("</div></body>\n</html>")
