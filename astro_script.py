@@ -932,7 +932,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             continue
         longitude = info['longitude']
         degrees_within_sign = longitude % 30
-        position = coord_in_minutes(degrees_within_sign) if degree_in_minutes else f"{degrees_within_sign:.2f}{degree_symbol}"
+        position = coord_in_minutes(degrees_within_sign, output_type) if degree_in_minutes else f"{degrees_within_sign:.2f}{degree_symbol}"
         retrograde = info['retrograde']
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
