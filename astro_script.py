@@ -1565,7 +1565,7 @@ def main(gui_arguments=None):
 <!DOCTYPE html>
     <html>
         <head>
-            <meta charset="UTF-8">
+            <meta charset="UTF-16LE">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>AstroScript Chart</title>\n
             <style>
@@ -1825,6 +1825,7 @@ def main(gui_arguments=None):
                 print(f"{br}{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}", end='')
             else:
                 print(f"{br}{string_synastry_latitude}, {string_synastry_longitude}", end='')
+            print(f"{br}{string_synastry_local_time} ", end='')
             print(f"{br}{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_synastry_UTC_Time}", end='')
 
     else:
@@ -1916,7 +1917,7 @@ def main(gui_arguments=None):
             chart_type = "Natal"
 
         if chart_type == "Natal":
-            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type)
+            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, None)
         elif chart_type == "Transit":
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, transits_utc_datetime)
         elif chart_type == "Synastry":
