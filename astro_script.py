@@ -430,7 +430,7 @@ def longitude_to_zodiac(longitude, output):
     seconds = int((((longitude % 1) * 60) % 1) * 60)
     
     if output == 'html':
-        degree_symbol = ""
+        degree_symbol = "°"
     else:
         degree_symbol = "°"
 
@@ -1556,7 +1556,7 @@ def main(gui_arguments=None):
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
-        h_sys = HOUSE_SYSTEMS["Placidus"]  # Reverting to default house system
+        h_sys = def_house_system  # Reverting to default house system if invalid
     show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
     output_type = args["Output"] if args["Output"] else def_output_type
@@ -1565,7 +1565,7 @@ def main(gui_arguments=None):
 <!DOCTYPE html>
     <html>
         <head>
-            <meta charset="UTF-16LE">
+            <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>AstroScript Chart</title>\n
             <style>
@@ -1922,7 +1922,6 @@ def main(gui_arguments=None):
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, transits_utc_datetime)
         elif chart_type == "Synastry":
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
-
 
         print("</div></body>\n</html>")
     return to_return
