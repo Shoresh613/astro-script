@@ -1033,7 +1033,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, transits=False, notime=False, output="text"):
+def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
@@ -1074,8 +1074,10 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         h3_ = ""
 
     planetary_aspects_table_data = []
-    if transits:
+    if type == "Transit":
         headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
+    if type == "Synastry":
+        headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
     else:
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     to_return = ""
@@ -1375,7 +1377,7 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, transits):
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry):
     arguments = {
         "Name": name,
         "Date": date,
@@ -1397,6 +1399,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Planetary Aspects": hide_planetary_aspects,
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
         "Transits": transits,
+        "Synastry": synastry,
         "Output": "return text"
     }
 
@@ -1431,6 +1434,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time)", required=False)
+    parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name", required=False)
     parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print text or html to stdout, or return text.', required=False)
 
     args = parser.parse_args()
@@ -1456,6 +1460,7 @@ If no record is found, default values will be used.''')
     "Hide Planetary Aspects": args.hide_planetary_aspects,
     "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
     "Transits": args.transits,
+    "Synastry": args.synastry,
     "Output": args.output_type}
 
     return arguments
@@ -1517,6 +1522,7 @@ def main(gui_arguments=None):
     hide_planetary_aspects = False  # Default hide planetary aspects
     hide_fixed_star_aspects = False  # Default hide fixed star aspects
     show_transits = False
+    show_synastry = False
 
     if args["Location"]: 
         place = args["Location"]
@@ -1545,7 +1551,7 @@ def main(gui_arguments=None):
         PLANETS["North Node"] = swe.MEAN_NODE
     if node == "true":
         PLANETS["North Node"] = swe.TRUE_NODE
-    # If True, the script will include all roughly 700 fixed stars
+    # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] and args["All Stars"].lower() in ["true", "yes", "1"] else def_all_stars
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
@@ -1719,6 +1725,22 @@ def main(gui_arguments=None):
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
             show_transits = True 
 
+    if args["Synastry"]:
+        try:
+            exists = load_event(FILENAME, args["Synastry"])
+            if exists:
+                synastry_local_datetime = datetime.fromisoformat(exists[0]['datetime'])
+                synastry_latitude = exists[0]['latitude']
+                synastry_longitude = exists[0]['longitude']
+                synastry_local_timezone = pytz.timezone(exists[0]['timezone'])
+                synastry_place = exists[0]['location']
+                synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
+                show_synastry = True 
+        except:
+            print("Invalid second event for synastry", file=sys.stderr)
+            return "Invalid second event for synastry."
+
+
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
@@ -1762,6 +1784,7 @@ def main(gui_arguments=None):
     string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_transits = f"Transits for"
+    string_synastry = f"Synastry chart for"
 
     if output_type in ("text","html"):
         print(f"{p}{string_heading}", end='')
@@ -1819,7 +1842,7 @@ def main(gui_arguments=None):
         print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
         to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, False, notime, output_type) # False = these are not transits
+        to_return += f"{p}" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, False, "", "", notime, output_type) # False = these are not transits
     if not hide_fixed_star_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     
@@ -1844,8 +1867,19 @@ def main(gui_arguments=None):
         if output_type in ("text",'html'):
             print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
-            to_return += f"{p}{string_transits} {transits_local_datetime}{br}===================================" 
-        to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, True, notime, output_type) # Transit True
+            to_return += f"{p}{string_transits} {name} {transits_local_datetime}{br}===================================" 
+        to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
+
+    if show_synastry:
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
+        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys) # Also add argument for transits location if different
+
+        synastry_aspects = calculate_transits(planet_positions, synastry_planet_positions, orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        if output_type in ("text",'html'):
+            print(f"{p}{bold}{h2}{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
+        else:
+            to_return += f"{p}{string_synastry} {name} {transits_local_datetime}{br}===================================" 
+        to_return += f"{p}" + print_aspects(synastry_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
     # Make SVG chart if output is html
     if output_type == "html":
