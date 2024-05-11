@@ -1079,7 +1079,6 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
     to_return = ""
 
     degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
-    print(os.name)
 
     if output in ('text','html'):
         print(f"{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
