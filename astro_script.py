@@ -12,6 +12,7 @@ import save_event
 from version import __version__
 import csv
 from colorama import init, Fore, Style
+import copy
 
 swe.set_ephe_path('./ephe/')
 saved_locations_file = 'saved_locations.json'  # File to save locations to
@@ -624,7 +625,10 @@ def calculate_aspect_duration(planet_positions, planet1, planet2, degrees_to_tra
     days = degrees_to_travel / relative_speed
 
     # Return formatted duration
-    return f"{int(days)} days, {int((days % 1) * 24)} hours, {int(((days % 1) * 24 % 1) * 60)} minutes"
+    return_string = f"{int(days)} days" if days >= 1 else ""
+    return_string += f", {int((days % 1) * 24)} hours" if days % 1 * 24 >= 1 else ""
+    return_string += f", {int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
+    return return_string if return_string else "Less than a minute"
 
 # Example usage assuming planet_positions dictionary is populated accordingly
 example_planet_positions = {
@@ -661,7 +665,8 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
         positions[planet] = {
             'longitude': pos[0],
             'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
-            'retrograde': 'R' if pos[3] < 0 else ''
+            'retrograde': 'R' if pos[3] < 0 else '',
+            'speed': pos[3]  # Speed of the planet in degrees per day
         }
         if planet == "North Node":
             # Calculate the South Node
@@ -669,20 +674,22 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
             positions["South Node"] = {
                 'longitude': south_node_longitude,
                 'zodiac_sign': longitude_to_zodiac(south_node_longitude, output).split()[0],
-                'retrograde': ''  # South Node does not have retrograde motion
+                'retrograde': '',  # South Node does not have retrograde motion
+                'speed': pos[3]  #Same speed as North Node
             }
 
-    # Calculate Ascendant and Midheaven
+    # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
-    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': ''}
-    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': ''}
+    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
+    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
 
     # Fix south node
     PLANETS.update({"South Node": None})  # Add South Node to the list of planets
     positions["South Node"] = {
         'longitude': (positions["North Node"]['longitude'] + 180) % 360,
         'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
-        'retrograde': ''
+        'retrograde': '',
+        'speed': 360
     }
 
     return positions
@@ -741,7 +748,7 @@ def calculate_aspects(planet_positions, orb, output_type, aspect_types):
 
             long1 = planet_positions[planet1]['longitude']
             long2 = planet_positions[planet2]['longitude']
-            angle_diff = abs(long1 - long2) % 360
+            angle_diff = (long1 - long2) % 360
             angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
 
             for aspect_name, aspect_values in aspect_types.items():
@@ -1029,7 +1036,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text"):
+def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
@@ -1071,7 +1078,7 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
 
     planetary_aspects_table_data = []
     if type == "Transit":
-        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by"]
+        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by", "Duration"]
     if type == "Synastry":
         headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
     else:
@@ -1109,17 +1116,20 @@ def print_aspects(aspects, imprecise_aspects="off", minor_aspects=True, degree_i
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}".strip("-")
+            angle_with_degree = f"{abs(aspect_details['angle_diff']):.2f}{degree_symbol}".strip("-")
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
-            row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
-
+            if type == "Transit":
+                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, calculate_aspect_duration(planet_positions, planets[0], planets[1], orb-aspect_details['angle_diff'])]
+            else:
+                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
                 off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
                 row.append(" ± " + off_by)
         planetary_aspects_table_data.append(row)
+    
         # Add or update the count of the aspect type
         aspect_name = aspect_details['aspect_name']
         if aspect_name in aspect_type_counts:
@@ -1739,7 +1749,6 @@ def main(gui_arguments=None):
             print("Invalid second event for synastry", file=sys.stderr)
             return "Invalid second event for synastry."
 
-
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
@@ -1757,7 +1766,7 @@ def main(gui_arguments=None):
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
-    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, planet_positions, notime, HOUSE_SYSTEMS[house_system_name])
+    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
     if notime:
@@ -1857,13 +1866,13 @@ def main(gui_arguments=None):
         else:
             to_return += f"\{string_house_cusps}{br}"
 
-    aspects = calculate_aspects(planet_positions, orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
-    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, planet_positions, house_cusps, orb, MAJOR_ASPECTS, all_stars)
+    aspects = calculate_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
+    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if not hide_planetary_positions:
         print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
-        to_return += f"{p}" + print_planet_positions(planet_positions, degree_in_minutes, notime, house_positions, orb, output_type)
+        to_return += f"{p}" + print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, False, "", "", notime, output_type) # False = these are not transits
+        to_return += f"{p}" + print_aspects(aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Natal", "", "", notime, output_type) # False = these are not transits
     if not hide_fixed_star_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     
@@ -1884,23 +1893,24 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude, output_type, h_sys) # Also add argument for transits location if different
 
-        transit_aspects = calculate_transits(planet_positions, transits_planet_positions, orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
             print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_transits} {name} {transits_local_datetime}{br}===================================" 
-        to_return += f"{p}" + print_aspects(transit_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
+        # planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys) # For some reason this dict is repolulated with the houses instead, so need to recalculate all the time, until bug found
+        to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys) # Also add argument for transits location if different
 
-        synastry_aspects = calculate_transits(planet_positions, synastry_planet_positions, orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        synastry_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
             print(f"{p}{bold}{h2}{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_synastry} {name} {transits_local_datetime}{br}===================================" 
-        to_return += f"{p}" + print_aspects(synastry_aspects, imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
+        to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
     # Make SVG chart if output is html
     if output_type == "html":
