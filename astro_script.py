@@ -597,7 +597,7 @@ def read_fixed_stars(all_stars=False):
     
     return fixed_stars
 
-def calculate_aspect_duration(planet_positions, planet1, planet2, degrees_to_travel):
+def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
     """
     Calculate the exact duration for which two planets are within a specified number of degrees of each other.
     
@@ -611,24 +611,32 @@ def calculate_aspect_duration(planet_positions, planet1, planet2, degrees_to_tra
     Returns:
     - str: Duration of the aspect in days, hours, and minutes.
     """
-    # Extract the speeds and consider retrograde status
-    speed1 = abs(planet_positions[planet1]['speed'])
-    speed2 = abs(planet_positions[planet2]['speed'])
-
-    # Determine relative speed based on their retrograde status and absolute speed
-    if planet_positions[planet1]['retrograde'] == planet_positions[planet2]['retrograde']:
-        relative_speed = abs(speed1 - speed2)
-    else:
-        relative_speed = speed1 + speed2
-
-    # Calculate the duration based on the relative speed
-    days = degrees_to_travel / relative_speed
+    days = degrees_to_travel / abs(planet_positions[planet2]['speed'])
+    hours = int((days % 1) * 24)
+    minutes = int(((days % 1) * 24 % 1) * 60)
+    return_string=""
 
     # Return formatted duration
-    return_string = f"{int(days)} days" if days >= 1 else ""
-    return_string += f", {int((days % 1) * 24)} hours" if days % 1 * 24 >= 1 else ""
-    return_string += f", {int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
-    return return_string if return_string else "Less than a minute"
+    if days >= 1 and days < 2:
+        return_string = f"{int(days)} day " 
+    elif days >= 2: 
+        return_string = f"{int(days)} days "
+    if days < 10: # Only show hours if less than 10 days
+        if days % 1 >= 1:
+            if hours >= 1 and hours < 2:
+                return_string += f"and {int(hours)} hour"
+            elif hours >= 2:
+                return_string += f"and {int(hours)} hours"
+        else:
+            if hours >= 1 and hours < 2:
+                return_string += f"{hours} hour"
+            elif hours >= 2:
+                return_string += f"{hours} hours"
+    # if days % 1 * 24 % 1 >= 1: # Skipping the minutes, as it's not accurate enough
+    #     return_string += f", {int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
+    # else:
+    #     return_string += f"{int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
+    return return_string if return_string else "Less than an hour"
 
 # Example usage assuming planet_positions dictionary is populated accordingly
 example_planet_positions = {
@@ -804,7 +812,7 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types, ou
         for planet2 in transit_planet_names[i+1:]:
             long1 = natal_positions[planet1]['longitude']
             long2 = transit_positions[planet2]['longitude']
-            angle_diff = abs(long1 - long2) % 360
+            angle_diff = (long1 - long2) % 360
             angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
 
             for aspect_name, aspect_values in aspect_types.items():
@@ -832,7 +840,6 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types, ou
                         'aspect_comment': aspect_comment
                     }
     return aspects_found
-
 
 def moon_phase(date):
     """
@@ -1078,8 +1085,8 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
 
     planetary_aspects_table_data = []
     if type == "Transit":
-        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "Off by", "Duration"]
-    if type == "Synastry":
+        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "From Exact", "Rem. Duration"]
+    elif type == "Synastry":
         headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
     else:
         headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
@@ -1121,13 +1128,15 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
             continue
         else:
             if type == "Transit":
-                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, calculate_aspect_duration(planet_positions, planets[0], planets[1], orb-aspect_details['angle_diff'])]
+                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, calculate_aspect_duration(planet_positions, planets[1], orb-abs(orb-aspect_details['angle_diff'])), calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
             else:
                 row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
                 off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
                 row.append(" ± " + off_by)
+            else:
+                row.append("")
         planetary_aspects_table_data.append(row)
     
         # Add or update the count of the aspect type
