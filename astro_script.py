@@ -497,13 +497,13 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
     - tuple: A tuple containing a boolean and a float. The boolean indicates whether the aspect is within
              the allowed orb, and the float represents how much the actual angle is off from the aspect_angle.
     """
-    angular_difference = abs(planet_long - star_long) % 360
+    angular_difference = (planet_long - star_long) % 360
     # Normalize the angle to <= 180 degrees for comparison
     if angular_difference > 180:
         angular_difference = 360 - angular_difference
     
-    angle_off = abs(angular_difference - aspect_angle)
-    return angle_off <= orb, angle_off
+    angle_off = (angular_difference - aspect_angle)
+    return ((angle_off <= orb) and angle_off >= -orb), angle_off
 
 def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
     """
@@ -765,7 +765,8 @@ def calculate_aspects(planet_positions, orb, output_type, aspect_types):
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
                     is_imprecise = any(
-                        planet in OFF_BY and OFF_BY[planet] > angle_diff
+                        (planet in OFF_BY and OFF_BY[planet] > angle_diff) or
+                        (planet in OFF_BY and OFF_BY[planet] < -angle_diff)
                         for planet in (planet1, planet2)
                     )
                     
@@ -821,7 +822,8 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types, ou
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
                     is_imprecise = any(
-                        planet in OFF_BY and OFF_BY[planet] > angle_diff
+                        (planet in OFF_BY and OFF_BY[planet] > angle_diff) or
+                        (planet in OFF_BY and OFF_BY[planet] < -angle_diff)
                         for planet in (planet1, planet2)
                     )
                     
@@ -1123,12 +1125,17 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            angle_with_degree = f"{abs(aspect_details['angle_diff']):.2f}{degree_symbol}".strip("-")
+            if type == "Transit":
+                angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}"
+            else:
+                angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}".strip("-")
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
             if type == "Transit":
-                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, calculate_aspect_duration(planet_positions, planets[1], orb-abs(orb-aspect_details['angle_diff'])), calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                       ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                       calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
             else:
                 row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
@@ -1152,7 +1159,8 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
             soft_count += 1
             soft_count_score += aspect_details['aspect_score']
 
-    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")    
+    table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
+                     colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
     to_return += "\n" + table
 
     if output in ('text', 'html'):
@@ -1902,13 +1910,15 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude, output_type, h_sys) # Also add argument for transits location if different
 
-        transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
+                                             aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
             print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_transits} {name} {transits_local_datetime}{br}===================================" 
         # planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys) # For some reason this dict is repolulated with the houses instead, so need to recalculate all the time, until bug found
-        to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
+        to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, 
+                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
