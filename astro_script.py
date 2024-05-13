@@ -632,11 +632,16 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
                 return_string += f"{hours} hour"
             elif hours >= 2:
                 return_string += f"{hours} hours"
+    if days<1 and hours<1:
+        if minutes >= 2:
+            return_string += f"{minutes} minutes"
+        elif 1 <= minutes <2:
+            return_string += f"{minutes} minute"
     # if days % 1 * 24 % 1 >= 1: # Skipping the minutes, as it's not accurate enough
     #     return_string += f", {int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
     # else:
     #     return_string += f"{int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
-    return return_string if return_string else "Less than an hour"
+    return return_string if return_string else "Less than a minute"
 
 # Example usage assuming planet_positions dictionary is populated accordingly
 example_planet_positions = {
