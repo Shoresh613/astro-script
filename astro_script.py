@@ -5,7 +5,7 @@ import json
 import os
 import sys
 import argparse
-from math import cos, radians
+from math import cos, radians, exp
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
 import save_event
@@ -131,6 +131,32 @@ h4_ = ""
 
 ############### Functions ###############
 
+def calculate_adjustment_factor(magnitude, min_factor=0.5, max_factor=2):
+    """
+    Calculate the adjustment factor based on the magnitude using a logistic function.
+    
+    Parameters:
+    - magnitude (float): The magnitude value to adjust.
+    - min_factor (float): The minimum adjustment factor.
+    - max_factor (float): The maximum adjustment factor.
+    
+    Returns:
+    - float: The clamped adjustment factor.
+    """
+    # Logistic function parameters
+    A = max_factor - min_factor  # Controls the range (max_factor - min_factor)
+    B = 0.4  # Controls the steepness
+    C = 3.45  # Shifts the function horizontally (based on median magnitude)
+    D = 0.5  # Shifts the function vertically (min_factor)
+
+    # Calculate the adjustment factor using the logistic function
+    adjustment_factor = A / (1 + exp(-B * (magnitude - C))) + D
+    
+    # Clamp the adjustment factor to the specified range
+    adjustment_factor = max(min(adjustment_factor, max_factor), min_factor)
+    
+    return adjustment_factor
+
 def angle_influence(angle):
     # Convert angle to absolute value for symmetry
     angle = float(abs(angle))
@@ -143,7 +169,7 @@ def angle_influence(angle):
         return 0
 
 # Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
-def calculate_aspect_score(aspect, magnitude, angle):
+def calculate_aspect_score(aspect, angle, magnitude=None):
     if aspect in MAJOR_ASPECTS:
         base_score = MAJOR_ASPECTS[aspect]['Score']
     elif aspect in MINOR_ASPECTS:
@@ -152,8 +178,9 @@ def calculate_aspect_score(aspect, magnitude, angle):
         return None  # Aspect not found
 
     # Adjust score based on magnitude (stars)
-    adjustment_factor = 1 + (10 - float(magnitude)) / 10
-    adjusted_score = base_score * adjustment_factor
+    if magnitude:
+        adjustment_factor = calculate_adjustment_factor(float(magnitude), 0.5, 2) # Adjust between 0.5 and 2
+        adjusted_score = base_score * adjustment_factor
 
     # Take the angle of the aspect into account
     influence_factor = angle_influence(angle)
@@ -1329,18 +1356,24 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             house_counts[house_positions[planet].get('house', 'Unknown')] += 1
         elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}{degree_symbol}")
+        # Show score for individual aspects, for fun
+        show_aspect_weight = True
+
+        if show_aspect_weight:
+            row.append(calculate_aspect_score(aspect_name, aspect[3], stars[star_name]))
         star_aspects_table_data.append(row)
+
         if aspect_name in aspect_type_counts:
             aspect_type_counts[aspect_name] += 1
         else:
             aspect_type_counts[aspect_name] = 1
         if aspect_name in HARD_ASPECTS:
             hard_count += 1
-            hard_count_score +=  calculate_aspect_score(aspect_name, stars[star_name], aspect[3])
+            hard_count_score +=  calculate_aspect_score(aspect_name, aspect[3], stars[star_name])
         elif aspect_name in SOFT_ASPECTS:
             soft_count += 1
             # soft_count_score += aspect_score # it was like this before magnitude was taken into account (keeping if adding switch)
-            soft_count_score += calculate_aspect_score(aspect_name, stars[star_name], aspect[3])
+            soft_count_score += calculate_aspect_score(aspect_name, aspect[3], stars[star_name])
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
@@ -1349,6 +1382,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         headers.append("S House") 
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
+    if show_aspect_weight:
+        headers.append("Weight")
 
     if output == 'html':
         table_format = 'html'
