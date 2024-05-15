@@ -131,7 +131,7 @@ h4_ = ""
 
 ############### Functions ###############
 
-def calculate_adjustment_factor(magnitude, min_factor=0.5, max_factor=2):
+def calculate_adjustment_factor(magnitude, min_factor=0.8, max_factor=1.2):
     """
     Calculate the adjustment factor based on the magnitude using a logistic function.
     
@@ -157,16 +157,22 @@ def calculate_adjustment_factor(magnitude, min_factor=0.5, max_factor=2):
     
     return adjustment_factor
 
-def angle_influence(angle):
-    # Convert angle to absolute value for symmetry
-    angle = float(abs(angle))
+import math
 
-    if angle <= 3:
-        return 2 - angle / 3
-    elif angle <= 10:
-        return 1 - (angle - 3) / 7
-    else:
-        return 0
+def angle_influence(angle):
+    # Returns an influece factor based on the angle of the aspect between 1.4 for exact and 0.6 for 10 degrees
+    # Convert angle to absolute value for symmetry 
+    angle = float(abs(angle))
+    
+    # Logistic function parameters
+    a = 0.6  # Minimum value
+    b = 1.4  # Maximum value
+    x0 = 5  # Midpoint of the logistic curve
+    k = -1   # Steepness of the curve
+    
+    # Logistic function for smooth transition
+    value = a + (b - a) / ( + math.exp(k * (angle - x0)))
+    return value
 
 # Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
 def calculate_aspect_score(aspect, angle, magnitude=None):
@@ -179,12 +185,14 @@ def calculate_aspect_score(aspect, angle, magnitude=None):
 
     # Adjust score based on magnitude (stars)
     if magnitude:
-        adjustment_factor = calculate_adjustment_factor(float(magnitude), 0.5, 2) # Adjust between 0.5 and 2
-        adjusted_score = base_score * adjustment_factor
+        adjustment_factor = calculate_adjustment_factor(float(magnitude), 0.9, 1.1)
 
-    # Take the angle of the aspect into account
+    # Always take the angle of the aspect into account
     influence_factor = angle_influence(angle)
-    adjusted_score *= influence_factor
+    if base_score > 50:
+        adjusted_score = 50 + (base_score-50) * influence_factor * adjustment_factor # Amplify harmoneous (>50) with higher magnitude
+    else:
+        adjusted_score = 50 - (50-base_score) * influence_factor * adjustment_factor # Amplify less harmoneous aspect (>50)
 
     # Normalize to 0-100 scale
     score = min(max(0, adjusted_score), 100)
