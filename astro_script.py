@@ -1102,12 +1102,20 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         h3_ = ""
 
     planetary_aspects_table_data = []
-    if type == "Transit":
-        headers = ["Natal Planet", "H", "Aspect", "Transit Planet", "H","Degree", "From Exact", "Rem. Duration"]
-    elif type == "Synastry":
-        headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
+    if notime:
+        if type == "Transit":
+            headers = ["Natal Planet", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
+        elif type == "Synastry":
+            headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
+        else:
+            headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     else:
-        headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
+        if type == "Transit":
+            headers = ["Natal Planet", "H", "Aspect", "Transit Planet", "H","Degree", "From Exact", "Rem. Duration"]
+        elif type == "Synastry":
+            headers = [p1_name, "H", "Aspect", p2_name, "H", "Degree", "Off by"]
+        else:
+            headers = ["Planet", "H", "Aspect", "Planet", "H", "Degree", "Off by"]
     to_return = ""
 
     degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
@@ -1133,10 +1141,10 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
-    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
+    degree_symbol = "" if (os.name == 'nt' and output=='html') else "°" # PowerShell doesn't save the degree symbol correctly when piping to an html file 
 
     for planets, aspect_details in aspects.items():
-        if planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME:
+        if (planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME) and notime:
             continue
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
@@ -1148,15 +1156,28 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
-            if type == "Transit":
-                row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], planet_positions[planets[1]]["house"], angle_with_degree, 
-                       ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
-                       calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+            if notime:
+                if type == "Transit":
+                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                elif type == "Synastry":
+                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
+                else:
+                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
             else:
-                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
+                if type == "Transit":
+                    row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], transit_planet_positions[planets[1]]["house"], angle_with_degree, 
+                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                elif type == "Synastry":
+                    row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], transit_planet_positions[planets[1]]["house"], angle_with_degree]
+                else:
+                    row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], planet_positions[planets[1]]["house"], angle_with_degree]
+
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
-                off_by = str(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0))
+                off_by = str(round(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0),2))
                 row.append(" ± " + off_by)
             else:
                 row.append("")
@@ -1906,7 +1927,7 @@ def main(gui_arguments=None):
         print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
         to_return += f"{p}" + print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Natal", "", "", notime, output_type) # False = these are not transits
+        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type)
     if not hide_fixed_star_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     
@@ -1946,7 +1967,7 @@ def main(gui_arguments=None):
             print(f"{p}{bold}{h2}{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
         else:
             to_return += f"{p}{string_synastry} {name} {transits_local_datetime}{br}===================================" 
-        to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
+        to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
     # Make SVG chart if output is html
     if output_type == "html":
