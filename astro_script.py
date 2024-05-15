@@ -1196,6 +1196,12 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             soft_count += 1
             soft_count_score += aspect_details['aspect_score']
 
+    # Sorting
+    if notime:
+        planetary_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
+    else:
+        planetary_aspects_table_data.sort(key=lambda x: x[5]) # 2 more columns
+
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
                      colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
     to_return += "\n" + table
@@ -1207,7 +1213,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
-    aspect_data.sort(key=lambda x: x[1], reverse=True)
+    aspect_data.sort(key=lambda x: x[1], reverse=True) # Sort by degree of aspect
     
     # Convert aspect_data to a list of lists
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
@@ -1348,6 +1354,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         table_format = 'html'
     else:
         table_format = 'simple'
+
+    star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     to_return += "\n\n" + table
