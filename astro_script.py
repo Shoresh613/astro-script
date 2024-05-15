@@ -131,8 +131,19 @@ h4_ = ""
 
 ############### Functions ###############
 
+def angle_influence(angle):
+    # Convert angle to absolute value for symmetry
+    angle = float(abs(angle))
+
+    if angle <= 3:
+        return 2 - angle / 3
+    elif angle <= 10:
+        return 1 - (angle - 3) / 7
+    else:
+        return 0
+
 # Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
-def calculate_aspect_score(aspect, magnitude):
+def calculate_aspect_score(aspect, magnitude, angle):
     if aspect in MAJOR_ASPECTS:
         base_score = MAJOR_ASPECTS[aspect]['Score']
     elif aspect in MINOR_ASPECTS:
@@ -140,14 +151,18 @@ def calculate_aspect_score(aspect, magnitude):
     else:
         return None  # Aspect not found
 
-    # Adjust score based on magnitude
+    # Adjust score based on magnitude (stars)
     adjustment_factor = 1 + (10 - float(magnitude)) / 10
     adjusted_score = base_score * adjustment_factor
 
-    # Normalize to 0-100 scale
-    final_score = min(max(0, adjusted_score), 100)
+    # Take the angle of the aspect into account
+    influence_factor = angle_influence(angle)
+    adjusted_score *= influence_factor
 
-    return final_score
+    # Normalize to 0-100 scale
+    score = min(max(0, adjusted_score), 100)
+
+    return score
 
 def get_davison_data(names):
     if not os.path.exists(saved_events_file):
@@ -616,12 +631,15 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
     minutes = int(((days % 1) * 24 % 1) * 60)
     return_string=""
 
+    if days > 5:
+        days = int(round(days)) 
+
     # Return formatted duration
     if days >= 1 and days < 2:
         return_string = f"{int(days)} day " 
     elif days >= 2: 
         return_string = f"{int(days)} days "
-    if days < 10: # Only show hours if less than 10 days
+    if days < 5: # Only show hours if less than 5 days
         if days % 1 >= 1:
             if hours >= 1 and hours < 2:
                 return_string += f"and {int(hours)} hour"
@@ -637,22 +655,7 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
             return_string += f"{minutes} minutes"
         elif 1 <= minutes <2:
             return_string += f"{minutes} minute"
-    # if days % 1 * 24 % 1 >= 1: # Skipping the minutes, as it's not accurate enough
-    #     return_string += f", {int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
-    # else:
-    #     return_string += f"{int(((days % 1) * 24 % 1) * 60)} minutes" if days % 1 * 24 % 1 * 60 >= 1 else ""
     return return_string if return_string else "Less than a minute"
-
-# Example usage assuming planet_positions dictionary is populated accordingly
-example_planet_positions = {
-    'Mars': {'longitude': 120, 'zodiac_sign': 'Leo', 'retrograde': '', 'speed': 0.8},
-    'Venus': {'longitude': 125, 'zodiac_sign': 'Leo', 'retrograde': '', 'speed': 1.1}
-}
-
-# Calculate duration of a transit with a 3-degree separation
-# aspect_duration = calculate_aspect_duration(example_planet_positions, 'Mars', 'Venus', 3)
-# print(aspect_duration)  # Outputs the calculated duration
-
 
 def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
     """
@@ -704,6 +707,13 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
         'retrograde': '',
         'speed': 360
     }
+
+    # Calculate house positions
+    house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
+
+    # Include house positions in the positions dictionary
+    for planet in positions:
+        positions[planet]['house'] = house_positions.get(planet, {}).get('house', None)
 
     return positions
 
@@ -1001,18 +1011,19 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     ## House counts
     sorted_planet_house_counts = sorted(planet_house_counts.items(), key=lambda item: item[1], reverse=True)
     
-    for house, count in sorted_planet_house_counts:
-        if count > 0:
-            if output_type == 'text':
-                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
-            elif output_type == 'html':
-                house_count_string += f"{bold}{house}:{nobold} {count}, "
-            else:
-                house_count_string += f"{house}: {count}, "
-    house_count_string = house_count_string[:-2] # Remove the last comma and space
-    to_return += "\n" + house_count_string
-    if output_type in ('text', 'html'):
-        print(house_count_string)
+    if not notime:
+        for house, count in sorted_planet_house_counts:
+            if count > 0:
+                if output_type == 'text':
+                    house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
+                elif output_type == 'html':
+                    house_count_string += f"{bold}{house}:{nobold} {count}, "
+                else:
+                    house_count_string += f"{house}: {count}, "
+        house_count_string = house_count_string[:-2] # Remove the last comma and space
+        to_return += "\n" + house_count_string
+        if output_type in ('text', 'html'):
+            print(house_count_string)
 
     # Print zodiac sign, element and modality counts
     if output_type in ('html'):
@@ -1050,7 +1061,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text"):
+def print_aspects(aspects, planet_positions, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
 
@@ -1092,7 +1103,7 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
 
     planetary_aspects_table_data = []
     if type == "Transit":
-        headers = ["Natal Planet", "Aspect", "Transit Planet", "Degree", "From Exact", "Rem. Duration"]
+        headers = ["Natal Planet", "H", "Aspect", "Transit Planet", "H","Degree", "From Exact", "Rem. Duration"]
     elif type == "Synastry":
         headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
     else:
@@ -1138,7 +1149,7 @@ def print_aspects(aspects, planet_positions, imprecise_aspects="off", minor_aspe
             continue
         else:
             if type == "Transit":
-                row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], planet_positions[planets[1]]["house"], angle_with_degree, 
                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
             else:
@@ -1298,11 +1309,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             aspect_type_counts[aspect_name] = 1
         if aspect_name in HARD_ASPECTS:
             hard_count += 1
-            hard_count_score +=  calculate_aspect_score(aspect_name, stars[star_name])
+            hard_count_score +=  calculate_aspect_score(aspect_name, stars[star_name], aspect[3])
         elif aspect_name in SOFT_ASPECTS:
             soft_count += 1
             # soft_count_score += aspect_score # it was like this before magnitude was taken into account (keeping if adding switch)
-            soft_count_score += calculate_aspect_score(aspect_name, stars[star_name])
+            soft_count_score += calculate_aspect_score(aspect_name, stars[star_name], aspect[3])
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
@@ -1345,21 +1356,22 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
 
     ## House counts
-    house_count_string = f'{p}{bold}House count{nobold}  '
-    sorted_star_house_counts = sorted(house_counts.items(), key=lambda item: item[1], reverse=True)
+    if not notime:
+        house_count_string = f'{p}{bold}House count{nobold}  '
+        sorted_star_house_counts = sorted(house_counts.items(), key=lambda item: item[1], reverse=True)
 
-    for house, count in sorted_star_house_counts:
-        if count > 0:
-            if output == 'text':
-                house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
-            elif output == 'html':
-                house_count_string += f"{bold}{house}:{nobold}: {count}, "
-            else:
-                house_count_string += f"{house}: {count}, "
-    house_count_string = house_count_string[:-2] # Remove the last comma and space
-    to_return += "\n" + house_count_string
-    if output in ('text', 'html'):
-        print(house_count_string)
+        for house, count in sorted_star_house_counts:
+            if count > 0:
+                if output == 'text':
+                    house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
+                elif output == 'html':
+                    house_count_string += f"{bold}{house}:{nobold}: {count}, "
+                else:
+                    house_count_string += f"{house}: {count}, "
+        house_count_string = house_count_string[:-2] # Remove the last comma and space
+        to_return += "\n" + house_count_string
+        if output in ('text', 'html'):
+            print(house_count_string)
 
 
     return to_return
@@ -1748,8 +1760,8 @@ def main(gui_arguments=None):
             try:
                 transits_local_datetime = datetime.strptime(args["Transits"], "%Y-%m-%d %H:%M")
             except ValueError:
-                print("Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nLeave blank for current time (UTC", file=sys.stderr)
-                return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nLeave blank for current time (UTC)"
+                print("Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC).", file=sys.stderr)
+                return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC)."
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_timezone)
             show_transits = True 
 
@@ -1822,7 +1834,7 @@ def main(gui_arguments=None):
     string_house_system_moon_nodes = f"{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"
     string_house_cusps = f"{bold}House cusps:{nobold} {house_cusps}"
     string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
-    string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}"
+    string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
     string_transits = f"Transits for"
     string_synastry = f"Synastry chart for"
 
@@ -1922,7 +1934,7 @@ def main(gui_arguments=None):
         else:
             to_return += f"{p}{string_transits} {name} {transits_local_datetime}{br}===================================" 
         # planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys) # For some reason this dict is repolulated with the houses instead, so need to recalculate all the time, until bug found
-        to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), imprecise_aspects, minor_aspects, 
+        to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
 
     if show_synastry:
