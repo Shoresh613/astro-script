@@ -953,7 +953,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     zodiac_table_data = []
 
-    if output_type == 'html':
+    if output_type in ('html', 'return_html'):
         table_format = 'html'
         bold = "<b>"
         nobold = "</b>"
@@ -1047,7 +1047,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             if count > 0:
                 if output_type == 'text':
                     house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
-                elif output_type == 'html':
+                elif output_type in ('html', 'return_html'):
                     house_count_string += f"{bold}{house}:{nobold} {count}, "
                 else:
                     house_count_string += f"{house}: {count}, "
@@ -1059,6 +1059,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     # Print zodiac sign, element and modality counts
     if output_type in ('html'):
         print(f"{p}<div class='table-container'>")
+    if output_type == 'return_html':
+        to_return += f"{p}<div class='table-container'>"
 
     for sign, data in sign_counts.items():
         if data['count'] > 0:
@@ -1066,7 +1068,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             sign_count_table_data.append(row)
 
     table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt=table_format, floatfmt=".2f")
-    to_return += "\n\n" + table
+    to_return += f"{br}{br}{table}"
     if output_type in ('text', 'html'):
         print(f"{p}{table}{br}")
 
@@ -1076,7 +1078,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             element_count_table_data.append(row)
 
     table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt=table_format, floatfmt=".2f")
-    to_return += "\n\n" + table
+    to_return += f"{br}{br}{table}"
     if output_type in ('text', 'html'):
         print(table + f"{br}")
 
@@ -1084,11 +1086,13 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         row = [modality, info['count'], ', '.join(info['planets'])]
         modality_count_table_data.append(row)
     table = tabulate(modality_count_table_data, headers=["Modality","Nr", "Planets"], tablefmt=table_format)
-    to_return += "\n\n" + table
+    to_return += f"{br}{br}{table}"
     if output_type in ('text', 'html'):
         print(table + f"{br}")
         if output_type == 'html':
             print('</div>')
+        elif output_type == 'return_html':
+            to_return += '</div>'
 
     return to_return
 
@@ -1107,7 +1111,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     Directly prints formatted aspect information based on specified parameters.
     """
-    if output == 'html':
+    if output in ('html', 'return_html'):
         table_format = 'html'
         bold = "<b>"
         nobold = "</b>"
@@ -1158,11 +1162,12 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
     else:
-        to_return = f"\nPlanetary Aspects ({orb}{degree_symbol} orb)"
+        to_return = f"{p}{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb{nobold})"
         if minor_aspects:
-            to_return += " and minor aspects" 
+            to_return += f"{bold} and minor aspects{nobold}" 
         if notime:
-            to_return += f" with imprecise aspects set to {imprecise_aspects}"
+            to_return += f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}"
+        to_return += f"{h3_}"
 
     aspect_type_counts = {}
     hard_count = 0 
@@ -1235,12 +1240,14 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
                      colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
-    to_return += "\n" + table
+    to_return += f"{br}" + table
 
     if output in ('text', 'html'):
         if output == 'html':
             print('<div class="table-container">')
         print(f"{table}")
+        if output == 'return_html':
+            to_return += '<div class="table-container">'
 
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
@@ -1255,14 +1262,17 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
     else:
         aspect_count_text = f"{p}No aspects found.{br}"
-    to_return += "\n" + table + aspect_count_text
+    to_return += f"{br}" + table + aspect_count_text
 
     # Print counts of each aspect type
     if output in ('text','html'):
         print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
         if output == 'html':
             print('</div>')
-
+    if output in ('return_text', 'return_html'):
+        to_return += f'{br}'+table + f'{p}' + aspect_count_text
+        if output == 'return_html':
+            to_return += '</div>'
 
     if output in ('text', 'html'):
         if not house_positions:
@@ -1272,10 +1282,10 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             print(f"{p}  Please specify the time of birth for a complete chart.\n")
     else:
         if not house_positions:
-            to_return += "\n* No time of day specified. Houses cannot be calculated. "
-            to_return += "  Aspects to the Ascendant and Midheaven are not available."
-            to_return += "  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n"
-            to_return += "\n  Please specify the time of birth for a complete chart.\n"
+            to_return += f"{p}* No time of day specified. Houses cannot be calculated. "
+            to_return += f"{p}  Aspects to the Ascendant and Midheaven are not available."
+            to_return += f"{p}  The positions of the Sun, Moon, Mercury, Venus, and Mars are uncertain.\n"
+            to_return += f"{p}  Please specify the time of birth for a complete chart.\n"
 
     return to_return
 
@@ -1296,7 +1306,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     Outputs a formatted list of aspects to the console based on the provided parameters.
     """
     to_return = ""
-    if output == 'html':
+    if output in ('html', 'return_html'):
         bold = "<b>"
         nobold = "</b>"
         br = "\n<br>"
@@ -1310,7 +1320,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         p = "\n"
         h3 = ""
         h3_ = ""
-    else:
+    elif output == 'return_text':
         bold = ""
         nobold = ""
         br = "\n"
@@ -1326,11 +1336,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
     else:
-        to_return += f"Fixed Star Aspects ({orb}° orb)"
+        to_return += f"{p}{h3}Fixed Star Aspects ({orb}° orb){nobold}"
         if minor_aspects:
-            to_return += " including Minor Aspects"
+            to_return += f"{bold} including Minor Aspects{nobold}"
         if notime:
-            to_return += f" with Imprecise Aspects set to {imprecise_aspects}\n\n"
+            to_return += f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}{br}{br}"
 
     star_aspects_table_data = []
 
@@ -1341,7 +1351,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     soft_count_score = 0
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
     house_counts = {house: 0 for house in range(1, 13)}
-
 
     for aspect in aspects:
         planet, star_name, aspect_name, angle, house, aspect_score, aspect_comment = aspect
@@ -1397,11 +1406,13 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
-    to_return += "\n\n" + table
+    to_return += f"{br}{br}" + table
     if output in ('text','html'):
         if output == 'html':
             print('<div class="table-container">')
         print(table + f"{br}", end="")
+    if output in ('return_html'):
+        to_return += '<div class="table-container">'
 
     aspect_data = list(aspect_type_counts.items())
     aspect_data.sort(key=lambda x: x[1], reverse=True)
@@ -1412,16 +1423,17 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
     else:
         aspect_count_text = f"{p}No aspects found.{br}"
-    to_return += "\n" + table + '\n' + aspect_count_text
-
-    # Update scoring based on the magnitude and the new function for scoring.
+    to_return += f"{br}" + table + f'{br}' + aspect_count_text
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
         print(f"{p}{table}{br}{aspect_count_text}", end="")
         if output == 'html':
             print('</div>')
-
+    if output in ('return_text', 'return_html'):
+        to_return += f"{br}" + table + f"{br}" + aspect_count_text
+        if output == 'return_html':
+            to_return += '</div>'
 
     ## House counts
     if not notime:
@@ -1437,7 +1449,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
                 else:
                     house_count_string += f"{house}: {count}, "
         house_count_string = house_count_string[:-2] # Remove the last comma and space
-        to_return += "\n" + house_count_string
+        to_return += f"{br}" + house_count_string
         if output in ('text', 'html'):
             print(house_count_string)
 
@@ -1485,7 +1497,11 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry):
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type)
+
+    if isinstance(date, datetime):
+        date = date.strftime("%Y-%m-%d %H:%M")
+
     arguments = {
         "Name": name,
         "Date": date,
@@ -1508,7 +1524,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
         "Transits": transits,
         "Synastry": synastry,
-        "Output": "return text"
+        "Output": output_type
     }
 
     print(arguments) 
