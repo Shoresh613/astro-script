@@ -1,4 +1,6 @@
-def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, second_datetime, second_name=None, second_longitude=None, second_latitude=None, second_local_timezone=None, second_place=None):
+import os
+
+def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, second_datetime, second_name=None, second_longitude=None, second_latitude=None, second_local_timezone=None, second_place=None):
     try:
         from kerykeion import AstrologicalSubject, KerykeionChartSVG
     except ImportError:
@@ -14,11 +16,26 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
                                     tz_str=str(second_local_timezone), city = second_place, nation="GB", online=False)
 
     if chart_type == "Natal":
-        chart = KerykeionChartSVG(subject, chart_type, new_output_directory="./")
+        if output_type=='html':
+            chart = KerykeionChartSVG(subject, chart_type, new_output_directory="./")
+        else:
+            chart = KerykeionChartSVG(subject, chart_type, new_output_directory="./myapp/static/")
     elif chart_type in ("Transit", "Synastry"):
-        chart = KerykeionChartSVG(subject, chart_type, second_subject, new_output_directory="./")
+        if output_type=='html':
+            chart = KerykeionChartSVG(subject, chart_type, second_subject, new_output_directory="./")
+        else:
+            chart = KerykeionChartSVG(subject, chart_type, second_subject, new_output_directory="./myapp/static/")
+    if output_type == 'html':
+        output_directory = "."
+    else:
+        output_directory = "./myapp/static"
+    
+    os.makedirs(output_directory, exist_ok=True)
 
+    print('Output type:' +output_type)
     chart.makeSVG()
-    #include the chart in the html output
-    if name:
-        print(f'<p><img src="{chart.output_directory}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">')
+    print(f'<p><img src="{chart.output_directory}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">')
+    return f'<p><img src="static/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">'
+    # elif output_type == 'return_html':
+    #     chart.makeSVG(output_directory)
+    #     return f'<p><img src="{output_directory}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">'

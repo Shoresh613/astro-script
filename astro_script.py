@@ -8,8 +8,8 @@ import argparse
 from math import cos, radians, exp
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
-import save_event
-from version import __version__
+from . import save_event
+from . import version
 import csv
 from colorama import init, Fore, Style
 import copy
@@ -703,6 +703,8 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
     - dict: A dictionary with each celestial body as keys, and dictionaries containing
       their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
     """
+    swe.set_ephe_path('./ephe/')
+    
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
     PLANETS.pop('South Node', None)  # None is the default value if the key doesn't exist
@@ -1026,7 +1028,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         modality_counts[modality]['planets'].append(planet)
         element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
 
-        table_format = 'html' if output_type == 'html' else 'simple'
+    table_format = 'html' if output_type in ('html', 'return_html') else 'simple'
 
     to_return = ''
     table = tabulate(zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
@@ -1341,7 +1343,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             to_return += f"{bold} including Minor Aspects{nobold}"
         if notime:
             to_return += f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}{br}{br}"
-
+        to_return += f"{h3_}{nobold}"
     star_aspects_table_data = []
 
     aspect_type_counts = {}
@@ -1398,7 +1400,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if show_aspect_weight:
         headers.append("Weight")
 
-    if output == 'html':
+    if output in ('html', 'return_html'):
         table_format = 'html'
     else:
         table_format = 'simple'
@@ -1497,7 +1499,7 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type)
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1538,28 +1540,28 @@ provided there are such values stored in the file (only the first 6 types are st
 If no record is found, default values will be used.''')
 
     # Add arguments
-    parser.add_argument('--name', help='Name to look up the record for.', required=False)
-    parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM local time).', required=False)
-    parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden".', required=False)
-    parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828.', required=False)
-    parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96.', required=False)
-    parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm").', required=False)
-    parser.add_argument('--davison', help='Create a Davison chart out of many stored events (e.g. "John, Jane").', required=False)
-    parser.add_argument('--place', help='Name of location without lookup of coordinates.', required=False)
-    parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn.', required=False)
-    parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects.', required=False)
-    parser.add_argument('--orb', type=float, help='Orb size in degrees.', required=False)
-    parser.add_argument('--degree_in_minutes',choices=['true','false'], help='Show degrees in arch minutes and seconds', required=False)
-    parser.add_argument('--node',choices=['mean','true'], help='Whether to use the moon mean node or true node', required=False)
-    parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars.', required=False)
-    parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc).', required=False)
-    parser.add_argument('--house_cusps', choices=['true','false'], help='Whether to show house cusps or not', required=False)
-    parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in.', required=False)
-    parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in.', required=False)
-    parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
-    parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time)", required=False)
-    parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name", required=False)
-    parser.add_argument('--output_type', choices=['text','return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html.', required=False)
+    parser.add_argument('--name', help='Name to look up the record for. (Default: None)', required=False)
+    parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM local time). (Default: None)', required=False)
+    parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden". (Default: "Sahlgrenska")', required=False)
+    parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828. (Default: 57.6828)', required=False)
+    parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
+    parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
+    parser.add_argument('--davison', help='Create a Davison chart out of many stored events (e.g. "John, Jane"). (Default: None)', required=False)
+    parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
+    parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
+    parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects. (Default: false)', required=False)
+    parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
+    parser.add_argument('--degree_in_minutes', choices=['true','false'], help='Show degrees in arch minutes and seconds. (Default: false)', required=False)
+    parser.add_argument('--node', choices=['mean','true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
+    parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars. (Default: false)', required=False)
+    parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc). (Default: "Placidus")', required=False)
+    parser.add_argument('--house_cusps', choices=['true','false'], help='Whether to show house cusps or not. (Default: false)', required=False)
+    parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in. (Default: false)', required=False)
+    parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in. (Default: false)', required=False)
+    parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars. (Default: false)', required=False)
+    parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time). (Default: None)", required=False)
+    parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name. (Default: None)", required=False)
+    parser.add_argument('--output_type', choices=['text','return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
 
@@ -1893,7 +1895,7 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"{p}{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}"
+    string_heading = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
     string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
     string_name = f"{p}{bold}Name:{nobold} {name}"
     string_place = f"{br}{bold}Place:{nobold} {place}"
@@ -2037,7 +2039,7 @@ def main(gui_arguments=None):
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
-        from chart_output import chart_output
+        from . import chart_output
         if show_transits:
             chart_type = "Transit"
         elif show_synastry:
@@ -2046,13 +2048,13 @@ def main(gui_arguments=None):
             chart_type = "Natal"
 
         if chart_type == "Natal":
-            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, None)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None,)
         elif chart_type == "Transit":
-            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, transits_utc_datetime)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type)
         elif chart_type == "Synastry":
-            chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
 
-        if output_type == "html":
+        if output_type in ("html", "return_html"):
             print("</div></body>\n</html>")
         else:
             to_return += "\n    </div></body>\n</html>"
