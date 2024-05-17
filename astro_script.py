@@ -160,19 +160,15 @@ def calculate_adjustment_factor(magnitude, min_factor=0.8, max_factor=1.2):
 import math
 
 def angle_influence(angle):
-    # Returns an influece factor based on the angle of the aspect between 1.4 for exact and 0.6 for 10 degrees
-    # Convert angle to absolute value for symmetry 
-    angle = float(abs(angle))
-    
-    # Logistic function parameters
-    a = 0.6  # Minimum value
-    b = 1.4  # Maximum value
-    x0 = 5  # Midpoint of the logistic curve
-    k = -1   # Steepness of the curve
-    
-    # Logistic function for smooth transition
-    value = a + (b - a) / ( + math.exp(k * (angle - x0)))
-    return value
+    # Convert angle to absolute value for symmetry
+    angle = abs(angle)
+
+    if angle <= 3:
+        return 2 - angle / 3
+    elif angle <= 10:
+        return 1 - (angle - 3) / 7
+    else:
+        return 0
 
 # Assesses the score in terms of ease (100) or difficulty (0) of aspects based on magnitude of stars
 def calculate_aspect_score(aspect, angle, magnitude=None):
@@ -1547,7 +1543,7 @@ If no record is found, default values will be used.''')
     parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars.', required=False)
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time)", required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name", required=False)
-    parser.add_argument('--output_type', choices=['text','return_text', 'html'], help='Output: Print text or html to stdout, or return text.', required=False)
+    parser.add_argument('--output_type', choices=['text','return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html.', required=False)
 
     args = parser.parse_args()
 
@@ -1771,6 +1767,7 @@ def main(gui_arguments=None):
             </style>
         </head>
         <body>''')
+    if output_type in ('html', 'return_html'):
         bold = "<b>"
         nobold = "</b>"
         br = "\n<br>"
@@ -1880,87 +1877,87 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    string_heading = f"{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}"
-    string_planets_heading = f"Planetary Positions{br}"
-    string_name = f"{bold}Name:{nobold} {name}"
-    string_place = f"{bold}Place:{nobold} {place}"
-    string_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
+    string_heading = f"{p}{h1}{bold}AstroScript v.{__version__} Chart{nobold}{h1_}"
+    string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
+    string_name = f"{p}{bold}Name:{nobold} {name}"
+    string_place = f"{br}{bold}Place:{nobold} {place}"
+    string_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
     string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude, output_type)}"
-    string_latitude = f"{bold}Latitude:{nobold} {latitude}"
+    string_latitude = f"{br}{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
-    string_davison = f"{bold}Davison chart of:{nobold} {args['Davison']}"
-    string_local_time = f"{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
-    string_UTC_Time_imprecise = f"{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
-    string_UTC_Time = f"{bold}UTC Time:{nobold} {utc_datetime} UTC"
+    string_davison = f"{br}{bold}Davison chart of:{nobold} {args['Davison']}"
+    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
+    string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC"
     if show_synastry:
-        string_synastry_name = f"{bold}Name:{nobold} {args['Synastry']}"
-        string_synastry_place = f"{bold}Place:{nobold} {synastry_place}"
-        string_synastry_latitude_in_minutes = f"{bold}Latitude:{nobold} {coord_in_minutes(synastry_latitude if show_synastry else 11.12, output_type)}"
+        string_synastry_name = f"{p}{p}{bold}Name:{nobold} {args['Synastry']}"
+        string_synastry_place = f"{br}{bold}Place:{nobold} {synastry_place}"
+        string_synastry_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(synastry_latitude if show_synastry else 11.12, output_type)}"
         string_synastry_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(synastry_longitude if show_synastry else 22.33, output_type)}"
-        string_synastry_latitude = f"{bold}Latitude:{nobold} {synastry_latitude}"
+        string_synastry_latitude = f"{br}{bold}Latitude:{nobold} {synastry_latitude}"
         string_synastry_longitude = f"{bold}Longitude:{nobold} {synastry_longitude}"
-        string_synastry_local_time = f"{bold}Local Time:{nobold} {synastry_local_datetime} {synastry_local_timezone}"
-        string_synastry_UTC_Time_imprecise = f"{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC (imprecise due to time of day missing)"
-        string_synastry_UTC_Time = f"{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC"
-    string_house_system_moon_nodes = f"{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"
-    string_house_cusps = f"{bold}House cusps:{nobold} {house_cusps}"
-    string_moon_phase_imprecise = f"{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
-    string_moon_phase = f"{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
-    string_transits = f"Transits for"
-    string_synastry = f"Synastry chart for"
+        string_synastry_local_time = f"{br}{bold}Local Time:{nobold} {synastry_local_datetime} {synastry_local_timezone}"
+        string_synastry_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC (imprecise due to time of day missing)"
+        string_synastry_UTC_Time = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC"
+    string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}"
+    string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
+    string_moon_phase_imprecise = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
+    string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
+    string_transits = f"{p}{bold}{h2}Transits for"
+    string_synastry = f"{p}{bold}{h2}Synastry chart for"
 
     if output_type in ("text","html"):
-        print(f"{p}{string_heading}", end='')
+        print(f"{string_heading}", end='')
         if exists or name:
-            print(f"{p}{string_name}", end='')
+            print(f"{string_name}", end='')
         if place:
-            print(f"{br}{string_place}", end='')
+            print(f"{string_place}", end='')
         if degree_in_minutes:
-            print(f"{br}{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
         else:
-            print(f"{br}{string_latitude}, {string_longitude}", end='')
+            print(f"{string_latitude}, {string_longitude}", end='')
         
         if args["Davison"]:
-            print(f"{br}{string_davison}", end='')
+            print(f"{string_davison}", end='')
 
         if not args['Davison'] or place != "Davison chart":
-            print(f"{br}{string_local_time} ", end='')
+            print(f"{string_local_time} ", end='')
 
-        print(f"{br}{string_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_UTC_Time}", end='')
+        print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
 
         if show_synastry:
-            print(f"{p}{p}{string_synastry_name}", end='')
-            print(f"{br}{string_synastry_place}", end='')
+            print(f"{string_synastry_name}", end='')
+            print(f"{string_synastry_place}", end='')
             if degree_in_minutes:
-                print(f"{br}{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}", end='')
+                print(f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}", end='')
             else:
-                print(f"{br}{string_synastry_latitude}, {string_synastry_longitude}", end='')
-            print(f"{br}{string_synastry_local_time} ", end='')
-            print(f"{br}{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{br}{string_synastry_UTC_Time}", end='')
+                print(f"{string_synastry_latitude}, {string_synastry_longitude}", end='')
+            print(f"{string_synastry_local_time} ", end='')
+            print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
 
     else:
         to_return = f"{string_heading}"
         if exists or name:
-            to_return += f"{br}{string_name}"
+            to_return += f"{string_name}"
         if place:
             to_return += f", {string_place}"
         if degree_in_minutes:
-            to_return += f"{br}{string_latitude_in_minutes}, {string_longitude_in_minutes}"
+            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
-            to_return += f"{br}{string_latitude}, {string_longitude}"
+            to_return += f"{string_latitude}, {string_longitude}"
         if place == "Davison chart" and not args["Davison"]:
-            to_return += f"{br}{string_davison_noname}"
+            to_return += f"{string_davison_noname}"
         if args["Davison"]:
-            to_return += f"{br}{string_davison}"
+            to_return += f"{string_davison}"
 
-        to_return += f"{br}{string_local_time}"
-        if notime: to_return += f"{br}{string_UTC_Time_imprecise}"
-        else: to_return += f"{br}{string_UTC_Time}"
+        to_return += f"{string_local_time}"
+        if notime: to_return += f"{string_UTC_Time_imprecise}"
+        else: to_return += f"{string_UTC_Time}"
 
     if output_type in ("text", "html"):
-        print(f"{br}{string_house_system_moon_nodes}{br}", end="")
-    else: to_return += f"{br}{string_house_system_moon_nodes}{br}"
+        print(f"{string_house_system_moon_nodes}", end="")
+    else: to_return += f"{string_house_system_moon_nodes}"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
@@ -1968,14 +1965,17 @@ def main(gui_arguments=None):
 
     if show_house_cusps:
         if output_type in ('text','html'):
-            print(f"{p}{string_house_cusps}{br}", end="")
+            print(f"{string_house_cusps}", end="")
         else:
-            to_return += f"\{string_house_cusps}{br}"
+            to_return += f"{string_house_cusps}"
 
     aspects = calculate_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if not hide_planetary_positions:
-        print(f"{p}{h3}{bold}{string_planets_heading}{nobold}{h3_}", end="")
+        if output_type in ("text", "html"):
+            print(f"{string_planets_heading}{nobold}{h3_}", end="")
+        else:
+            to_return += f"{string_planets_heading}"
         to_return += f"{p}" + print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type)
@@ -1985,14 +1985,14 @@ def main(gui_arguments=None):
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             if (output_type in ("text", "html")):
-                print(f"{p}{string_moon_phase_imprecise}")
+                print(f"{string_moon_phase_imprecise}")
             else:
-                to_return += f"{p}{string_moon_phase_imprecise}"
+                to_return += f"{string_moon_phase_imprecise}"
     else:
         if output_type in ("text", "html"):
-            print(f"{p}{string_moon_phase}")
+            print(f"{string_moon_phase}")
         else:
-            to_return += f"{p}{string_moon_phase_imprecise}"
+            to_return += f"{string_moon_phase_imprecise}"
 
     name = f"{args['Name']} " if args["Name"] else ""
     if show_transits:           
@@ -2002,10 +2002,9 @@ def main(gui_arguments=None):
         transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
-            print(f"{p}{bold}{h2}{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
+            print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
         else:
-            to_return += f"{p}{string_transits} {name} {transits_local_datetime}{br}===================================" 
-        # planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys) # For some reason this dict is repolulated with the houses instead, so need to recalculate all the time, until bug found
+            to_return += f"{string_transits} {name} {transits_local_datetime}{br}" 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
 
@@ -2015,13 +2014,13 @@ def main(gui_arguments=None):
 
         synastry_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
-            print(f"{p}{bold}{h2}{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
+            print(f"{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
         else:
-            to_return += f"{p}{string_synastry} {name} {transits_local_datetime}{br}===================================" 
+            to_return += f"{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}{br}" 
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
     # Make SVG chart if output is html
-    if output_type == "html":
+    if output_type in ("html", "return_html"):
         from chart_output import chart_output
         if show_transits:
             chart_type = "Transit"
@@ -2037,7 +2036,10 @@ def main(gui_arguments=None):
         elif chart_type == "Synastry":
             chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
 
-        print("</div></body>\n</html>")
+        if output_type == "html":
+            print("</div></body>\n</html>")
+        else:
+            to_return += "\n    </div></body>\n</html>"
     return to_return
 
 if __name__ == "__main__":
