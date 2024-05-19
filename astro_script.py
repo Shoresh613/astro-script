@@ -8,8 +8,12 @@ import argparse
 from math import cos, radians, exp
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
-from . import save_event
-from . import version
+try:
+    from . import save_event
+    from . import version
+except:
+    import save_event
+    import version
 import csv
 from colorama import init, Fore, Style
 import copy
@@ -1242,14 +1246,15 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
                      colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
-    to_return += f"{br}" + table
 
     if output in ('text', 'html'):
         if output == 'html':
             print('<div class="table-container">')
         print(f"{table}")
-        if output == 'return_html':
+    if output == 'return_html':
             to_return += '<div class="table-container">'
+    if output in ('return_text', 'return_html'):
+        to_return += f"{br}" + table
 
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
@@ -1408,13 +1413,13 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
-    to_return += f"{br}{br}" + table
     if output in ('text','html'):
         if output == 'html':
             print('<div class="table-container">')
         print(table + f"{br}", end="")
     if output in ('return_html'):
         to_return += '<div class="table-container">'
+    to_return += f"{br}{br}" + table
 
     aspect_data = list(aspect_type_counts.items())
     aspect_data.sort(key=lambda x: x[1], reverse=True)
@@ -1425,7 +1430,6 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
     else:
         aspect_count_text = f"{p}No aspects found.{br}"
-    to_return += f"{br}" + table + f'{br}' + aspect_count_text
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
@@ -1454,9 +1458,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         to_return += f"{br}" + house_count_string
         if output in ('text', 'html'):
             print(house_count_string)
-
-
-    return to_return
+            return to_return
 
 # Function to check if there is an entry for a specified name in the JSON file
 def load_event(filename, name):
@@ -1896,7 +1898,7 @@ def main(gui_arguments=None):
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
     string_heading = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
-    string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
+    string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}"
     string_name = f"{p}{bold}Name:{nobold} {name}"
     string_place = f"{br}{bold}Place:{nobold} {place}"
     string_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
@@ -1955,7 +1957,8 @@ def main(gui_arguments=None):
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
 
     else:
-        to_return = f"{string_heading}"
+        if output_type == 'html':
+            to_return = f"{string_heading}"
         if exists or name:
             to_return += f"{string_name}"
         if place:
@@ -1994,7 +1997,7 @@ def main(gui_arguments=None):
             print(f"{string_planets_heading}{nobold}{h3_}", end="")
         else:
             to_return += f"{string_planets_heading}"
-        to_return += f"{p}" + print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
+        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type)
     if not hide_fixed_star_aspects:
@@ -2039,7 +2042,10 @@ def main(gui_arguments=None):
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
-        from . import chart_output
+        try:
+            from . import chart_output
+        except:
+            import chart_output
         if show_transits:
             chart_type = "Transit"
         elif show_synastry:
