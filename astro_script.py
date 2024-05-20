@@ -237,6 +237,7 @@ def get_davison_data(names):
         total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
         avg_seconds = total_seconds / len(datetimes)
         avg_datetime_utc = datetime(1970, 1, 1, tzinfo=pytz.utc) + timedelta(seconds=avg_seconds)
+        avg_datetime_naive = avg_datetime_utc.replace(tzinfo=None)
         # avg_datetime_str = avg_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
     else:
         avg_datetime_str = 'No datetimes to average'
@@ -252,7 +253,7 @@ def get_davison_data(names):
     else:
         avg_latitude = 'No latitudes to average'
     
-    return avg_datetime_utc, avg_longitude, avg_latitude
+    return avg_datetime_naive, avg_longitude, avg_latitude
 
 def assess_planet_strength(planet_signs):
     strength_status = {}

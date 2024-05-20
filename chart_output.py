@@ -4,7 +4,10 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
     try:
         from kerykeion import AstrologicalSubject, KerykeionChartSVG
     except ImportError:
-        print("<br><p><h5>Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.</h5></p>")
+        if output_type == 'html':
+            print("<br><p><h5>Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.</h5></p>")
+        else:
+            print("\n\nPlease install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.")
         return
 
     subject = AstrologicalSubject(name, utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
@@ -35,7 +38,10 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
     print('Output type:' +output_type)
     chart.makeSVG()
     print(f'</div></table><p><img src="{chart.output_directory}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">')
-    return f'</div></table><p><img src="static/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+    if name:
+        return f'</div></table><p><img src="static/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+    else:
+        return f'</div></table><p><img src="static/{chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
 
     # elif output_type == 'return_html':
     #     chart.makeSVG(output_directory)
