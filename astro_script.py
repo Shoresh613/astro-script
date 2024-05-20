@@ -18,7 +18,10 @@ import csv
 from colorama import init, Fore, Style
 import copy
 
-swe.set_ephe_path('./ephe/')
+if (os.name == 'nt'): 
+    swe.set_ephe_path('.\ephe') 
+else: 
+    swe.set_ephe_path('./ephe')
 saved_locations_file = 'saved_locations.json'  # File to save locations to
 saved_events_file = 'saved_events.json'
 
@@ -1097,8 +1100,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(table + f"{br}")
         if output_type == 'html':
             print('</div>')
-        elif output_type == 'return_html':
-            to_return += '</div>'
+    elif output_type == 'return_html':
+        to_return += '</div>'
 
     return to_return
 
@@ -1276,10 +1279,8 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
         if output == 'html':
             print('</div>')
-    if output in ('return_text', 'return_html'):
-        to_return += f'{br}'+table + f'{p}' + aspect_count_text
-        if output == 'return_html':
-            to_return += '</div>'
+    if output == 'return_html':
+        to_return += '</div>'
 
     if output in ('text', 'html'):
         if not house_positions:
@@ -1296,7 +1297,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
 
     return to_return
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text"):
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text") -> str:
     """
     Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
@@ -1458,7 +1459,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         to_return += f"{br}" + house_count_string
         if output in ('text', 'html'):
             print(house_count_string)
-            return to_return
+        return to_return
 
 # Function to check if there is an entry for a specified name in the JSON file
 def load_event(filename, name):
@@ -1779,10 +1780,10 @@ def main(gui_arguments=None):
                         flex-direction: column;
                     }
 
-                    table {
-                        /* Ensures each table takes full width of the container on small screens */
-                        flex: 1 0 100%; 
-                    }
+                    <!-- table {
+                         /* Ensures each table takes full width of the container on small screens */
+                         flex: 1 0 100%; 
+                     } -->
                 }
             </style>
         </head>
@@ -2013,7 +2014,7 @@ def main(gui_arguments=None):
         if output_type in ("text", "html"):
             print(f"{string_moon_phase}")
         else:
-            to_return += f"{string_moon_phase_imprecise}"
+            to_return += f"{string_moon_phase}"
 
     name = f"{args['Name']} " if args["Name"] else ""
     if show_transits:           
@@ -2023,9 +2024,9 @@ def main(gui_arguments=None):
         transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
-            print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{nobold}{h2_}")
+            print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{h2_}{nobold}")
         else:
-            to_return += f"{string_transits} {name} {transits_local_datetime}{br}" 
+            to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{h2_}{nobold}" 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
 
@@ -2035,9 +2036,9 @@ def main(gui_arguments=None):
 
         synastry_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if output_type in ("text",'html'):
-            print(f"{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}")
+            print(f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}")
         else:
-            to_return += f"{string_synastry} {name}and {args['Synastry']}{nobold}{h2_}{br}" 
+            to_return += f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}{br}" 
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
     # Make SVG chart if output is html
