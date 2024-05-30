@@ -8,7 +8,7 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
             print("<br><p><h5>Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.</h5></p>")
         else:
             print("\n\nPlease install the kerykeion package using 'pip install kerykeion' for graphical output of the chart.")
-        return
+        return "Please install the kerykeion package using 'pip install kerykeion' for graphical output of the chart."
 
     subject = AstrologicalSubject(name, utc_datetime=utc_datetime, year=utc_datetime.year, month=utc_datetime.month,
                                         day=utc_datetime.day, hour=utc_datetime.hour, minute=utc_datetime.minute, lng=longitude, lat=latitude,
