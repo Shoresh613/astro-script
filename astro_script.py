@@ -1344,8 +1344,8 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
     if type in ("Asteroids", 'Synastry'):
         if not notime and len(aspects)>1:
             to_return += house_count(house_counts, output, bold, nobold, br)
-        if output == 'html':
-            print('</div>')
+    if output == 'html':
+        print('</div>')
     if output == 'return_html':
         to_return += '</div>'
 
@@ -1752,7 +1752,8 @@ def main(gui_arguments=None):
     if not args["Location"]:
         latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
-    local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
+    if not exists:
+        local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
     # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
     imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects

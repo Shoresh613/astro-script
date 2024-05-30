@@ -16,6 +16,7 @@ from kivy.graphics import * # Not needed unless the darker transparent rectangle
 
 import astro_script
 import json
+import pytz
 
 def read_time_zones(filename):
     """
@@ -122,7 +123,8 @@ class InputScreen(Screen):
 
         # Timezone Spinner
         form_layout.add_widget(Label(text='Select Timezone:', halign='right'))
-        self.spinner_tz = Spinner(text='Europe/Stockholm', values=read_time_zones('./timezones.txt'), size_hint_x=0.5)
+        # self.spinner_tz = Spinner(text='Europe/Stockholm', values=read_time_zones('./timezones.txt'), size_hint_x=0.5)
+        self.spinner_tz = Spinner(text='Europe/Stockholm', values=pytz.all_timezones, size_hint_x=0.5)
         form_layout.add_widget(self.spinner_tz)
 
         # House System Spinner
@@ -203,7 +205,7 @@ class InputScreen(Screen):
         results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, None, place, # change 'False' to value of davison when implemented 
                                             imprecise_aspects, minor_aspects, False, False, orb, degree_in_minutes, 'true', # change'true' to value of moon node selection when implemented
                                             all_stars, house_system, house_cusps, hide_planetary_positions, 
-                                            hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, False, None, False, "return_text", None) # change 'False' to value of transits or synastry when implemented, second None is guid
+                                            hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, None, False, None, False, "return_text", None) # change 'False' to value of transits or synastry when implemented, second None is guid
 
         # Switch to the ResultsScreen
         self.manager.current = 'results_screen'
