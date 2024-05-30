@@ -1489,7 +1489,11 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry):
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type="return text"):
+
+    if isinstance(date, datetime):
+        date = date.strftime("%Y-%m-%d %H:%M") 
+        
     arguments = {
         "Name": name,
         "Date": date,
@@ -1512,7 +1516,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
         "Transits": transits,
         "Synastry": synastry,
-        "Output": "return text"
+        "Output": output_type
     }
 
     print(arguments) 
