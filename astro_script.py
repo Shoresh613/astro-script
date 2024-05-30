@@ -976,8 +976,8 @@ def house_count(house_counts, output, bold, nobold, br):
         if count > 0:
             if output == 'text':
                 house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
-            elif output == 'html':
-                house_count_string += f"{bold}{house}:{nobold}: {count}, "
+            elif output in ('html', 'return_html'):
+                house_count_string += f"{bold}{house}:{nobold} {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
@@ -1273,7 +1273,6 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
                     house_counts[planet_positions[planets[0]]["house"]] += 1
                     house_counts[transit_planet_positions[planets[1]]["house"]] += 1
 
-
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
                 off_by = str(round(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0),2))
@@ -1340,15 +1339,15 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
     # Print counts of each aspect type
     if output in ('text','html'):
         print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
+
+    # House counts only if asteroids or synastry and time specified and more aspects than one, in which case counting is unnecessary
+    if type in ("Asteroids", 'Synastry'):
+        if not notime and len(aspects)>1:
+            to_return += house_count(house_counts, output, bold, nobold, br)
         if output == 'html':
             print('</div>')
     if output == 'return_html':
         to_return += '</div>'
-
-    # House counts only if asteroids and time specified and more aspects than one, in which case counting is unnecessary
-    if type == "Asteroids":
-        if not notime and len(aspects)>1:
-            to_return += house_count(house_counts, output, bold, nobold, br)
 
     if output in ('text', 'html'):
         if not house_positions:
@@ -1510,7 +1509,14 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     # House counts
     if not notime:
-        to_return += house_count(house_counts, output, bold, nobold, br)
+        if output == 'html':
+            print('<div style="text-align: left;">')
+            to_return += house_count(house_counts, output, bold, nobold, br)
+            print('</div>')
+        elif output == 'return_html':
+            to_return += '<div style="text-align: left;">'
+            to_return += house_count(house_counts, output, bold, nobold, br)
+            print('</div>')
 
     return to_return
 
@@ -1833,10 +1839,6 @@ def main(gui_arguments=None):
                     color: white;
                 }
 
-                th:hover {
-                    background-color: #f5f5f5;
-                }
-
                 img {
                     max-height: 90vh;   /* vh unit represents a percentage of the viewport height */
                     width: auto;        /* Maintains the aspect ratio of the image */
@@ -1973,6 +1975,7 @@ def main(gui_arguments=None):
                 hide_planetary_positions = True  
                 hide_planetary_aspects = True  
                 hide_fixed_star_aspects = True
+                hide_asteroid_aspects = True
         except:
             print("Invalid second event for synastry", file=sys.stderr)
             return "Invalid second event for synastry."
@@ -2011,9 +2014,9 @@ def main(gui_arguments=None):
     string_latitude = f"{br}{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
-    if args["Name"]:
+    if args["Name"] and args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
-    else:
+    elif args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])} (not stored, --name lacking)"
     string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
@@ -2121,6 +2124,11 @@ def main(gui_arguments=None):
         if asteroid_aspects:
             to_return += f"{p}" + print_aspects(asteroid_aspects, copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
                                                 degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type, show_score)
+    if output_type == "html": 
+        print("</div>")
+    elif output_type == "return_html":
+        to_return += "</div>"
+
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             if (output_type in ("text", "html")):
@@ -2186,11 +2194,11 @@ def main(gui_arguments=None):
             chart_type = "Natal"
 
         if chart_type == "Natal":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None, guid=args["Guid"])
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None, guid=args["Guid"] if args["Guid"] else None)
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, guid=args["Guid"])
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, guid=args["Guid"] if args["Guid"] else None)
         elif chart_type == "Synastry":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place, guid=args["Guid"])
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place, guid=args["Guid"] if args["Guid"] else None)
 
         if output_type in ("html", "return_html"):
             print("</div></body>\n</html>")
