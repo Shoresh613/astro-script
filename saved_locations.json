@@ -46,5 +46,13 @@
     "S\u00f6dra \u00c4lvsborgs Sjukhus, Bor\u00e5s": {
         "latitude": 57.72606815,
         "longitude": 12.962750285104228
+    },
+    "null": {
+        "latitude": 44.933143,
+        "longitude": 7.540121
+    },
+    "G\u00f6teborg": {
+        "latitude": 57.7072326,
+        "longitude": 11.9670171
     }
 }

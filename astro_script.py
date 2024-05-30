@@ -1548,8 +1548,9 @@ def load_event(filename, name):
         return False
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
-                  minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, synastry, output_type, guid):
+                  minor_aspects, show_score, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
+                  hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
+                  transits_location, synastry, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1565,6 +1566,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
+        "Show Score": show_score,
         "Orb": orb,
         "Degree in Minutes": degree_in_minutes,
         "Node": node,
@@ -1577,6 +1579,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Asteroid Aspects": hide_asteroid_aspects,
         "Transits": transits,
         "Transits Timezone": transits_timezone,
+        "Transits Location": transits_location,
         "Synastry": synastry,
         "Output": output_type,
         "Guid": guid if guid else None
@@ -1599,10 +1602,11 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828. (Default: 57.6828)', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
-    parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, Jane").', required=False)
+    parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects. (Default: false)', required=False)
+    parser.add_argument('--show_score', choices=['true','false'], help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)', required=False) ##SHOW ASPECT SCORES
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
     parser.add_argument('--degree_in_minutes', choices=['true','false'], help='Show degrees in arch minutes and seconds. (Default: false)', required=False)
     parser.add_argument('--node', choices=['mean','true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
@@ -1615,13 +1619,14 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--hide_asteroid_aspects', choices=['true','false'], help='Output: hide aspects planets are in to asteroids. (Default: false)', required=False)
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time). (Default: None)", required=False)
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
+    parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name. (Default: None)", required=False)
     parser.add_argument('--output_type', choices=['text','return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
 
     if args.davison and len(args.davison) < 2:
-        parser.error("--davison requires at least two events.")
+        parser.error("--davison requires at least two named events.")
 
     arguments = {
     "Name": args.name,
@@ -1634,6 +1639,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     "Place": args.place,
     "Imprecise Aspects": args.imprecise_aspects,
     "Minor Aspects": args.minor_aspects,
+    "Show Score": args.show_score,
     "Orb": args.orb,
     "Degree in Minutes": args.degree_in_minutes,
     "Node": args.node,
@@ -1646,6 +1652,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     "Hide Asteroid Aspects": args.hide_asteroid_aspects,
     "Transits": args.transits,
     "Transits Timezone": args.transits_timezone,
+    "Transits Location": args.transits_location,
     "Synastry": args.synastry,
     "Output": args.output_type,
     "Guid": None}
@@ -1693,10 +1700,12 @@ def main(gui_arguments=None):
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
     def_transits_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
     def_place_name = "Sahlgrenska"  # Default place
+    def_transits_location = "Göteborg"  # Default transit location
     def_lat = 57.6828  # Default latitude
     def_long = 11.9624  # Default longitude
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
+    def_show_score = False  # Default minor aspects
     def_orb = 1  # Default orb size
     def_degree_in_minutes = False  # Default degree in minutes
     def_node = "true"  # Default mean node (true node is more accurate)
@@ -1748,6 +1757,11 @@ def main(gui_arguments=None):
         h_sys = def_house_system  # Reverting to default house system if invalid
     show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
+    show_score = def_show_score
+    if args["Show Score"]:
+        if args["Show Score"].lower() in ["true", "yes", "1"]:
+            show_score = True
+
     output_type = args["Output"] if args["Output"] else def_output_type
     if output_type == 'html':
         print('''
@@ -1908,6 +1922,15 @@ def main(gui_arguments=None):
         else:
             local_transits_timezone = def_transits_tz
 
+        if args["Transits Location"]:
+            transits_location = args["Location"]
+        else:
+            transits_location = def_transits_location
+        transits_latitude, transits_longitude = get_coordinates(transits_location)
+        if transits_latitude is None or transits_longitude is None:
+            print("Transit location not found. Please check the spelling and internet connection.")
+            return "Transit location not found. Please check the spelling and internet connection."
+
         if args["Transits"] == "now":
             transits_local_datetime = datetime.now() # Defaulting to now
             # transits_local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz # Also add argument for transits timezone if different
@@ -1974,10 +1997,13 @@ def main(gui_arguments=None):
     string_latitude = f"{br}{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
-    string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}"
+    if args["Name"]:
+        string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
+    else:
+        string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])} (not stored, --name lacking)"
     string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
-    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC"
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC" 
     if show_synastry:
         string_synastry_name = f"{p}{p}{bold}Name:{nobold} {args['Synastry']}"
         string_synastry_place = f"{br}{bold}Place:{nobold} {synastry_place}"
@@ -2071,7 +2097,7 @@ def main(gui_arguments=None):
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=True)
+        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
     if not hide_fixed_star_aspects and fixstar_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     if not hide_asteroid_aspects:
@@ -2080,7 +2106,7 @@ def main(gui_arguments=None):
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type)
         if asteroid_aspects:
             to_return += f"{p}" + print_aspects(asteroid_aspects, copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
-                                                degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type)
+                                                degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type, show_score)
     if notime:
         if moon_phase_name1 != moon_phase_name2:
             if (output_type in ("text", "html")):
@@ -2100,7 +2126,7 @@ def main(gui_arguments=None):
 
     if show_transits:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, latitude, longitude, output_type, h_sys) # Also add argument for transits location if different
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys)
 
         transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type)
@@ -2116,7 +2142,7 @@ def main(gui_arguments=None):
                 to_return += f"{string_no_transits_tz}"
 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
-                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type)
+                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
@@ -2127,7 +2153,9 @@ def main(gui_arguments=None):
             print(f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}")
         else:
             to_return += f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}{br}" 
-        to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
+        to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, 
+                                            minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type, 
+                                            show_score)
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
