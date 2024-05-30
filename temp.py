@@ -3,7 +3,7 @@ import pandas as pd
 from astro_script import angle_influence  # Ensure this is correctly imported
 
 # Generate values
-x = list(range(-11, 11))  # This includes values from -11 to 10
+x = list(range(-11, 11, 100))  # This includes values from -11 to 10
 y = [angle_influence(i) for i in x]
 
 # Create a DataFrame for Plotly Express
