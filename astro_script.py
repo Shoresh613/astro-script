@@ -89,6 +89,16 @@ PLANETS = {
     'Chiron': swe.CHIRON, 'North Node': swe.TRUE_NODE, 
 }
 
+ASTEROIDS = {
+    'Ceres': swe.CERES, 
+    'Pholus': swe.PHOLUS,
+    'Pallas': swe.PALLAS,
+    'Juno': swe.JUNO,
+    'Vesta': swe.VESTA,
+    # 'Varuna': swe.VARUNA,
+    # Add more asteroids as needed
+}
+
 ZODIAC_ELEMENTS = {
     'Aries': 'Fire', 'Taurus': 'Earth', 'Gemini': 'Air', 'Cancer': 'Water',
     'Leo': 'Fire', 'Virgo': 'Earth', 'Libra': 'Air', 'Scorpio': 'Water',
@@ -696,7 +706,7 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
             return_string += f"{minutes} minute"
     return return_string if return_string else "Less than a minute"
 
-def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
+def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets"):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -715,9 +725,13 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
     
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
-    PLANETS.pop('South Node', None)  # None is the default value if the key doesn't exist
+    if mode == "planets":
+        bodies = PLANETS
+        PLANETS.pop('South Node', None)  # None is the default value if the key doesn't exist
+    elif mode == "asteroids":
+        bodies = ASTEROIDS
 
-    for planet, id in PLANETS.items():
+    for planet, id in bodies.items():
         pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
             'longitude': pos[0],
@@ -736,18 +750,19 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P'):
             }
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
-    asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
-    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
-    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
+    if mode == "planets":
+        asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
+        positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
+        positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
 
-    # Fix south node
-    PLANETS.update({"South Node": None})  # Add South Node to the list of planets
-    positions["South Node"] = {
-        'longitude': (positions["North Node"]['longitude'] + 180) % 360,
-        'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
-        'retrograde': '',
-        'speed': 360
-    }
+        # Fix south node
+        PLANETS.update({"South Node": None})  # Add South Node to the list of planets
+        positions["South Node"] = {
+            'longitude': (positions["North Node"]['longitude'] + 180) % 360,
+            'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
+            'retrograde': '',
+            'speed': 360
+        }
 
     # Calculate house positions
     house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
@@ -898,6 +913,74 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types, ou
                         'aspect_comment': aspect_comment
                     }
     return aspects_found
+
+def calculate_asteroid_positions(date, latitude, longitude, asteroids, output, h_sys='P'):
+    """
+    Calculate the ecliptic longitudes, signs, and retrograde status of asteroids
+    at a given datetime, for a specified location. This includes the asteroids
+    specified in the 'asteroids' parameter.
+
+    Parameters:
+    - date (datetime): The datetime for which positions are calculated.
+    - latitude (float): Latitude of the location in degrees.
+    - longitude (float): Longitude of the location in degrees.
+    - asteroids (dict): A dictionary of asteroids with their names and IDs as provided by Swiss Ephemeris.
+
+    Returns:
+    - dict: A dictionary with each asteroid as keys, and dictionaries containing
+      their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
+    """
+    swe.set_ephe_path('./ephe/')
+    
+    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
+    positions = {}
+
+    for asteroid, id in asteroids.items():
+        pos, ret = swe.calc_ut(jd, id)
+        positions[asteroid] = {
+            'longitude': pos[0],
+            'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
+            'retrograde': 'R' if pos[3] < 0 else '',
+            'speed': pos[3]  # Speed of the asteroid in degrees per day
+        }
+
+    # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
+    asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
+    positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
+    positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
+
+    return positions
+
+def calculate_asteroid_aspects_to_natal(date, natal_positions, asteroid_positions, orb=1.0, aspect_types=None):
+    """
+    Calculate aspects between asteroids and natal chart positions.
+
+    Parameters:
+    - date (datetime): The date and time for the calculation.
+    - natal_positions (dict): A dictionary of natal positions with celestial bodies and their positions.
+    - asteroid_positions (dict): A dictionary of asteroid positions.
+    - orb (float): Orb value for aspect consideration. Default is 1.0 degree.
+    - aspect_types (dict, optional): A dictionary of aspect names and their angular distances.
+                                     Defaults to common aspects if None.
+
+    Returns:
+    - list: A list of tuples, each representing an aspect between an asteroid and a natal body.
+            Each tuple includes the asteroid name, natal body name, aspect name, and the angle difference.
+    """
+    if aspect_types is None:
+        aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60}
+
+    aspects = []
+
+    for asteroid, asteroid_pos in asteroid_positions.items():
+        asteroid_long = asteroid_pos['longitude'] % 360
+        for natal_body, natal_pos in natal_positions.items():
+            natal_long = natal_pos['longitude']
+            for aspect_name, aspect_angle in aspect_types.items():
+                valid_aspect, angle_off = check_aspect(natal_long, asteroid_long, aspect_angle['Degrees'], orb)
+                if valid_aspect:
+                    aspects.append((asteroid, natal_body, aspect_name, angle_off, 0, 0, "")) # 0, 0, "" are dummies to be replaced
+    return aspects
 
 def moon_phase(date):
     """
@@ -1503,7 +1586,7 @@ def load_event(filename, name):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type):
+                  hide_planetary_aspects, hide_fixed_star_aspects, transits, synastry, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1530,7 +1613,8 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
         "Transits": transits,
         "Synastry": synastry,
-        "Output": output_type
+        "Output": output_type,
+        "Guid": guid if guid else None
     }
 
     print(arguments) 
@@ -1591,7 +1675,8 @@ If no record is found, default values will be used.''')
     "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
     "Transits": args.transits,
     "Synastry": args.synastry,
-    "Output": args.output_type}
+    "Output": args.output_type,
+    "Guid": None}
 
     return arguments
 
@@ -2004,6 +2089,18 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type)
     if not hide_fixed_star_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
+
+    # Add switch to hide asteriods
+    # Calculate asteroid positions
+    # asteroid_positions = calculate_asteroid_positions(utc_datetime, latitude, longitude, ASTEROIDS, output_type, h_sys)
+
+    asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
+    asteroid_house_positions, asteroid_house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+
+    # Calculate aspects between asteroids and natal chart
+    asteroid_aspects = calculate_asteroid_aspects_to_natal(utc_datetime, planet_positions, asteroid_positions, orb, MAJOR_ASPECTS)
+
+    to_return += f"{p}" + print_fixed_star_aspects(asteroid_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, asteroid_house_positions, ASTEROIDS, output_type)
     
     if notime:
         if moon_phase_name1 != moon_phase_name2:
@@ -2042,6 +2139,13 @@ def main(gui_arguments=None):
             to_return += f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}{br}" 
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), imprecise_aspects, minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type)
 
+
+    # Print or process asteroid aspects as needed
+    # for aspect in asteroid_aspects:
+    #     print(f"Asteroid {aspect[0]} forms a {aspect[2]} with {aspect[1]} with an angle difference of {aspect[3]:.2f} degrees")
+
+
+
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
         try:
@@ -2056,11 +2160,11 @@ def main(gui_arguments=None):
             chart_type = "Natal"
 
         if chart_type == "Natal":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None,)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None, guid=args["Guid"])
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, guid=args["Guid"])
         elif chart_type == "Synastry":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place, guid=args["Guid"])
 
         if output_type in ("html", "return_html"):
             print("</div></body>\n</html>")
