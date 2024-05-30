@@ -803,7 +803,7 @@ def coord_in_minutes(longitude, output_type):
 
     return f"{degrees}{degree_symbol}{minutes}'{seconds}\"".strip('-')
 
-def calculate_aspects(planet_positions, orb, output_type, aspect_types):
+def calculate_planetary_aspects(planet_positions, orb, output_type, aspect_types):
     """
     Calculate astrological aspects between celestial bodies based on their positions,
     excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
@@ -867,7 +867,7 @@ def calculate_aspects(planet_positions, orb, output_type, aspect_types):
                     }
     return aspects_found
 
-def calculate_transits(natal_positions, transit_positions, orb, aspect_types, output_type):
+def calculate_aspects_takes_two(natal_positions, second_positions, orb, aspect_types, output_type, type, show_brief_aspects=False):
     """
     Calculate astrological aspects between natal and transit celestial bodies based on their positions,
     excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
@@ -886,14 +886,20 @@ def calculate_transits(natal_positions, transit_positions, orb, aspect_types, ou
     - A list of tuples, each representing an aspect found between a natal and a transit celestial body.
       Each tuple includes the names of the bodies, the aspect name, and the exact angle.
     """
+    excluded = [ "Ascendant", "Midheaven" ]
+    
     aspects_found = {}
     natal_planet_names = list(natal_positions.keys())
-    transit_planet_names = list(transit_positions.keys())
+    second_planet_names = list(second_positions.keys())
 
     for i, planet1 in enumerate(natal_planet_names):
-        for planet2 in transit_planet_names[i+1:]:
+        for planet2 in second_planet_names[i+1:]:
+            # Skip calculation if it's for transits and the transiting planet is in the exclusion list, 
+            # unless the user specified to show brief aspects
+            if planet2 in excluded and type == "transits" and not show_brief_aspects:
+                continue
             long1 = natal_positions[planet1]['longitude']
-            long2 = transit_positions[planet2]['longitude']
+            long2 = second_positions[planet2]['longitude']
             angle_diff = (long1 - long2) % 360
             angle_diff = min(angle_diff, 360 - angle_diff)  # Normalize to <= 180 degrees
 
@@ -1548,7 +1554,7 @@ def load_event(filename, name):
         return False
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
-                  minor_aspects, show_score, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
+                  minor_aspects, show_brief_aspects, show_score, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
                   transits_location, synastry, output_type, guid):
 
@@ -1566,6 +1572,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
+        "Show Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
         "Orb": orb,
         "Degree in Minutes": degree_in_minutes,
@@ -1606,6 +1613,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
     parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects. (Default: false)', required=False)
+    parser.add_argument('--brief_aspects', choices=['true','false'], help='Whether to show brief aspects for transits, i.e. Asc, MC. (Default: false)', required=False)
     parser.add_argument('--show_score', choices=['true','false'], help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)', required=False) ##SHOW ASPECT SCORES
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
     parser.add_argument('--degree_in_minutes', choices=['true','false'], help='Show degrees in arch minutes and seconds. (Default: false)', required=False)
@@ -1639,6 +1647,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     "Place": args.place,
     "Imprecise Aspects": args.imprecise_aspects,
     "Minor Aspects": args.minor_aspects,
+    "Show Brief Aspects": args.brief_aspects,
     "Show Score": args.show_score,
     "Orb": args.orb,
     "Degree in Minutes": args.degree_in_minutes,
@@ -1705,11 +1714,12 @@ def main(gui_arguments=None):
     def_long = 11.9624  # Default longitude
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
+    def_show_brief_aspects = False  # Default brief aspects
     def_show_score = False  # Default minor aspects
     def_orb = 1  # Default orb size
     def_degree_in_minutes = False  # Default degree in minutes
-    def_node = "true"  # Default mean node (true node is more accurate)
-    def_all_stars = False  # Default all stars
+    def_node = "true"  # Default node (true node is more accurate than mean node)
+    def_all_stars = False  # Default only astrologically known stars
     def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
@@ -1757,6 +1767,10 @@ def main(gui_arguments=None):
         h_sys = def_house_system  # Reverting to default house system if invalid
     show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
     
+    show_brief_aspects = def_show_brief_aspects
+    if args["Show Brief Aspects"]:
+        if args["Show Brief Aspects"].lower() in ["true", "yes", "1"]:
+            show_brief_aspects = True
     show_score = def_show_score
     if args["Show Score"]:
         if args["Show Score"].lower() in ["true", "yes", "1"]:
@@ -2088,7 +2102,7 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_house_cusps}"
 
-    aspects = calculate_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
+    aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if not hide_planetary_positions:
         if output_type in ("text", "html"):
@@ -2102,8 +2116,8 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     if not hide_asteroid_aspects:
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
-        asteroid_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orb, 
-                                                aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orb, 
+                                                aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
             to_return += f"{p}" + print_aspects(asteroid_aspects, copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
                                                 degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type, show_score)
@@ -2128,8 +2142,8 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys)
 
-        transit_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
-                                             aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
+                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
         if output_type in ("text",'html'):
             print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{h2_}{nobold}")
         else:
@@ -2148,7 +2162,8 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys)
 
-        synastry_aspects = calculate_transits(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS, output_type=output_type)
+        synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS,
+                                                       output_type=output_type, type='synastry')
         if output_type in ("text",'html'):
             print(f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}")
         else:

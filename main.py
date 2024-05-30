@@ -201,7 +201,7 @@ class InputScreen(Screen):
         # Now pass these collected values to your astro_script function
         # Adjust the function call based on actual parameters it needs
         results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, None, place, # change 'False' to value of davison when implemented 
-                                            imprecise_aspects, minor_aspects, orb, degree_in_minutes, 'true', # change'true' to value of moon node selection when implemented
+                                            imprecise_aspects, minor_aspects, False, False, orb, degree_in_minutes, 'true', # change'true' to value of moon node selection when implemented
                                             all_stars, house_system, house_cusps, hide_planetary_positions, 
                                             hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, False, None, False, "return_text", None) # change 'False' to value of transits or synastry when implemented, second None is guid
 
