@@ -3,24 +3,25 @@ from datetime import datetime
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
-    # Create the events table
+    # Create the myapp_event table
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS events (
+    CREATE TABLE IF NOT EXISTS myapp_event (
         name TEXT PRIMARY KEY,
         location TEXT,
         datetime TEXT,
         timezone TEXT,
         latitude REAL,
-        longitude REAL
+        longitude REAL,
+        random_column TEXT NULL
     )
     ''')
     
-    # Create the locations table
+    # Create the myapp_location table
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS locations (
+    CREATE TABLE IF NOT EXISTS myapp_location (
         location_name TEXT PRIMARY KEY,
         latitude REAL,
         longitude REAL
@@ -32,11 +33,11 @@ def initialize_db():
 
 # Function to add or update an event in the database
 def update_event(name, location, datetime_str, timezone, latitude, longitude):
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
     cursor.execute('''
-    INSERT INTO events (name, location, datetime, timezone, latitude, longitude)
+    INSERT INTO myapp_event (name, location, datetime, timezone, latitude, longitude)
     VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(name) DO UPDATE SET
     location=excluded.location,
@@ -51,10 +52,10 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude):
 
 # Function to retrieve an event by name
 def get_event(name):
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
-    cursor.execute('SELECT * FROM events WHERE name = ?', (name,))
+    cursor.execute('SELECT * FROM myapp_event WHERE name = ?', (name,))
     event = cursor.fetchone()
     
     conn.close()
@@ -62,11 +63,11 @@ def get_event(name):
 
 # Function to save a location in the database
 def save_location(location_name, latitude, longitude):
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
     cursor.execute('''
-    INSERT INTO locations (location_name, latitude, longitude)
+    INSERT INTO myapp_location (location_name, latitude, longitude)
     VALUES (?, ?, ?)
     ON CONFLICT(location_name) DO UPDATE SET
     latitude=excluded.latitude,
@@ -78,10 +79,10 @@ def save_location(location_name, latitude, longitude):
 
 # Function to load a location from the database
 def load_location(location_name):
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
-    cursor.execute('SELECT latitude, longitude FROM locations WHERE location_name = ?', (location_name,))
+    cursor.execute('SELECT latitude, longitude FROM myapp_location WHERE location_name = ?', (location_name,))
     location = cursor.fetchone()
     
     conn.close()

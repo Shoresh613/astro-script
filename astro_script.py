@@ -1707,8 +1707,8 @@ def main(gui_arguments=None):
             latitude = exists['latitude']
         if not args["Longitude"]:
             longitude = exists['longitude']
-        if not args["Timezone"]:
-            local_timezone = pytz.timezone(exists['timezone'])
+        # if not args["Timezone"]:
+        local_timezone = pytz.timezone(exists['timezone'])
         if not args["Place"]:
             place = exists['location']
     else:

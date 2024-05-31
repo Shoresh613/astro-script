@@ -48,7 +48,7 @@ import sqlite3
 #         print(f"An unexpected error occurred: {e}")
 #         return []
 
-def read_saved_names(db_filename='events.db'):
+def read_saved_names(db_filename='db.sqlite3'):
     """
     Reads the names of saved events from a SQLite database and returns a list of event names.
 
@@ -64,7 +64,7 @@ def read_saved_names(db_filename='events.db'):
         cursor = conn.cursor()
         
         # Execute a query to retrieve the names of the events
-        cursor.execute("SELECT name FROM events")
+        cursor.execute("SELECT name FROM myapp_event")
         rows = cursor.fetchall()
         
         # Extract the names from the query result

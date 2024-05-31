@@ -16,7 +16,7 @@ AstroScript is a powerful astrology software tool designed to calculate and inte
 - **GUI**: Optional rudimentary GUI for easier interaction w/o CLI.
 - **Export as responsive HTML**: Use `--output html` and redirect to a file e.g `> chart.html`.
 
-![Example HTML output](img/sample_html.png)
+![Example HTML output](img/sample_html.jpg)
 
 
 
@@ -83,7 +83,7 @@ python main.py
 
 This starts the application, where you can navigate through the input screen to enter event details and view calculated results in real-time.
 
-![Image of GUI](img/GUI.png)
+![Image of GUI](img/GUI.jpg)
 *Image of GUI running on Windows, but it can also run on for example Android*
 
 ## File Management
