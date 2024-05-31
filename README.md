@@ -9,7 +9,16 @@ AstroScript is a powerful astrology software tool designed to calculate and inte
 - **Aspect Analysis**: Calculates major and minor astrological aspects between planets and fixed stars.
 - **Moon Phase Calculation**: Determines the current phase of the Moon and its illumination.
 - **Fixed Star Aspects**: Lists aspects between planets and fixed stars, considering the house placement of each fixed star.
+- **Asteroid Aspects**: Lists aspects between planets and asteroids, considering the house placements.
 - **Location Handling**: Uses Nominatim via the geopy library to convert location names to geographic coordinates, with the ability to save and retrieve frequently used locations.
+- **Davison relationship charts**: Calculate Davison relationship charts for as many people as you like.
+- **Customizable**: There are switches for showing degrees in minutes, minor aspects, brief aspects (for transits), different house calculations, the level of harmony/disharmony of different aspects (also taking into account the magnitude of stars and orb), etc.
+- **GUI**: Optional rudimentary GUI for easier interaction w/o CLI.
+- **Export as responsive HTML**: Use `--output html` and redirect to a file e.g `> chart.html`.
+
+![Example HTML output](img/sample_html.png)
+
+
 
 ## Installation
 
@@ -74,6 +83,9 @@ python main.py
 
 This starts the application, where you can navigate through the input screen to enter event details and view calculated results in real-time.
 
+![Image of GUI](img/GUI.png)
+*Image of GUI running on Windows, but it can also run on for example Android*
+
 ## File Management
 
 AstroScript interacts with various files to store and retrieve data, enhancing functionality and user experience.
@@ -90,19 +102,11 @@ AstroScript interacts with various files to store and retrieve data, enhancing f
 - **Purpose**: Saves geographic coordinates of frequently used locations to minimize repeated API calls.
 - **Usage**: Automatically updated when users add new locations through the GUI or script.
 
-### Event Files
+### Events and Locations File
 
-- **Filename**: `saved_events.json`
-- **Purpose**: Stores details of astrological events, such as dates, times, and locations, for quick retrieval.
+- **Filename**: `events.db`
+- **Purpose**: Stores details of astrological events, such as dates, times, and locations, for quick retrieval. Locations are also stored so as not to have the retrieve the same coordinates from the internet each time.
 - **Usage**: Users can save event details for future reference, which facilitates repeated analyses without re-entering data. This is done automatically whenever a name is given as an argument.
-
-### Time Zone Files
-
-- **Filename**: `timezones.txt`
-- **Purpose**: Lists available time zones used for accurate time conversions.
-- **Usage**: Read by the system to populate time zone options in the GUI, ensuring that users can select their appropriate time zone easily.
-
-These files are crucial for AstroScript's operation, allowing it to perform accurate calculations and provide a seamless user experience. Users are encouraged to back up these files regularly, especially if they store important event data.
 
 ## Font Management
 
@@ -116,7 +120,7 @@ AstroScript's GUI utilizes custom fonts to enhance the readability of the result
 - **Setup**: The Roboto Mono font files are included with the application (see licence information). Users do not need to install or manage these fonts separately.
 
 ## To do
-I'm working on getting Buildozer package it as an Android package for installing as an app. That's the big thing. Then there are smaller things.
+I'm working on getting Buildozer package it as an Android package for installing as an app. That's a big thing. Then there are other things.
 
 ## Contributing
 
