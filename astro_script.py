@@ -1618,24 +1618,24 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
-    parser.add_argument('--minor_aspects', choices=['true','false'], help='Whether to show minor aspects. (Default: false)', required=False)
-    parser.add_argument('--brief_aspects', choices=['true','false'], help='Whether to show brief aspects for transits, i.e. Asc, MC. (Default: false)', required=False)
-    parser.add_argument('--show_score', choices=['true','false'], help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)', required=False) ##SHOW ASPECT SCORES
+    parser.add_argument('--minor_aspects', action='store_true', help='Whether to show minor aspects. (Default: false)')
+    parser.add_argument('--brief_aspects', action='store_true', help='Whether to show brief aspects for transits, i.e. Asc, MC. (Default: false)')
+    parser.add_argument('--show_score', action='store_true', help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
-    parser.add_argument('--degree_in_minutes', choices=['true','false'], help='Show degrees in arch minutes and seconds. (Default: false)', required=False)
-    parser.add_argument('--node', choices=['mean','true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
-    parser.add_argument('--all_stars', choices=['true','false'], help='Show aspects for all fixed stars. (Default: false)', required=False)
+    parser.add_argument('--degree_in_minutes', action='store_true', help='Show degrees in arch minutes and seconds. (Default: false)')
+    parser.add_argument('--node', choices=['mean', 'true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
+    parser.add_argument('--all_stars', action='store_true', help='Show aspects for all fixed stars. (Default: false)')
     parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc). (Default: "Placidus")', required=False)
-    parser.add_argument('--house_cusps', choices=['true','false'], help='Whether to show house cusps or not. (Default: false)', required=False)
-    parser.add_argument('--hide_planetary_positions', choices=['true','false'], help='Output: hide what signs and houses (if time specified) planets are in. (Default: false)', required=False)
-    parser.add_argument('--hide_planetary_aspects', choices=['true','false'], help='Output: hide aspects planets are in. (Default: false)', required=False)
-    parser.add_argument('--hide_fixed_star_aspects', choices=['true','false'], help='Output: hide aspects planets are in to fixed stars. (Default: false)', required=False)
-    parser.add_argument('--hide_asteroid_aspects', choices=['true','false'], help='Output: hide aspects planets are in to asteroids. (Default: false)', required=False)
+    parser.add_argument('--house_cusps', action='store_true', help='Whether to show house cusps or not. (Default: false)')
+    parser.add_argument('--hide_planetary_positions', action='store_true', help='Output: hide what signs and houses (if time specified) planets are in. (Default: false)')
+    parser.add_argument('--hide_planetary_aspects', action='store_true', help='Output: hide aspects planets are in. (Default: false)')
+    parser.add_argument('--hide_fixed_star_aspects', action='store_true', help='Output: hide aspects planets are in to fixed stars. (Default: false)')
+    parser.add_argument('--hide_asteroid_aspects', action='store_true', help='Output: hide aspects planets are in to asteroids. (Default: false)')
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time). (Default: None)", required=False)
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
-    parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --Name. (Default: None)", required=False)
-    parser.add_argument('--output_type', choices=['text','return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
+    parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
+    parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
 
@@ -1757,31 +1757,29 @@ def main(gui_arguments=None):
     # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
     imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects
-    minor_aspects = True if args["Minor Aspects"] and args["Minor Aspects"].lower() in ["true", "yes", "1"] else def_minor_aspects
+    minor_aspects = True if args["Minor Aspects"] else def_minor_aspects
     orb = float(args["Orb"]) if args["Orb"] else def_orb
     # If True, the script will show the positions in degrees and minutes
-    degree_in_minutes = True if args["Degree in Minutes"] and args["Degree in Minutes"].lower() in ["true", "yes", "1"] else def_degree_in_minutes
+    degree_in_minutes = True if args["Degree in Minutes"] else def_degree_in_minutes
     node = "mean" if args["Node"] and args["Node"].lower() in ["mean"] else def_node
     if node == "mean":
         PLANETS["North Node"] = swe.MEAN_NODE
     if node == "true":
         PLANETS["North Node"] = swe.TRUE_NODE
     # If True, the script will include all roughly 600 fixed stars
-    all_stars = True if args["All Stars"] and args["All Stars"].lower() in ["true", "yes", "1"] else def_all_stars
+    all_stars = True if args["All Stars"] else def_all_stars
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
         h_sys = def_house_system  # Reverting to default house system if invalid
-    show_house_cusps = True if args["House Cusps"] == 'true' else def_house_cusps
+    show_house_cusps = True if args["House Cusps"] else def_house_cusps
     
-    show_brief_aspects = def_show_brief_aspects
+    show_brief_aspects = def_show_brief_aspects # code follows
     if args["Show Brief Aspects"]:
-        if args["Show Brief Aspects"].lower() in ["true", "yes", "1"]:
-            show_brief_aspects = True
+        show_brief_aspects = True
     show_score = def_show_score
     if args["Show Score"]:
-        if args["Show Score"].lower() in ["true", "yes", "1"]:
-            show_score = True
+        show_score = True
 
     output_type = args["Output"] if args["Output"] else def_output_type
     if output_type == 'html':
@@ -1914,13 +1912,13 @@ def main(gui_arguments=None):
         h3_ = ""
 
     if args["Hide Planetary Positions"]:
-        if args["Hide Planetary Positions"].lower() in ["true", "yes", "1"]: hide_planetary_positions = True 
+        if args["Hide Planetary Positions"]: hide_planetary_positions = True 
     if args["Hide Planetary Aspects"]:
-        if args["Hide Planetary Aspects"].lower() in ["true", "yes", "1"]: hide_planetary_aspects = True
+        if args["Hide Planetary Aspects"]: hide_planetary_aspects = True
     if args["Hide Fixed Star Aspects"]:
-        if args["Hide Fixed Star Aspects"].lower() in ["true", "yes", "1"]: hide_fixed_star_aspects = True 
+        if args["Hide Fixed Star Aspects"]: hide_fixed_star_aspects = True 
     if args["Hide Asteroid Aspects"]:
-        if args["Hide Asteroid Aspects"].lower() in ["true", "yes", "1"]: hide_asteroid_aspects = True 
+        if args["Hide Asteroid Aspects"]: hide_asteroid_aspects = True 
 
     if args["Davison"]:
         utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
