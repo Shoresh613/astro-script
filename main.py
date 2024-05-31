@@ -15,63 +15,73 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.graphics import * # Not needed unless the darker transparent rectangle around the gridlayout starts working
 
 import astro_script
-import json
 import pytz
+import sqlite3
 
-def read_time_zones(filename):
+
+# def read_saved_names(filename='saved_events.json'):
+#     """
+#     Reads a file containing a dictionary of saved events and returns a list of event names.
+
+#     Args:
+#     filename (str): The path to the file containing the saved events.
+
+#     Returns:
+#     list: A list of names of saved events.
+#     """
+#     try:
+#         with open(filename, 'r') as file:
+#             # Load the dictionary from the file
+#             events_dict = json.load(file)
+#             # Return the list of keys, which are the names of the events
+#             return list(events_dict.keys())
+#     except FileNotFoundError:
+#         # If the file does not exist, return an empty list
+#         print(f"No file found named '{filename}'. Returning an empty list.")
+#         return []
+#     except json.JSONDecodeError:
+#         # Handle cases where the file content is not valid JSON
+#         print(f"Error decoding JSON from file '{filename}'. Check file content.")
+#         return []
+#     except Exception as e:
+#         # General exception handling, useful for debugging
+#         print(f"An unexpected error occurred: {e}")
+#         return []
+
+def read_saved_names(db_filename='events.db'):
     """
-    Reads a text file with one time zone per line and returns a list of time zones.
+    Reads the names of saved events from a SQLite database and returns a list of event names.
 
     Args:
-    filename (str): The path to the file containing the time zones.
-
-    Returns:
-    list: A list of time zones read from the file.
-    """
-    time_zones = []
-    try:
-        with open(filename, 'r') as file:
-            for line in file:
-                # Strip any leading/trailing whitespace characters, including newline
-                time_zone = line.strip()
-                if time_zone:  # This checks if the line is not empty
-                    time_zones.append(time_zone)
-    except FileNotFoundError:
-        print(f"Error: The file '{filename}' does not exist.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    
-    return time_zones
-
-def read_saved_names(filename='saved_events.json'):
-    """
-    Reads a file containing a dictionary of saved events and returns a list of event names.
-
-    Args:
-    filename (str): The path to the file containing the saved events.
+    db_filename (str): The path to the SQLite database file.
 
     Returns:
     list: A list of names of saved events.
     """
     try:
-        with open(filename, 'r') as file:
-            # Load the dictionary from the file
-            events_dict = json.load(file)
-            # Return the list of keys, which are the names of the events
-            return list(events_dict.keys())
-    except FileNotFoundError:
-        # If the file does not exist, return an empty list
-        print(f"No file found named '{filename}'. Returning an empty list.")
-        return []
-    except json.JSONDecodeError:
-        # Handle cases where the file content is not valid JSON
-        print(f"Error decoding JSON from file '{filename}'. Check file content.")
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        
+        # Execute a query to retrieve the names of the events
+        cursor.execute("SELECT name FROM events")
+        rows = cursor.fetchall()
+        
+        # Extract the names from the query result
+        names = [row[0] for row in rows]
+        
+        # Close the database connection
+        conn.close()
+        
+        return names
+    except sqlite3.OperationalError as e:
+        # Handle operational errors such as missing tables or database files
+        print(f"Database error: {e}")
         return []
     except Exception as e:
         # General exception handling, useful for debugging
         print(f"An unexpected error occurred: {e}")
         return []
-
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
