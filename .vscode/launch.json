@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--name", "Mikael", "--transits", "now"]
+            "args": ["--name", "Mikael", "--date", "1979-01-09 12:38", "--location", "Sahlgrenska"]
         }
     ]
 }

@@ -8,12 +8,15 @@ import argparse
 from math import cos, radians, exp
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
+import sqlite3
 try:
     from . import save_event
     from . import version
+    from . import db_manager
 except:
     import save_event
     import version
+    import db_manager
 import csv
 from colorama import init, Fore, Style
 import copy
@@ -22,6 +25,11 @@ if (os.name == 'nt'):
     swe.set_ephe_path('.\ephe') 
 else: 
     swe.set_ephe_path('./ephe')
+
+#Initialize database
+db_manager.initialize_db()
+
+# Can remove these 
 saved_locations_file = 'saved_locations.json'  # File to save locations to
 saved_events_file = 'saved_events.json'
 
@@ -215,16 +223,6 @@ def calculate_aspect_score(aspect, angle, magnitude=None):
     return score
 
 def get_davison_data(names):
-    if not os.path.exists(saved_events_file):
-        print(f"No file named {saved_events_file} found.")
-        return False
-    try:
-        with open(saved_events_file, 'r') as file:
-            data_dict = json.load(file)
-    except json.JSONDecodeError:
-        print(f"Error reading JSON data from {saved_events_file}.")
-        return False
-
     datetimes = []
     longitudes = []
     latitudes = []
@@ -233,9 +231,10 @@ def get_davison_data(names):
     # names = names.split(',')    
     for name in names:
         name = name.strip()
-        if name in data_dict:
-            datetime_str = data_dict[name]['datetime']
-            timezone_str = data_dict[name]['timezone']
+        event = db_manager.get_event(name)
+        if event:
+            datetime_str = event[2]
+            timezone_str = event[3]
             timezone = pytz.timezone(timezone_str)
             try:
                 dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
@@ -246,32 +245,48 @@ def get_davison_data(names):
                     print(f"Error parsing datetime for {name}: ({ex})")
             dt_with_tz = timezone.localize(dt)
             datetimes.append(dt_with_tz)
-            longitudes.append(data_dict[name]['longitude'])
-            latitudes.append(data_dict[name]['latitude'])
+            longitudes.append(event[5])
+            latitudes.append(event[4])
         else:
             print(f"\nNo data found for {name}. First create the event by specifying the event details including the name.\n")
+
     
+    # # Calculate the average datetime
+    # if datetimes:
+    #     # Convert all datetimes to UTC for averaging
+    #     total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
+    #     avg_seconds = total_seconds / len(datetimes)
+    #     avg_datetime_utc = datetime(1970, 1, 1, tzinfo=pytz.utc) + timedelta(seconds=avg_seconds)
+    #     avg_datetime_naive = avg_datetime_utc.replace(tzinfo=None)
+    #     # avg_datetime_str = avg_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
+    # else:
+    #     avg_datetime_str = 'No datetimes to average'
+    
+    # # Calculate the average longitude and latitude
+    # if longitudes:
+    #     avg_longitude = sum(longitudes) / len(longitudes)
+    # else:
+    #     avg_longitude = 'No longitudes to average'
+    
+    # if latitudes:
+    #     avg_latitude = sum(latitudes) / len(latitudes)
+    # else:
+    #     avg_latitude = 'No latitudes to average'
+    
+    # return avg_datetime_naive, avg_longitude, avg_latitude
+
     # Calculate the average datetime
     if datetimes:
-        # Convert all datetimes to UTC for averaging
         total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
         avg_seconds = total_seconds / len(datetimes)
         avg_datetime_utc = datetime(1970, 1, 1, tzinfo=pytz.utc) + timedelta(seconds=avg_seconds)
         avg_datetime_naive = avg_datetime_utc.replace(tzinfo=None)
-        # avg_datetime_str = avg_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
     else:
         avg_datetime_str = 'No datetimes to average'
     
     # Calculate the average longitude and latitude
-    if longitudes:
-        avg_longitude = sum(longitudes) / len(longitudes)
-    else:
-        avg_longitude = 'No longitudes to average'
-    
-    if latitudes:
-        avg_latitude = sum(latitudes) / len(latitudes)
-    else:
-        avg_latitude = 'No latitudes to average'
+    avg_longitude = sum(longitudes) / len(longitudes) if longitudes else 'No longitudes to average'
+    avg_latitude = sum(latitudes) / len(latitudes) if latitudes else 'No latitudes to average'
     
     return avg_datetime_naive, avg_longitude, avg_latitude
 
@@ -348,9 +363,9 @@ def get_coordinates(location_name:str):
     - Ensure compliance with Nominatim's usage policy when using this function.
     """
     
-    location_details = load_location('locations.json', location_name)
+    location_details = db_manager.load_location(location_name)
     if location_details:
-        return location_details.latutude, location_details.longitude 
+        return location_details[0], location_details[1] # Latitude, Longitude
     else:
         # Initialize Nominatim API
         try:
@@ -365,7 +380,7 @@ def get_coordinates(location_name:str):
         except Exception as e:
             print(f"Error getting location, check internet connection: {e}")
             return None, None
-        save_location(saved_locations_file, location_name, location.latitude, location.longitude)
+        db_manager.save_location(location_name, location.latitude, location.longitude)
 
         return location.latitude, location.longitude
 
@@ -1521,7 +1536,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     return to_return
 
 # Function to check if there is an entry for a specified name in the JSON file
-def load_event(filename, name):
+# def load_event(filename, name):
+def load_event(name):
     """
     Load event details from a JSON file based on the given event name.
 
@@ -1539,22 +1555,17 @@ def load_event(filename, name):
     - FileNotFoundError: If the specified file does not exist.
     - json.JSONDecodeError: If there's an error parsing the JSON file.
     """
-    # Check if the file exists
-    if not os.path.exists(filename):
-        print(f"No file named {filename} found.")
-        return False
 
-    # Read the current data from the file
-    try:
-        with open(filename, 'r') as file:
-            data = json.load(file)
-    except json.JSONDecodeError:
-        print(f"Error reading JSON data from {filename}.")
-        return False
-
-    # Check if the name exists in the data
-    if name in data:
-        return data[name],
+    event = db_manager.get_event(name)
+    if event:
+        return {
+            'name': event[0],
+            'location': event[1],
+            'datetime': event[2],
+            'timezone': event[3],
+            'latitude': event[4],
+            'longitude': event[5]
+        }
     else:
         print(f"No entry found for {name}.")
         return False
@@ -1688,18 +1699,18 @@ def main(gui_arguments=None):
     to_return = ""
 
     #################### Load event ####################
-    exists = load_event(FILENAME, name) if name else None
+    exists = load_event(name) if name else None
     if exists:
         if not args["Date"]:
-            local_datetime = datetime.fromisoformat(exists[0]['datetime'])
+            local_datetime = datetime.fromisoformat(exists['datetime'])
         if not args["Latitude"]:
-            latitude = exists[0]['latitude']
+            latitude = exists['latitude']
         if not args["Longitude"]:
-            longitude = exists[0]['longitude']
+            longitude = exists['longitude']
         if not args["Timezone"]:
-            local_timezone = pytz.timezone(exists[0]['timezone'])
+            local_timezone = pytz.timezone(exists['timezone'])
         if not args["Place"]:
-            place = exists[0]['location']
+            place = exists['location']
     else:
         try:
             if args["Date"]:
@@ -1962,13 +1973,13 @@ def main(gui_arguments=None):
 
     if args["Synastry"]:
         try:
-            exists = load_event(FILENAME, args["Synastry"])
+            exists = load_event(args["Synastry"])
             if exists:
-                synastry_local_datetime = datetime.fromisoformat(exists[0]['datetime'])
-                synastry_latitude = exists[0]['latitude']
-                synastry_longitude = exists[0]['longitude']
-                synastry_local_timezone = pytz.timezone(exists[0]['timezone'])
-                synastry_place = exists[0]['location']
+                synastry_local_datetime = datetime.fromisoformat(exists['datetime'])
+                synastry_latitude = exists['latitude']
+                synastry_longitude = exists['longitude']
+                synastry_local_timezone = pytz.timezone(exists['timezone'])
+                synastry_place = exists['location']
                 synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
                 show_synastry = True
                 hide_planetary_positions = True  
@@ -1984,12 +1995,7 @@ def main(gui_arguments=None):
 
     # Save event if name given and not already given
     if name and not exists:
-        new_data = {name: {"location": place,
-                           "datetime": local_datetime.isoformat(),
-                           'timezone': str(local_timezone),
-                           "latitude": latitude,
-                           "longitude": longitude}}
-        save_event.update_json_file(saved_events_file,new_data)
+        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings

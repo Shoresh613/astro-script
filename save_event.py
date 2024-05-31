@@ -1,29 +1,35 @@
-import json
-import os
-from datetime import datetime
+from db_manager import update_event
 
-# Function to update or add new entries to the JSON file
-def update_json_file(filename, new_data):
-    # Check if the file exists
-    if os.path.exists(filename):
-        # File exists, so read the current data
-        with open(filename, 'r') as file:
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError:
-                # File is empty or corrupted
-                data = {}
-    else:
-        # File does not exist, start with an empty dictionary
-        data = {}
+# Function to update or add new entries to the database, can just replace this with update_event directly
+def save_event_to_db(name, location, datetime_str, timezone, latitude, longitude):
+    update_event(name, location, datetime_str, timezone, latitude, longitude)
 
-    # Update the dictionary with new_data
-    # This will add new entries and update existing ones with the same keys
-    data.update(new_data)
+# import json
+# import os
+# from datetime import datetime
 
-    # Write the updated dictionary back to the file
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
+# # Function to update or add new entries to the JSON file
+# def update_json_file(filename, new_data):
+#     # Check if the file exists
+#     if os.path.exists(filename):
+#         # File exists, so read the current data
+#         with open(filename, 'r') as file:
+#             try:
+#                 data = json.load(file)
+#             except json.JSONDecodeError:
+#                 # File is empty or corrupted
+#                 data = {}
+#     else:
+#         # File does not exist, start with an empty dictionary
+#         data = {}
+
+#     # Update the dictionary with new_data
+#     # This will add new entries and update existing ones with the same keys
+#     data.update(new_data)
+
+#     # Write the updated dictionary back to the file
+#     with open(filename, 'w') as file:
+#         json.dump(data, file, indent=4)
 
 # Example new data to add/update
 # new_people_data = {
