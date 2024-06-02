@@ -8,13 +8,10 @@ import argparse
 from math import cos, radians, exp
 from geopy.geocoders import Nominatim
 from tabulate import tabulate
-import sqlite3
 try:
-    from . import save_event
     from . import version
     from . import db_manager
 except:
-    import save_event
     import version
     import db_manager
 import csv
