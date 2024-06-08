@@ -179,8 +179,6 @@ def calculate_adjustment_factor(magnitude, min_factor=0.8, max_factor=1.2):
     
     return adjustment_factor
 
-import math
-
 def angle_influence(angle):
     # Convert angle to absolute value for symmetry
     angle = abs(angle)
@@ -219,7 +217,7 @@ def calculate_aspect_score(aspect, angle, magnitude=None):
 
     return score
 
-def get_davison_data(names):
+def get_davison_data(names, guid=None):
     datetimes = []
     longitudes = []
     latitudes = []
@@ -228,10 +226,12 @@ def get_davison_data(names):
     # names = names.split(',')    
     for name in names:
         name = name.strip()
-        event = db_manager.get_event(name)
+        event = db_manager.get_event(name, guid)
         if event:
-            datetime_str = event[2]
-            timezone_str = event[3]
+            datetime_str = event["datetime"]
+            timezone_str = event["timezone"]
+            print(f'DEBUG: datetime:{event["datetime"]}')
+            print(f'DEBUG: timezone: {event["timezone"]}')
             timezone = pytz.timezone(timezone_str)
             try:
                 dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
@@ -242,8 +242,8 @@ def get_davison_data(names):
                     print(f"Error parsing datetime for {name}: ({ex})")
             dt_with_tz = timezone.localize(dt)
             datetimes.append(dt_with_tz)
-            longitudes.append(event[5])
-            latitudes.append(event[4])
+            longitudes.append(event["longitude"])
+            latitudes.append(event["latitude"])
         else:
             print(f"\nNo data found for {name}. First create the event by specifying the event details including the name.\n")
 
@@ -316,6 +316,45 @@ def is_planet_elevated(planet_positions):
             elevated_status[planet] = ''
     return elevated_status
 
+def datetime_ruled_by(date):
+    # Chaldean order of the planets
+    planets = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon']
+
+    # Starting with Saturn on the first hour of the first day (Saturday)
+    current_planet_index = 0
+
+    # List to store the planet ruling the first hour of each day
+    first_hour_planets = []
+
+    # Calculating the ruling planet for the first hour of each of the seven days
+    for day in range(7):
+        first_hour_planets.append(planets[current_planet_index % 7])
+        # Move to the planet of the 25th hour, which will be the first hour of the next day
+        current_planet_index += 24
+
+    # Mapping the first hour planets to their corresponding weekdays
+    weekdays = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    weekday_planet_mapping = dict(zip(weekdays, first_hour_planets))
+
+    # Find the day of the week for the given datetime
+    day_of_week = (date.weekday() - 5) % 7  # Adjust the weekday to start from Saturday
+
+    # Get the weekday name and the planet ruling that day
+    weekday_name = weekdays[day_of_week]
+    day_planet = weekday_planet_mapping[weekday_name]
+    
+    # Calculate the planetary hour
+    # Assuming the day starts at 6:00 AM with the first hour ruled by the day's planet
+    hour_offset = (date.hour - 6) % 24  # Adjust hour for planetary hours starting at 6 AM
+    if hour_offset < 0:
+        hour_offset += 24  # Adjust for hours before 6 AM
+
+    # Find the planet for the given hour
+    hour_planet_index = (planets.index(day_planet) + hour_offset) % 7
+    hour_planet = planets[hour_planet_index]
+
+    return weekday_name, day_planet, hour_planet
+
 def convert_to_utc(local_datetime, local_timezone):
     """
     Convert a naive datetime object to UTC using a specified timezone.
@@ -375,67 +414,11 @@ def get_coordinates(location_name:str):
         try:
             location = geolocator.geocode(location_name)
         except Exception as e:
-            print(f"Error getting location, check internet connection: {e}")
+            print(f"Error getting location {location_name}, check internet connection: {e}")
             return None, None
         db_manager.save_location(location_name, location.latitude, location.longitude)
 
         return location.latitude, location.longitude
-
-def save_location(filename, location_name, latitude, longitude):
-    """
-    Save a location with its latitude and longitude to a JSON file.
-    
-    Parameters:
-    - filename (str): The name of the file where the data will be saved.
-    - location_name (str): The name of the location.
-    - latitude (float): The latitude of the location.
-    - longitude (float): The longitude of the location.
-    """
-    # Check if the file exists and read its content if it does
-    if os.path.exists(filename):
-        with open(filename, 'r') as file:
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError:
-                # If the file is empty or corrupted, start with an empty dictionary
-                data = {}
-    else:
-        data = {}
-
-    # Add or update the location in the data
-    data[location_name] = {
-        'latitude': latitude,
-        'longitude': longitude
-    }
-
-    # Write the updated data back to the file
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
-
-def load_location(filename, location_name):
-    """
-    Load and return the details of a specified location from a JSON file.
-    
-    Parameters:
-    - filename (str): The name of the JSON file to read from.
-    - location_name (str): The name of the location to retrieve details for.
-    
-    Returns:
-    - dict or None: The dictionary containing the latitude and longitude of the location if found, 
-                     None otherwise.
-    """
-    try:
-        with open(filename, 'r') as file:
-            data = json.load(file)
-            
-        # Check if the location exists in the data and return its details
-        if location_name in data:
-            return data[location_name]
-        else:
-            return None
-    except (FileNotFoundError, json.JSONDecodeError):
-        # If the file doesn't exist or there's an error reading it, return None
-        return None
 
 def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False, h_sys='P'):
     """
@@ -1223,7 +1206,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             print(f"{p}{bold}{h3}Asteroid Aspects ({orb}{degree_symbol} orb){nobold}", end="")
         else:
             print(f"{p}{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
-        print(f"{bold} and minor aspects{nobold}" if minor_aspects else "", end="")
+        print(f"{bold} including minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
@@ -1233,7 +1216,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         else:
             to_return = f"{p}{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb{nobold})"
         if minor_aspects:
-            to_return += f"{bold} and minor aspects{nobold}" 
+            to_return += f"{bold} including minor aspects{nobold}" 
         if notime:
             to_return += f"{bold} with imprecise aspects set to {imprecise_aspects}{nobold}"
         to_return += f"{h3_}"
@@ -1534,7 +1517,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
 # Function to check if there is an entry for a specified name in the JSON file
 # def load_event(filename, name):
-def load_event(name):
+def load_event(name, guid=None):
     """
     Load event details from a JSON file based on the given event name.
 
@@ -1553,15 +1536,15 @@ def load_event(name):
     - json.JSONDecodeError: If there's an error parsing the JSON file.
     """
 
-    event = db_manager.get_event(name)
+    event = db_manager.get_event(name, guid=guid)
     if event:
         return {
-            'name': event[0],
-            'location': event[1],
-            'datetime': event[2],
-            'timezone': event[3],
-            'latitude': event[4],
-            'longitude': event[5]
+            'name': name,
+            'location': event["location"],
+            'datetime': event["datetime"],
+            'timezone': event["timezone"],
+            'latitude': event["latitude"],
+            'longitude': event["longitude"]
         }
     else:
         print(f"No entry found for {name}.")
@@ -1690,24 +1673,22 @@ def main(gui_arguments=None):
 
     local_datetime = datetime.now()  # Default date now
 
-    # Check if name was provided as argumentgit pull
+    # Check if name was provided as argument
 
     name = args["Name"] if args["Name"] else ""
     to_return = ""
 
     #################### Load event ####################
-    exists = load_event(name) if name else None
+    if args["Guid"]:
+        exists = load_event(name, args["Guid"]) if name else False
+    else:
+        exists = load_event(name) if name else False
     if exists:
-        if not args["Date"]:
-            local_datetime = datetime.fromisoformat(exists['datetime'])
-        if not args["Latitude"]:
-            latitude = exists['latitude']
-        if not args["Longitude"]:
-            longitude = exists['longitude']
-        # if not args["Timezone"]:
+        local_datetime = datetime.fromisoformat(exists['datetime'])
+        latitude = exists['latitude']
+        longitude = exists['longitude']
         local_timezone = pytz.timezone(exists['timezone'])
-        if not args["Place"]:
-            place = exists['location']
+        place = exists['location']
     else:
         try:
             if args["Date"]:
@@ -1716,8 +1697,6 @@ def main(gui_arguments=None):
             print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
             local_datetime = None
             return "Invalid date format. Please use YYYY-MM-DD HH:MM."
-    if args["Date"]:
-        local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
 
     ######### Default settings if no arguments are passed #########
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
@@ -1946,13 +1925,13 @@ def main(gui_arguments=None):
             local_transits_timezone = def_transits_tz
 
         if args["Transits Location"]:
-            transits_location = args["Location"]
+            transits_location = args["Transits Location"]
         else:
             transits_location = def_transits_location
         transits_latitude, transits_longitude = get_coordinates(transits_location)
         if transits_latitude is None or transits_longitude is None:
-            print("Transit location not found. Please check the spelling and internet connection.")
-            return "Transit location not found. Please check the spelling and internet connection."
+            print(f"Transit location '{transits_location}' not found. Please check the spelling and internet connection.")
+            return f"Transit location '{transits_location}' not found. Please check the spelling and internet connection."
 
         if args["Transits"] == "now":
             transits_local_datetime = datetime.now() # Defaulting to now
@@ -1970,7 +1949,7 @@ def main(gui_arguments=None):
 
     if args["Synastry"]:
         try:
-            exists = load_event(args["Synastry"])
+            exists = load_event(args["Synastry"], args["Guid"] if args["Guid"] else None)
             if exists:
                 synastry_local_datetime = datetime.fromisoformat(exists['datetime'])
                 synastry_latitude = exists['latitude']
@@ -1980,7 +1959,7 @@ def main(gui_arguments=None):
                 synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
                 show_synastry = True
                 hide_planetary_positions = True  
-                hide_planetary_aspects = True  
+                hide_planetary_aspects = True
                 hide_fixed_star_aspects = True
                 hide_asteroid_aspects = True
         except:
@@ -1992,7 +1971,7 @@ def main(gui_arguments=None):
 
     # Save event if name given and not already given
     if name and not exists:
-        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude)
+        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings
@@ -2007,9 +1986,12 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
+    
+    weekday, ruling_day, ruling_hour = datetime_ruled_by(utc_datetime)
+    
     string_heading = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
     string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
-    string_name = f"{p}{bold}Name:{nobold} {name}"
+    string_name = f"{p}{bold}Name:{nobold} {name}".rstrip(", ")
     string_place = f"{br}{bold}Place:{nobold} {place}"
     string_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
     string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude, output_type)}"
@@ -2023,6 +2005,10 @@ def main(gui_arguments=None):
     string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC" 
+    if notime:
+        string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
+    else:
+        string_ruled_by_notime = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day} {bold}Hour ruled by:{nobold} {ruling_hour}"
     if show_synastry:
         string_synastry_name = f"{p}{p}{bold}Name:{nobold} {args['Synastry']}"
         string_synastry_place = f"{br}{bold}Place:{nobold} {synastry_place}"
@@ -2063,6 +2049,11 @@ def main(gui_arguments=None):
 
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
 
+        if notime:
+            print(f"{string_ruled_by}", end='')
+        else:
+            print(f"{string_ruled_by_notime}", end='')
+
         if show_synastry:
             print(f"{string_synastry_name}", end='')
             print(f"{string_synastry_place}", end='')
@@ -2073,13 +2064,11 @@ def main(gui_arguments=None):
             print(f"{string_synastry_local_time} ", end='')
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
 
-    else:
-        if output_type == 'html':
-            to_return = f"{string_heading}"
+    elif output_type in ('return_text', "return_html"):
         if exists or name:
             to_return += f"{string_name}"
         if place:
-            to_return += f", {string_place}"
+            to_return += f"{string_place}"
         if degree_in_minutes:
             to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
@@ -2092,6 +2081,12 @@ def main(gui_arguments=None):
         to_return += f"{string_local_time}"
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
+
+        if notime:
+            to_return += f"{string_ruled_by_notime}"
+        else:
+            to_return += f"{string_ruled_by}"
+
 
     if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}", end="")
@@ -2155,9 +2150,9 @@ def main(gui_arguments=None):
         transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
         if output_type in ("text",'html'):
-            print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{h2_}{nobold}")
+            print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}")
         else:
-            to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')}{h2_}{nobold}" 
+            to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}" 
 
         if not args["Transits Timezone"]:
             if output_type in ("text", "html"):
@@ -2198,7 +2193,7 @@ def main(gui_arguments=None):
         if chart_type == "Natal":
             to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, None, guid=args["Guid"] if args["Guid"] else None)
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, guid=args["Guid"] if args["Guid"] else None)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, second_local_timezone=local_transits_timezone, second_place=transits_location, guid=args["Guid"] if args["Guid"] else None)
         elif chart_type == "Synastry":
             to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, synastry_utc_datetime, args["Synastry"], synastry_longitude, synastry_latitude, synastry_local_timezone, synastry_place, guid=args["Guid"] if args["Guid"] else None)
 
