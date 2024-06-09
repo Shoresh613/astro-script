@@ -158,6 +158,76 @@ def read_saved_names(guid=None, db_filename='db.sqlite3'):
         print(f"An unexpected error occurred: {e}")
         return []
 
+import sqlite3
+
+def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.sqlite3'):
+    """
+    Removes the specified names of saved events from a SQLite database.
+    Checks if the user is authenticated before proceeding.
+
+    Args:
+    names_to_remove (list of str): The names of the saved events to remove.
+    output_type (str): The type of output expected (e.g., 'json', 'text').
+    guid (uuid, optional): The user's GUID. Defaults to None.
+    db_filename (str): The path to the SQLite database file. Defaults to 'db.sqlite3'.
+
+    Returns:
+    str: A string message indicating the result of the removal operation.
+    """
+    existing_names = set(read_saved_names(guid, db_filename))
+    names_to_remove = set(names_to_remove)
+
+    # Check if the names to remove are valid
+    invalid_names = names_to_remove - existing_names
+    valid_names = names_to_remove - invalid_names
+
+    invalid_names = list(invalid_names)
+    valid_names = list(valid_names)
+
+    if valid_names:
+        try:
+            # Connect to the SQLite database
+            conn = sqlite3.connect(db_filename)
+            cursor = conn.cursor()
+
+            # If guid is provided, ensure the removal operation is scoped to the specific user
+            if guid:
+                cursor.execute("DELETE FROM myapp_event WHERE name IN ({}) AND random_column=?".format(
+                    ','.join('?' * len(valid_names))), (*valid_names, guid))
+            else:
+                cursor.execute("DELETE FROM myapp_event WHERE name IN ({})".format(
+                    ','.join('?' * len(valid_names))), valid_names)
+
+            # Commit the transaction
+            conn.commit()
+            
+            # Close the database connection
+            conn.close()
+
+        except sqlite3.OperationalError as e:
+            # Handle operational errors such as missing tables or database files
+            print(f"Database error: {e}")
+            return f"Database error: {e}"
+        except Exception as e:
+            # General exception handling, useful for debugging
+            print(f"An unexpected error occurred: {e}")
+            return f"An unexpected error occurred: {e}"
+
+    # Prepare the result message based on the output type
+    to_return = ""
+    if output_type in ('text', 'html'):
+        if invalid_names:
+            print(f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n")
+        if valid_names:
+            print(f"\nThe following names have been removed: {', '.join(valid_names)}.\n")
+    else:
+        if invalid_names:
+            to_return += f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n"
+        if valid_names:
+            to_return += f"\nThe following names have been removed: {', '.join(valid_names)}.\n"
+
+    return to_return
+
 # Function to save a location in the database
 def save_location(location_name, latitude, longitude):
     conn = sqlite3.connect('db.sqlite3')

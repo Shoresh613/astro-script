@@ -1549,7 +1549,7 @@ def load_event(name, guid=None):
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
-                  transits_location, synastry, output_type, guid):
+                  transits_location, synastry, remove_saved_names, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1583,6 +1583,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Synastry": synastry,
         "Saved Names": None,
         "Output": output_type,
+        "Remove Saved Names": remove_saved_names,
         "Guid": guid if guid else None
     }
 
@@ -1596,13 +1597,12 @@ If a name is passed, the script will look up the record for that name in the JSO
 provided there are such values stored in the file (only the first 6 types are stored). 
 If no record is found, default values will be used.''', formatter_class=argparse.RawTextHelpFormatter)
 
-    # Add arguments
     parser.add_argument('--name', help='Name to look up the record for. (Default: None)', required=False)
     parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM local time). (Default: None)', required=False)
     parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden". (Default: "Sahlgrenska")', required=False)
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828. (Default: 57.6828)', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
-    parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
+    parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -1620,10 +1620,11 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--hide_fixed_star_aspects', action='store_true', help='Output: hide aspects planets are in to fixed stars. (Default: false)')
     parser.add_argument('--hide_asteroid_aspects', action='store_true', help='Output: hide aspects planets are in to asteroids. (Default: false)')
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time). (Default: None)", required=False)
-    parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
+    parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
+    parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -1659,6 +1660,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     "Transits Location": args.transits_location,
     "Synastry": args.synastry,
     "Saved Names": args.saved_names,
+    "Remove Saved Names": args.remove_saved_names,
     "Output": args.output_type,
     "Guid": None}
 
@@ -1768,6 +1770,13 @@ def main(gui_arguments=None):
 
     output_type = args["Output"] if args["Output"] else def_output_type
 
+    if args["Remove Saved Names"]:
+        to_return = db_manager.remove_saved_names(args["Remove Saved Names"], output_type, guid=args["Guid"] if args["Guid"] else None)
+        if output_type in ('text','html'):
+            print(to_return)
+        if not args["Saved Names"]:
+            return to_return
+
     if args["Saved Names"]:
         names = db_manager.read_saved_names()
         if output_type in ('text','html'):
@@ -1775,7 +1784,7 @@ def main(gui_arguments=None):
             for name in names:
                 print(f"{name}")
         else:
-            to_return = "Names stored in db:\n\n"
+            to_return += "Names stored in db:\n\n"
             for name in names:
                 to_return += f"{name}"
         return to_return
