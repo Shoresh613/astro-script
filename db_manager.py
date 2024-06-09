@@ -75,7 +75,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, gu
 def get_event(name, guid=None):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
-    print(f"DEBUG: get_event() name={name} guid={guid}")
+    # print(f"DEBUG: get_event() name={name} guid={guid}")
     if guid:
         cursor.execute('SELECT location FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
         location = cursor.fetchone()
@@ -113,6 +113,50 @@ def get_event(name, guid=None):
         return event
     else:
         return None
+
+
+def read_saved_names(guid=None, db_filename='db.sqlite3'):
+    """
+    Reads the names of saved events from a SQLite database and returns a list of event names.
+    Checks if the user is authenticated before proceeding.
+
+    Args:
+    guid (uuid): .
+    db_filename (str): The path to the SQLite database file.
+
+    Returns:
+    list: A list of names of saved events, or an empty list if the user is not authenticated.
+    """
+    # print(f"DEBUG - guid: {str(guid)}")
+    try:
+        
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        
+        # Execute a query to retrieve the names of the events
+        if guid:
+            print(f"DEBUG - read_saved_names() guid: {guid}")
+            cursor.execute(f"SELECT name FROM myapp_event WHERE random_column=?", (guid, ))
+        else:
+            cursor.execute("SELECT name FROM myapp_event")
+        rows = cursor.fetchall()
+        
+        # Extract the names from the query result
+        names = [row[0] for row in rows]
+        
+        # Close the database connection
+        conn.close()
+        
+        return names
+    except sqlite3.OperationalError as e:
+        # Handle operational errors such as missing tables or database files
+        print(f"Database error: {e}")
+        return []
+    except Exception as e:
+        # General exception handling, useful for debugging
+        print(f"An unexpected error occurred: {e}")
+        return []
 
 # Function to save a location in the database
 def save_location(location_name, latitude, longitude):

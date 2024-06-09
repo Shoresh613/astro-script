@@ -323,10 +323,7 @@ def datetime_ruled_by(date):
     # Starting with Saturn on the first hour of the first day (Saturday)
     current_planet_index = 0
 
-    # List to store the planet ruling the first hour of each day
     first_hour_planets = []
-
-    # Calculating the ruling planet for the first hour of each of the seven days
     for day in range(7):
         first_hour_planets.append(planets[current_planet_index % 7])
         # Move to the planet of the 25th hour, which will be the first hour of the next day
@@ -336,7 +333,6 @@ def datetime_ruled_by(date):
     weekdays = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
     weekday_planet_mapping = dict(zip(weekdays, first_hour_planets))
 
-    # Find the day of the week for the given datetime
     day_of_week = (date.weekday() - 5) % 7  # Adjust the weekday to start from Saturday
 
     # Get the weekday name and the planet ruling that day
@@ -1585,6 +1581,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Transits Timezone": transits_timezone,
         "Transits Location": transits_location,
         "Synastry": synastry,
+        "Saved Names": None,
         "Output": output_type,
         "Guid": guid if guid else None
     }
@@ -1626,6 +1623,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
+    parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -1660,6 +1658,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     "Transits Timezone": args.transits_timezone,
     "Transits Location": args.transits_location,
     "Synastry": args.synastry,
+    "Saved Names": args.saved_names,
     "Output": args.output_type,
     "Guid": None}
 
@@ -1674,7 +1673,6 @@ def main(gui_arguments=None):
     local_datetime = datetime.now()  # Default date now
 
     # Check if name was provided as argument
-
     name = args["Name"] if args["Name"] else ""
     to_return = ""
 
@@ -1769,6 +1767,19 @@ def main(gui_arguments=None):
         show_score = True
 
     output_type = args["Output"] if args["Output"] else def_output_type
+
+    if args["Saved Names"]:
+        names = db_manager.read_saved_names()
+        if output_type in ('text','html'):
+            print("Names stored in db:")
+            for name in names:
+                print(f"{name}")
+        else:
+            to_return = "Names stored in db:\n\n"
+            for name in names:
+                to_return += f"{name}"
+        return to_return
+
     if output_type == 'html':
         print('''
 <!DOCTYPE html>
@@ -2008,7 +2019,7 @@ def main(gui_arguments=None):
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
-        string_ruled_by_notime = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day} {bold}Hour ruled by:{nobold} {ruling_hour}"
+        string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day} {bold}Hour ruled by:{nobold} {ruling_hour}"
     if show_synastry:
         string_synastry_name = f"{p}{p}{bold}Name:{nobold} {args['Synastry']}"
         string_synastry_place = f"{br}{bold}Place:{nobold} {synastry_place}"
@@ -2049,11 +2060,8 @@ def main(gui_arguments=None):
 
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
 
-        if notime:
-            print(f"{string_ruled_by}", end='')
-        else:
-            print(f"{string_ruled_by_notime}", end='')
-
+        print(f"{string_ruled_by}", end='')
+        
         if show_synastry:
             print(f"{string_synastry_name}", end='')
             print(f"{string_synastry_place}", end='')
@@ -2082,11 +2090,7 @@ def main(gui_arguments=None):
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
 
-        if notime:
-            to_return += f"{string_ruled_by_notime}"
-        else:
-            to_return += f"{string_ruled_by}"
-
+        to_return += f"{string_ruled_by}"
 
     if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}", end="")
