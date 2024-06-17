@@ -65,7 +65,7 @@ SOFT_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
-          "Ascendant": 360, "Midheaven": 360}
+          "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
 FILENAME = 'saved_events.json' 
@@ -91,7 +91,7 @@ PLANETS = {
     'Sun': swe.SUN, 'Moon': swe.MOON, 'Mercury': swe.MERCURY, 'Venus': swe.VENUS,
     'Mars': swe.MARS, 'Jupiter': swe.JUPITER, 'Saturn': swe.SATURN,
     'Uranus': swe.URANUS, 'Neptune': swe.NEPTUNE, 'Pluto': swe.PLUTO,
-    'Chiron': swe.CHIRON, 'North Node': swe.TRUE_NODE, 
+    'Chiron': swe.CHIRON, 'Lilith': swe.MEAN_APOG, 'North Node': swe.TRUE_NODE, 
 }
 
 ASTEROIDS = {
@@ -1689,14 +1689,13 @@ def main(gui_arguments=None):
         longitude = exists['longitude']
         local_timezone = pytz.timezone(exists['timezone'])
         place = exists['location']
-    else:
-        try:
-            if args["Date"]:
-                local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
-        except ValueError:
-            print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
-            local_datetime = None
-            return "Invalid date format. Please use YYYY-MM-DD HH:MM."
+    try:
+        if args["Date"]:
+            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
+    except ValueError:
+        print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
+        local_datetime = None
+        return "Invalid date format. Please use YYYY-MM-DD HH:MM."
 
     ######### Default settings if no arguments are passed #########
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
@@ -1989,8 +1988,8 @@ def main(gui_arguments=None):
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
     notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
-    # Save event if name given and not already given
-    if name and not exists:
+    # Save event if name given
+    if name:
         db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    

@@ -39,34 +39,47 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, gu
     
     #only for debug
     print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude= {longitude} guid={guid}")    
-    
-    if guid:
+    result = get_event(name, guid)
+    if result:
+        print(f"DEBUG: get_event() result{result}")
         cursor.execute('''
-        
-        INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, random_column, name)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-        location=excluded.location,
-        datetime=excluded.datetime,
-        timezone=excluded.timezone,
-        latitude=excluded.latitude,
-        longitude=excluded.longitude,
-        random_column=excluded.guid,
-        name=excluded.name
-        ''', (location, datetime_str, timezone, latitude, longitude, str(guid), name))
+        UPDATE myapp_event
+        SET location = ?,
+            datetime = ?,
+            timezone = ?,
+            latitude = ?,
+            longitude = ?,
+            random_column = ?
+        WHERE name = ? AND random_column = ?
+        ''', (location, datetime_str, timezone, latitude, longitude, str(guid), name, str(guid)))
     else:
-        cursor.execute('''
-        
-        INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, name)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-        location=excluded.location,
-        datetime=excluded.datetime,
-        timezone=excluded.timezone,
-        latitude=excluded.latitude,
-        longitude=excluded.longitude,
-        name=excluded.name
-        ''', (location, datetime_str, timezone, latitude, longitude, name))
+        if guid:
+            cursor.execute('''
+            
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, random_column, name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+            location=excluded.location,
+            datetime=excluded.datetime,
+            timezone=excluded.timezone,
+            latitude=excluded.latitude,
+            longitude=excluded.longitude,
+            random_column=excluded.guid,
+            name=excluded.name
+            ''', (location, datetime_str, timezone, latitude, longitude, str(guid), name))
+        else:
+            cursor.execute('''
+            
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, name)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+            location=excluded.location,
+            datetime=excluded.datetime,
+            timezone=excluded.timezone,
+            latitude=excluded.latitude,
+            longitude=excluded.longitude,
+            name=excluded.name
+            ''', (location, datetime_str, timezone, latitude, longitude, name))
 
     conn.commit()
     conn.close()
@@ -111,9 +124,7 @@ def get_event(name, guid=None):
             'longitude': longitude[0]
         }
         return event
-    else:
-        return None
-
+    return None
 
 def read_saved_names(guid=None, db_filename='db.sqlite3'):
     """
@@ -186,11 +197,9 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
 
     if valid_names:
         try:
-            # Connect to the SQLite database
             conn = sqlite3.connect(db_filename)
             cursor = conn.cursor()
 
-            # If guid is provided, ensure the removal operation is scoped to the specific user
             if guid:
                 cursor.execute("DELETE FROM myapp_event WHERE name IN ({}) AND random_column=?".format(
                     ','.join('?' * len(valid_names))), (*valid_names, guid))
@@ -198,14 +207,11 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
                 cursor.execute("DELETE FROM myapp_event WHERE name IN ({})".format(
                     ','.join('?' * len(valid_names))), valid_names)
 
-            # Commit the transaction
             conn.commit()
             
-            # Close the database connection
             conn.close()
 
         except sqlite3.OperationalError as e:
-            # Handle operational errors such as missing tables or database files
             print(f"Database error: {e}")
             return f"Database error: {e}"
         except Exception as e:
@@ -213,7 +219,6 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
             print(f"An unexpected error occurred: {e}")
             return f"An unexpected error occurred: {e}"
 
-    # Prepare the result message based on the output type
     to_return = ""
     if output_type in ('text', 'html'):
         if invalid_names:
