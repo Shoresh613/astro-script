@@ -137,6 +137,17 @@ fall = {
     'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
 }
 
+ORBS = {
+    "Default": None,
+    "Major": None,
+    "Minor": None,
+    "Fixed Star": None,
+    "Transit Fast": None,
+    "Transit Slow": None,
+    "Synastry Fast": None,
+    "Synastry Slow": None
+}
+
 # Global formatting variables set in main depending on output type
 bold = "\033[1m"
 nobold = "\033[0m"
@@ -1117,6 +1128,23 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     to_return += f"{br}{br}{table}"
     if output_type in ('text', 'html'):
         print(table + f"{br}")
+    
+    #Check day and night signs
+    nr_day_signs = 0
+    nr_night_signs = 0
+
+    fire_count = next((item[1] for item in element_count_table_data if item[0] == 'Fire'), 0)
+    air_count = next((item[1] for item in element_count_table_data if item[0] == 'Air'), 0)
+    earth_count = next((item[1] for item in element_count_table_data if item[0] == 'Earth'), 0)
+    water_count = next((item[1] for item in element_count_table_data if item[0] == 'Water'), 0)
+
+    nr_day_signs = fire_count + air_count
+    nr_night_signs = earth_count + water_count
+
+    if output_type in ('html', 'text'):
+        print(f"Day signs: {nr_day_signs} Night signs: {nr_night_signs}{br}")
+    else:
+        to_return += f"{p}Day signs: {nr_day_signs} Night signs: {nr_night_signs}"
 
     for modality, info in modality_counts.items():
         row = [modality, info['count'], ', '.join(info['planets'])]
@@ -1149,6 +1177,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
     """
     if output in ('html', 'return_html'):
         table_format = 'html'
+        house_called = "House"
         bold = "<b>"
         nobold = "</b>"
         br = "\n<br>"
@@ -1157,6 +1186,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         h3_ = "</h3>"
     elif output == 'text':
         table_format = 'simple'
+        house_called = "H"
         bold = "\033[1m"
         nobold = "\033[0m"
         br = "\n"
@@ -1165,6 +1195,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         h3_ = ""
     else:
         table_format = 'simple'
+        house_called = "H"
         bold = ""
         nobold = ""
         br = "\n"
@@ -1179,18 +1210,18 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
         elif type == "Synastry":
             headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
         elif type == "Asteroids":
-            headers = ["Natal Planet", "H", "Aspect", "Natal Asteroid", "H", "Degree"]
+            headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
         else:
             headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     else:
         if type == "Transit":
-            headers = ["Natal Planet", "H", "Aspect", "Transit Planet", "H","Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
-            headers = [p1_name, "H", "Aspect", p2_name, "H", "Degree", "Off by"]
+            headers = [p1_name, house_called, "Aspect", p2_name, house_called, "Degree", "Off by"]
         elif type == "Asteroids":
-            headers = ["Natal Planet", "H", "Aspect", "Natal Asteroid", "H", "Degree"]
+            headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
         else:
-            headers = ["Planet", "H", "Aspect", "Planet", "H", "Degree", "Off by"]
+            headers = ["Planet", house_called, "Aspect", "Planet", house_called, "Degree", "Off by"]
     if show_aspect_score:
         headers.append("Score")
     to_return = ""
@@ -1373,6 +1404,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     """
     to_return = ""
     if output in ('html', 'return_html'):
+        table_format = 'html'
         bold = "<b>"
         nobold = "</b>"
         br = "\n<br>"
@@ -1380,6 +1412,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         h3 = "<h3>"
         h3_ = "</h3>"
     elif output == 'text':
+        table_format = 'simple'
         bold = "\033[1m"
         nobold = "\033[0m"
         br = "\n"
@@ -1387,6 +1420,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         h3 = ""
         h3_ = ""
     elif output == 'return_text':
+        table_format = 'simple'
         bold = ""
         nobold = ""
         br = "\n"
@@ -1455,17 +1489,17 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
     if house_positions and not notime:
-        headers.append("P House")
-        headers.append("S House") 
+        if output in ('html', 'return_html'):
+            headers.append("Planet in House")
+            headers.append("Star in House")
+        else:
+            headers.append("P House")
+            headers.append("S House")
+
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
     if show_aspect_score:
         headers.append("Score")
-
-    if output in ('html', 'return_html'):
-        table_format = 'html'
-    else:
-        table_format = 'simple'
 
     star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
 
@@ -1546,10 +1580,28 @@ def load_event(name, guid=None):
         print(f"No entry found for {name}.")
         return False
 
+def set_orbs(args, def_orbs):
+    # Set orbs to default if not specified
+    orbs = {}
+
+    orbs.update({
+        'Orb': args["Orb"] if args["Orb"] else def_orbs["Orb"],
+        'Orb Major': args["Orb Major"] if args["Orb Major"] else def_orbs["Orb Major"],
+        'Orb Minor': args["Orb Minor"] if args["Orb Minor"] else def_orbs["Orb Minor"],
+        'Orb Fixed Star': args["Orb Fixed Star"] if args["Orb Fixed Star"] else def_orbs["Orb Fixed Star"],
+        'Orb Transit Fast': args["Orb Transit Fast"] if args["Orb Transit Fast"] else def_orbs["Orb Transit Fast"],
+        'Orb Transit Slow': args["Orb Transit Slow"] if args["Orb Transit Slow"] else def_orbs["Orb Transit Slow"],
+        'Orb Synastry Fast': args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else def_orbs["Orb Synastry Fast"],
+        'Orb Synastry Slow': args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else def_orbs["Orb Synastry Slow"]
+    })
+
+    return orbs
+
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
-                  minor_aspects, show_brief_aspects, show_score, orb, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
+                  minor_aspects, show_brief_aspects, show_score, orb, orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow,
+                  orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
-                  transits_location, synastry, remove_saved_names, output_type, guid):
+                  transits_location, synastry, remove_saved_names, store_defaults, use_defaults, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1568,6 +1620,13 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Show Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
         "Orb": orb,
+        "Orb Major": orb_major,
+        "Orb Minor": orb_minor,
+        "Orb Fixed Star": orb_fixed_star,
+        "Orb Transit Fast": orb_transit_fast,
+        "Orb Transit Slow": orb_transit_slow,
+        "Orb Synastry Fast": orb_synastry_fast,
+        "Orb Synastry Slow": orb_synastry_slow,
         "Degree in Minutes": degree_in_minutes,
         "Node": node,
         "All Stars": all_stars,
@@ -1582,6 +1641,8 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Transits Location": transits_location,
         "Synastry": synastry,
         "Saved Names": None,
+        "Store Defaults": store_defaults,
+        "Use Defaults": use_defaults,
         "Output": output_type,
         "Remove Saved Names": remove_saved_names,
         "Guid": guid if guid else None
@@ -1610,6 +1671,13 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--brief_aspects', action='store_true', help='Whether to show brief aspects for transits, i.e. Asc, MC. (Default: false)')
     parser.add_argument('--show_score', action='store_true', help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_minor', type=float, help='Orb size in degrees for minor aspects. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_fixed_star', type=float, help='Orb size in degrees for fixed star aspects. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_transit_fast', type=float, help='Orb size in degrees for fast-moving planet transits. (Default: 1.5)', required=False)
+    parser.add_argument('--orb_transit_slow', type=float, help='Orb size in degrees for slow-moving planet transits. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_synastry_fast', type=float, help='Orb size in degrees for fast-moving planet synastry. (Default: 1.5)', required=False)
+    parser.add_argument('--orb_synastry_slow', type=float, help='Orb size in degrees for slow-moving planet synastry. (Default: 1.0)', required=False)
     parser.add_argument('--degree_in_minutes', action='store_true', help='Show degrees in arch minutes and seconds. (Default: false)')
     parser.add_argument('--node', choices=['mean', 'true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
     parser.add_argument('--all_stars', action='store_true', help='Show aspects for all fixed stars. (Default: false)')
@@ -1625,6 +1693,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
+    parser.add_argument('--store_defaults', type=str, help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
+    parser.add_argument('--use_defaults', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -1633,36 +1703,46 @@ If no record is found, default values will be used.''', formatter_class=argparse
         parser.error("--davison requires at least two named events.")
 
     arguments = {
-    "Name": args.name,
-    "Date": args.date,
-    "Location": args.location,
-    "Latitude": args.latitude,
-    "Longitude": args.longitude,
-    "Timezone": args.timezone,
-    "Davison": args.davison,
-    "Place": args.place,
-    "Imprecise Aspects": args.imprecise_aspects,
-    "Minor Aspects": args.minor_aspects,
-    "Show Brief Aspects": args.brief_aspects,
-    "Show Score": args.show_score,
-    "Orb": args.orb,
-    "Degree in Minutes": args.degree_in_minutes,
-    "Node": args.node,
-    "All Stars": args.all_stars,
-    "House System": args.house_system,
-    "House Cusps": args.house_cusps,
-    "Hide Planetary Positions": args.hide_planetary_positions,
-    "Hide Planetary Aspects": args.hide_planetary_aspects,
-    "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
-    "Hide Asteroid Aspects": args.hide_asteroid_aspects,
-    "Transits": args.transits,
-    "Transits Timezone": args.transits_timezone,
-    "Transits Location": args.transits_location,
-    "Synastry": args.synastry,
-    "Saved Names": args.saved_names,
-    "Remove Saved Names": args.remove_saved_names,
-    "Output": args.output_type,
-    "Guid": None}
+        "Name": args.name,
+        "Date": args.date,
+        "Location": args.location,
+        "Latitude": args.latitude,
+        "Longitude": args.longitude,
+        "Timezone": args.timezone,
+        "Davison": args.davison,
+        "Place": args.place,
+        "Imprecise Aspects": args.imprecise_aspects,
+        "Minor Aspects": args.minor_aspects,
+        "Show Brief Aspects": args.brief_aspects,
+        "Show Score": args.show_score,
+        "Orb": args.orb,
+        "Orb Major": args.orb_major,
+        "Orb Minor": args.orb_minor,
+        "Orb Fixed Star": args.orb_fixed_star,
+        "Orb Transit Fast": args.orb_transit_fast,
+        "Orb Transit Slow": args.orb_transit_slow,
+        "Orb Synastry Fast": args.orb_synastry_fast,
+        "Orb Synastry Slow": args.orb_synastry_slow,
+        "Degree in Minutes": args.degree_in_minutes,
+        "Node": args.node,
+        "All Stars": args.all_stars,
+        "House System": args.house_system,
+        "House Cusps": args.house_cusps,
+        "Hide Planetary Positions": args.hide_planetary_positions,
+        "Hide Planetary Aspects": args.hide_planetary_aspects,
+        "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
+        "Hide Asteroid Aspects": args.hide_asteroid_aspects,
+        "Transits": args.transits,
+        "Transits Timezone": args.transits_timezone,
+        "Transits Location": args.transits_location,
+        "Synastry": args.synastry,
+        "Saved Names": args.saved_names,
+        "Remove Saved Names": args.remove_saved_names,
+        "Store Defaults": args.store_defaults,
+        "Use Defaults": args.use_defaults,
+        "Output": args.output_type,
+        "Guid": None
+    }
 
     return arguments
 
@@ -1708,7 +1788,18 @@ def main(gui_arguments=None):
     def_minor_aspects = False  # Default minor aspects
     def_show_brief_aspects = False  # Default brief aspects
     def_show_score = False  # Default minor aspects
-    def_orb = 1  # Default orb size
+    
+    def_orbs = {
+        "Orb": 1,  # General default orb size
+        "Orb Major": 6.0,  # Default orb size for major aspects
+        "Orb Minor": 1.5,  # Default orb size for minor aspects
+        "Orb Fixed Star": 1.0,  # Default orb size for fixed star aspects
+        "Orb Transit Fast": 1.5,  # Default orb size for fast-moving planet transits
+        "Orb Transit Slow": 1.0,  # Default orb size for slow-moving planet transits
+        "Orb Synastry Fast": 3.0,  # Default orb size for fast-moving planet synastry
+        "Orb Synastry Slow": 2.0,  # Default orb size for slow-moving planet synastry
+    }
+
     def_degree_in_minutes = False  # Default degree in minutes
     def_node = "true"  # Default node (true node is more accurate than mean node)
     def_all_stars = False  # Default only astrologically known stars
@@ -1723,6 +1814,99 @@ def main(gui_arguments=None):
     hide_asteroid_aspects = False
     show_transits = False
     show_synastry = False
+
+    # Store defaults if requested
+    if args["Store Defaults"]:
+        defaults_to_store = {
+            "Name": args["Store Defaults"],
+            "GUID": args["Guid"] if args["Guid"] else None,
+            "Location": args["Location"] if args["Location"] else None,
+            "Timezone": args["Timezone"] if args["Timezone"] else None,
+            "Imprecise Aspects": args["Imprecise Aspects"] if args["Imprecise Aspects"] else None,
+            "Minor Aspects": args["Minor Aspects"] if args["Minor Aspects"] else None,
+            "Show Brief Aspects": args["Show Brief Aspects"] if args["Show Brief Aspects"] else None,
+            "Show Score": args["Show Score"] if args["Show Score"] else None,
+            "Orb": args["Orb"] if args["Orb"] else None,
+            "Orb Major": args["Orb Major"] if args["Orb Major"] else None,
+            "Orb Minor": args["Orb Minor"] if args["Orb Minor"] else None,
+            "Orb Fixed Star": args["Orb Fixed Star"] if args["Orb Fixed Star"] else None,
+            "Orb Transit Fast": args["Orb Transit Fast"] if args["Orb Transit Fast"] else None,
+            "Orb Transit Slow": args["Orb Transit Slow"] if args["Orb Transit Slow"] else None,
+            "Orb Synastry Fast": args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else None,
+            "Orb Synastry Slow": args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else None,
+            "Degree in Minutes": args["Degree in Minutes"] if args["Degree in Minutes"] else None,
+            "Node": args["Node"] if args["Node"] else None,
+            "All Stars": args["All Stars"] if args["All Stars"] else None,
+            "House System": args["House System"] if args["House System"] else None,
+            "House Cusps": args["House Cusps"] if args["House Cusps"] else None,
+            "Hide Planetary Positions": args["Hide Planetary Positions"] if args["Hide Planetary Positions"] else None,
+            "Hide Planetary Aspects": args["Hide Planetary Aspects"] if args["Hide Planetary Aspects"] else None,
+            "Hide Fixed Star Aspects": args["Hide Fixed Star Aspects"] if args["Hide Fixed Star Aspects"] else None,
+            "Hide Asteroid Aspects": args["Hide Asteroid Aspects"] if args["Hide Asteroid Aspects"] else None,
+            "Output Type": args["Output"] if args["Output"] else None
+        }
+        
+        db_manager.store_defaults(defaults_to_store)
+        return f"Settings stored as defaults with the name '{args['Store Defaults']}'."
+
+    # Override using stored defaults if requested
+    stored_defaults = None
+    if args["Use Defaults"]:
+        stored_defaults = db_manager.read_defaults(args["Use Defaults"], args["Guid"] if args["Guid"] else None)            
+
+    if stored_defaults:
+        if stored_defaults["Location"]:
+            args["Location"] = stored_defaults["Location"]
+        if stored_defaults["Timezone"]:
+            args["Timezone"] = stored_defaults["Timezone"]
+        if stored_defaults["Imprecise Aspects"]:
+            args["Imprecise Aspects"] = stored_defaults["Imprecise Aspects"]
+        if stored_defaults["Minor Aspects"]:
+            args["Minor Aspects"] = stored_defaults["Minor Aspects"]
+        if stored_defaults["Show Brief Aspects"]:
+            args["Show Brief Aspects"] = stored_defaults["Show Brief Aspects"]
+        if stored_defaults["Show Score"]:
+            args["Show Score"] = stored_defaults["Show Score"]
+        if stored_defaults["Orb"]:
+            args["Orb"] = stored_defaults["Orb"]
+        if stored_defaults["Orb Major"]:
+            args["Orb Major"] = stored_defaults["Orb Major"]
+        if stored_defaults["Orb Minor"]:
+            args["Orb Minor"] = stored_defaults["Orb Minor"]
+        if stored_defaults["Orb Fixed Star"]:
+            args["Orb Fixed Star"] = stored_defaults["Orb Fixed Star"]
+        if stored_defaults["Orb Transit Fast"]:
+            args["Orb Transit Fast"] = stored_defaults["Orb Transit Fast"]
+        if stored_defaults["Orb Transit Slow"]:
+            args["Orb Transit Slow"] = stored_defaults["Orb Transit Slow"]
+        if stored_defaults["Orb Synastry Fast"]:
+            args["Orb Synastry Fast"] = stored_defaults["Orb Synastry Fast"]
+        if stored_defaults["Orb Synastry Slow"]:
+            args["Orb Synastry Slow"] = stored_defaults["Orb Synastry Slow"]
+        if stored_defaults["Degree in Minutes"]:
+            args["Degree in Minutes"] = stored_defaults["Degree in Minutes"]
+        if stored_defaults["Node"]:
+            args["Node"] = stored_defaults["Node"]
+        if stored_defaults["All Stars"]:
+            args["All Stars"] = stored_defaults["All Stars"]
+        if stored_defaults["House System"]:
+            args["House System"] = stored_defaults["House System"]
+        if stored_defaults["House Cusps"]:
+            args["House Cusps"] = stored_defaults["House Cusps"]
+        if stored_defaults["Hide Planetary Positions"]:
+            args["Hide Planetary Positions"] = stored_defaults["Hide Planetary Positions"]
+        if stored_defaults["Hide Planetary Aspects"]:
+            args["Hide Planetary Aspects"] = stored_defaults["Hide Planetary Aspects"]
+        if stored_defaults["Hide Fixed Star Aspects"]:
+            args["Hide Fixed Star Aspects"] = stored_defaults["Hide Fixed Star Aspects"]
+        if stored_defaults["Hide Asteroid Aspects"]:
+            args["Hide Asteroid Aspects"] = stored_defaults["Hide Asteroid Aspects"]
+        if stored_defaults["Transits Timezone"]:
+            args["Transits Timezone"] = stored_defaults["Transits Timezone"]
+        if stored_defaults["Transits Location"]:
+            args["Transits Location"] = stored_defaults["Transits Location"]
+        if stored_defaults["Output Type"]:
+            args["Output Type"] = stored_defaults["Output Type"]
 
     if args["Location"]: 
         place = args["Location"]
@@ -1744,7 +1928,8 @@ def main(gui_arguments=None):
     imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects
     minor_aspects = True if args["Minor Aspects"] else def_minor_aspects
-    orb = float(args["Orb"]) if args["Orb"] else def_orb
+    orbs = set_orbs(args, def_orbs)
+    orb = float(args["Orb"]) if args["Orb"] else def_orbs["Orb"]
     # If True, the script will show the positions in degrees and minutes
     degree_in_minutes = True if args["Degree in Minutes"] else def_degree_in_minutes
     node = "mean" if args["Node"] and args["Node"].lower() in ["mean"] else def_node
