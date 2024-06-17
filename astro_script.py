@@ -987,6 +987,34 @@ def house_count(house_counts, output, bold, nobold, br):
         print(house_count_string)    
     return f"{br}" + house_count_string
 
+# Arabic Parts
+def calculate_part_of_fortune(sun_pos, moon_pos, asc_pos, is_daytime):
+    """Calculate the Part of Fortune"""
+    if is_daytime:
+        part_of_fortune = asc_pos + moon_pos - sun_pos
+    else:
+        part_of_fortune = asc_pos + sun_pos - moon_pos
+
+    # Normalize to 0-360 degrees
+    part_of_fortune = part_of_fortune % 360
+    return part_of_fortune
+
+def calculate_part_of_spirit(sun_pos, moon_pos, asc_pos, is_daytime):
+    if is_daytime:
+        part_of_spirit = asc_pos + sun_pos - moon_pos
+    else:
+        part_of_spirit = asc_pos + moon_pos - sun_pos
+
+    part_of_spirit = part_of_spirit % 360
+    return part_of_spirit
+
+def calculate_part_of_love(asc_pos, venus_pos, sun_pos):
+    """Calculate the Part of Love"""
+    part_of_love = asc_pos + venus_pos - sun_pos
+    part_of_love = part_of_love % 360
+    return part_of_love
+
+
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text"):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
