@@ -776,35 +776,70 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
             'speed': 0.05
         }
 
-    # if arabic_parts:
-    if True:
-        PLANETS.update({"Fortune": None})
-        PLANETS.update({"Spirit": None})
-        PLANETS.update({"Love": None})
+        ### IMPLEMENT - if arabic_parts:
+        if True:
+            PLANETS.update({"Fortune": None})
+            PLANETS.update({"Spirit": None})
+            PLANETS.update({"Love": None})
 
-        sunrise = swe.rise_trans(jd, swe.SUN, lon=longitude, lat=latitude, rsmi=(swe.CALC_RISE | swe.BIT_DISC_CENTER))
-        sunset = swe.rise_trans(jd, swe.SUN, lon=longitude, lat=latitude, rsmi=(swe.CALC_SET | swe.BIT_DISC_CENTER))
+            geopos = [longitude, latitude, 0]  # Elevation is set to 0 for now
 
-        # Convert Julian Day back to a datetime object for readability
-        sunrise_time = swe.revjul(sunrise[1])[3:]
-        sunset_time = swe.revjul(sunset[1])[3:]
+            sunrise = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_RISE ))
+            sunset = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_SET ))
+            ### SUNSET TIME IS NOT CORRECT, NEED TO FIX THIS
 
-        if date < sunrise_time or date > sunset_time:
-            is_daytime = False
-        else:
-            is_daytime = True
+            # Convert Julian Day back to a datetime object
+            rise_year, rise_month, rise_day, sunrise_time = swe.revjul(sunrise[1][0])
+            set_year, set_month, set_day, sunset_time = swe.revjul(sunset[1][0]) #[3:]
 
-        # Need to get elevation of the Sun to determine if it is day or night
-        # Use Geopy to get the elevation of the location, using Google API.
-        fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+            sunrise_time = sunrise_time % 1
+            sunset_time = sunset_time % 1
 
-        positions["Fortune"] = {
-            'longitude': fortune_pos,
-            'zodiac_sign': longitude_to_zodiac(fortune_pos, output).split()[0],
-            'retrograde': '',
-            'speed': 360
-        }
+            total_seconds = sunrise_time * 24 * 3600
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
 
+            sunrise_datetime = datetime(rise_year, rise_month, rise_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
+
+            total_seconds = sunset_time * 24 * 3600
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
+
+            sunset_datetime = datetime(set_year, set_month, set_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
+
+            if date < sunrise_datetime or date > sunset_datetime:
+                is_daytime = False
+            else:
+                is_daytime = True
+
+            # Need to get elevation of the Sun to determine if it is day or night
+            # Use Geopy to get the elevation of the location, using Google API.
+            fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+            spirit_pos = calculate_part_of_spirit(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+            love_pos = calculate_part_of_love(positions['Ascendant']['longitude'], positions['Venus']['longitude'], positions['Sun']['longitude'])
+
+            positions["Fortune"] = {
+                'longitude': fortune_pos,
+                'zodiac_sign': longitude_to_zodiac(fortune_pos, output).split()[0],
+                'retrograde': '',
+                'speed': 360
+            }
+            positions["Spirit"] = {
+                'longitude': spirit_pos,
+                'zodiac_sign': longitude_to_zodiac(spirit_pos, output).split()[0],
+                'retrograde': '',
+                'speed': 360
+            }
+            positions["Love"] = {
+                'longitude': love_pos,
+                'zodiac_sign': longitude_to_zodiac(love_pos, output).split()[0],
+                'retrograde': '',
+                'speed': 360
+            }
+
+    ### ADD MORE ARABIC PARTS, SUCH AS MARRIAGE, FRIENDSHIP, DEATH
 
     # Calculate house positions
     house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
