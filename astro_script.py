@@ -773,8 +773,38 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
             'longitude': (positions["North Node"]['longitude'] + 180) % 360,
             'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
             'retrograde': '',
+            'speed': 0.05
+        }
+
+    # if arabic_parts:
+    if True:
+        PLANETS.update({"Fortune": None})
+        PLANETS.update({"Spirit": None})
+        PLANETS.update({"Love": None})
+
+        sunrise = swe.rise_trans(jd, swe.SUN, lon=longitude, lat=latitude, rsmi=(swe.CALC_RISE | swe.BIT_DISC_CENTER))
+        sunset = swe.rise_trans(jd, swe.SUN, lon=longitude, lat=latitude, rsmi=(swe.CALC_SET | swe.BIT_DISC_CENTER))
+
+        # Convert Julian Day back to a datetime object for readability
+        sunrise_time = swe.revjul(sunrise[1])[3:]
+        sunset_time = swe.revjul(sunset[1])[3:]
+
+        if date < sunrise_time or date > sunset_time:
+            is_daytime = False
+        else:
+            is_daytime = True
+
+        # Need to get elevation of the Sun to determine if it is day or night
+        # Use Geopy to get the elevation of the location, using Google API.
+        fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+
+        positions["Fortune"] = {
+            'longitude': fortune_pos,
+            'zodiac_sign': longitude_to_zodiac(fortune_pos, output).split()[0],
+            'retrograde': '',
             'speed': 360
         }
+
 
     # Calculate house positions
     house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
@@ -804,7 +834,7 @@ def coord_in_minutes(longitude, output_type):
     degree_symbol = " " if (os.name == 'nt' and output_type=='html') else "°"
 
     neg=''
-    if minutes <0:
+    if minutes < 0:
         minutes = abs(minutes)
         seconds = abs(seconds)
         neg='-'
