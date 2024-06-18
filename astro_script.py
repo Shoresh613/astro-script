@@ -7,7 +7,7 @@ import sys
 import argparse
 from math import cos, radians, exp
 from geopy.geocoders import Nominatim
-from tabulate import tabulate
+from tabulate import tabulate, SEPARATING_LINE
 try:
     from . import version
     from . import db_manager
@@ -1152,15 +1152,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             row = [element, count]
             element_count_table_data.append(row)
 
-    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt=table_format, floatfmt=".2f")
-    to_return += f"{br}{br}{table}"
-    if output_type in ('text', 'html'):
-        print(table + f"{br}")
-    
-    #Check day and night signs
-    nr_day_signs = 0
-    nr_night_signs = 0
-
+    #Check nr of day and night signs
     fire_count = next((item[1] for item in element_count_table_data if item[0] == 'Fire'), 0)
     air_count = next((item[1] for item in element_count_table_data if item[0] == 'Air'), 0)
     earth_count = next((item[1] for item in element_count_table_data if item[0] == 'Earth'), 0)
@@ -1168,11 +1160,14 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     nr_day_signs = fire_count + air_count
     nr_night_signs = earth_count + water_count
+    # element_count_table_data.append(SEPARATING_LINE)
+    element_count_table_data.append(["Day signs", nr_day_signs])
+    element_count_table_data.append(["Night signs", nr_night_signs])
 
-    if output_type in ('html', 'text'):
-        print(f"Day signs: {nr_day_signs} Night signs: {nr_night_signs}{br}")
-    else:
-        to_return += f"{p}Day signs: {nr_day_signs} Night signs: {nr_night_signs}"
+    table = tabulate(element_count_table_data, headers=["Element","Nr"], tablefmt=table_format, floatfmt=".2f")
+    to_return += f"{br}{br}{table}"
+    if output_type in ('text', 'html'):
+        print(table + f"{br}")
 
     for modality, info in modality_counts.items():
         row = [modality, info['count'], ', '.join(info['planets'])]
