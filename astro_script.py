@@ -803,7 +803,12 @@ def coord_in_minutes(longitude, output_type):
 
     degree_symbol = " " if (os.name == 'nt' and output_type=='html') else "°"
 
-    return f"{degrees}{degree_symbol}{minutes}'{seconds}\"".strip('-')
+    neg=''
+    if minutes <0:
+        minutes = abs(minutes)
+        seconds = abs(seconds)
+        neg='-'
+    return f"{neg}{degrees}{degree_symbol}{minutes}'{seconds}\""
 
 def calculate_planetary_aspects(planet_positions, orb, output_type, aspect_types):
     """
