@@ -18,36 +18,6 @@ import astro_script
 import pytz
 import sqlite3
 
-
-# def read_saved_names(filename='saved_events.json'):
-#     """
-#     Reads a file containing a dictionary of saved events and returns a list of event names.
-
-#     Args:
-#     filename (str): The path to the file containing the saved events.
-
-#     Returns:
-#     list: A list of names of saved events.
-#     """
-#     try:
-#         with open(filename, 'r') as file:
-#             # Load the dictionary from the file
-#             events_dict = json.load(file)
-#             # Return the list of keys, which are the names of the events
-#             return list(events_dict.keys())
-#     except FileNotFoundError:
-#         # If the file does not exist, return an empty list
-#         print(f"No file found named '{filename}'. Returning an empty list.")
-#         return []
-#     except json.JSONDecodeError:
-#         # Handle cases where the file content is not valid JSON
-#         print(f"Error decoding JSON from file '{filename}'. Check file content.")
-#         return []
-#     except Exception as e:
-#         # General exception handling, useful for debugging
-#         print(f"An unexpected error occurred: {e}")
-#         return []
-
 def read_saved_names(db_filename='db.sqlite3'):
     """
     Reads the names of saved events from a SQLite database and returns a list of event names.
@@ -212,10 +182,38 @@ class InputScreen(Screen):
 
         # Now pass these collected values to your astro_script function
         # Adjust the function call based on actual parameters it needs
-        results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, None, place, # change 'False' to value of davison when implemented 
-                                            imprecise_aspects, minor_aspects, False, False, orb, degree_in_minutes, 'true', # change'true' to value of moon node selection when implemented
-                                            all_stars, house_system, house_cusps, hide_planetary_positions, 
-                                            hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, None, False, None, False, "return_text", None) # change 'False' to value of transits or synastry when implemented, second None is guid
+        results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, davison=None, place=place, # change 'False' to value of davison when implemented 
+                                            imprecise_aspects=imprecise_aspects,
+                                            minor_aspects=minor_aspects,
+                                            show_brief_aspects=False,
+                                            show_score=False,
+                                            show_arabic_parts=False,
+                                            orb=orb, 
+                                            orb_major=None, 
+                                            orb_minor=None, 
+                                            orb_fixed_star=None,
+                                            orb_transit_fast=None, 
+                                            orb_transit_slow=None,
+                                            orb_synastry_fast=None,
+                                            orb_synastry_slow=None,
+                                            degree_in_minutes=degree_in_minutes, 
+                                            node='true', # change'true' to value of moon node selection when implemented
+                                            all_stars=all_stars,
+                                            house_system=house_system,
+                                            house_cusps=house_cusps,
+                                            hide_planetary_positions=hide_planetary_positions, 
+                                            hide_planetary_aspects=hide_planetary_aspects,
+                                            hide_fixed_star_aspects=hide_fixed_star_aspects,
+                                            hide_asteroid_aspects=hide_asteroid_aspects, 
+                                            transits=None, 
+                                            transits_location=None, 
+                                            transits_timezone=None, 
+                                            synastry=False,
+                                            remove_saved_names=None,
+                                            store_defaults=None,
+                                            use_defaults=None,
+                                            output_type="return_text", 
+                                            guid=None)
 
         # Switch to the ResultsScreen
         self.manager.current = 'results_screen'
