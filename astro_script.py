@@ -65,7 +65,7 @@ SOFT_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
-          "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360}
+          "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360, "Juno": 0.1, "Vesta": 0.12, "Pallas": 0.09, "Pholus": 0.06, "Ceres": 0.08}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven']  # Aspects that are always excluded if no time of day is specified
 FILENAME = 'saved_events.json' 
@@ -740,6 +740,9 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     if mode == "planets":
         bodies = PLANETS
         PLANETS.pop('South Node', None)  # None is the default value if the key doesn't exist
+        PLANETS.pop('Fortune', None)
+        PLANETS.pop('Spirit', None)
+        PLANETS.pop('Love', None)
     elif mode == "asteroids":
         bodies = ASTEROIDS
 
@@ -778,68 +781,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
 
         ### IMPLEMENT - if arabic_parts:
         if True:
-            PLANETS.update({"Fortune": None})
-            PLANETS.update({"Spirit": None})
-            PLANETS.update({"Love": None})
-
-            geopos = [longitude, latitude, 0]  # Elevation is set to 0 for now
-
-            sunrise = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_RISE ))
-            sunset = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_SET ))
-            ### SUNSET TIME IS NOT CORRECT, NEED TO FIX THIS
-
-            # Convert Julian Day back to a datetime object
-            rise_year, rise_month, rise_day, sunrise_time = swe.revjul(sunrise[1][0])
-            set_year, set_month, set_day, sunset_time = swe.revjul(sunset[1][0]) #[3:]
-
-            sunrise_time = sunrise_time % 1
-            sunset_time = sunset_time % 1
-
-            total_seconds = sunrise_time * 24 * 3600
-            hours = int(total_seconds // 3600)
-            minutes = int((total_seconds % 3600) // 60)
-            seconds = int(total_seconds % 60)
-
-            sunrise_datetime = datetime(rise_year, rise_month, rise_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
-
-            total_seconds = sunset_time * 24 * 3600
-            hours = int(total_seconds // 3600)
-            minutes = int((total_seconds % 3600) // 60)
-            seconds = int(total_seconds % 60)
-
-            sunset_datetime = datetime(set_year, set_month, set_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
-
-            if date < sunrise_datetime or date > sunset_datetime:
-                is_daytime = False
-            else:
-                is_daytime = True
-
-            # Need to get elevation of the Sun to determine if it is day or night
-            # Use Geopy to get the elevation of the location, using Google API.
-            fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
-            spirit_pos = calculate_part_of_spirit(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
-            love_pos = calculate_part_of_love(positions['Ascendant']['longitude'], positions['Venus']['longitude'], positions['Sun']['longitude'])
-
-            positions["Fortune"] = {
-                'longitude': fortune_pos,
-                'zodiac_sign': longitude_to_zodiac(fortune_pos, output).split()[0],
-                'retrograde': '',
-                'speed': 360
-            }
-            positions["Spirit"] = {
-                'longitude': spirit_pos,
-                'zodiac_sign': longitude_to_zodiac(spirit_pos, output).split()[0],
-                'retrograde': '',
-                'speed': 360
-            }
-            positions["Love"] = {
-                'longitude': love_pos,
-                'zodiac_sign': longitude_to_zodiac(love_pos, output).split()[0],
-                'retrograde': '',
-                'speed': 360
-            }
-
-    ### ADD MORE ARABIC PARTS, SUCH AS MARRIAGE, FRIENDSHIP, DEATH
+            positions = add_arabic_parts(date, jd, latitude, longitude, positions, output)
 
     # Calculate house positions
     house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
@@ -848,6 +790,70 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     for planet in positions:
         positions[planet]['house'] = house_positions.get(planet, {}).get('house', None)
 
+    return positions
+
+def add_arabic_parts(date, jd, latitude, longitude, positions, output):
+    PLANETS.update({"Fortune": None})
+    PLANETS.update({"Spirit": None})
+    PLANETS.update({"Love": None})
+
+    geopos = [longitude, latitude, 0]  # Elevation is set to 0 for now
+
+    sunrise = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_RISE ))
+    sunset = swe.rise_trans(tjdut=jd, body=swe.SUN, geopos=geopos, rsmi=(swe.CALC_SET ))
+    ### SUNSET TIME IS NOT CORRECT, NEED TO FIX THIS
+
+    # Convert Julian Day back to a datetime object
+    rise_year, rise_month, rise_day, sunrise_time = swe.revjul(sunrise[1][0])
+    set_year, set_month, set_day, sunset_time = swe.revjul(sunset[1][0]) #[3:]
+
+    sunrise_time = sunrise_time % 1
+    sunset_time = sunset_time % 1
+
+    total_seconds = sunrise_time * 24 * 3600
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+    seconds = int(total_seconds % 60)
+
+    sunrise_datetime = datetime(rise_year, rise_month, rise_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
+
+    total_seconds = sunset_time * 24 * 3600
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+    seconds = int(total_seconds % 60)
+
+    sunset_datetime = datetime(set_year, set_month, set_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
+
+    if date < sunrise_datetime or date > sunset_datetime:
+        is_daytime = False
+    else:
+        is_daytime = True
+
+    # Need to get elevation of the Sun to determine if it is day or night
+    # Use Geopy to get the elevation of the location, using Google API.
+    fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+    spirit_pos = calculate_part_of_spirit(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
+    love_pos = calculate_part_of_love(positions['Ascendant']['longitude'], positions['Venus']['longitude'], positions['Sun']['longitude'])
+
+    positions["Fortune"] = {
+        'longitude': fortune_pos,
+        'zodiac_sign': longitude_to_zodiac(fortune_pos, output).split()[0],
+        'retrograde': '',
+        'speed': 360
+    }
+    positions["Spirit"] = {
+        'longitude': spirit_pos,
+        'zodiac_sign': longitude_to_zodiac(spirit_pos, output).split()[0],
+        'retrograde': '',
+        'speed': 360
+    }
+    positions["Love"] = {
+        'longitude': love_pos,
+        'zodiac_sign': longitude_to_zodiac(love_pos, output).split()[0],
+        'retrograde': '',
+        'speed': 360
+    }
+    ### ADD MORE ARABIC PARTS, SUCH AS MARRIAGE, FRIENDSHIP, DEATH
     return positions
 
 def coord_in_minutes(longitude, output_type):
@@ -1133,7 +1139,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°" # If running on Windows, don't use degree symbol for html output
 
     # Define headers based on whether house positions should be included
-    headers = ["Planet", "Zodiac", "Position", "R"]
+    headers = ["Planet", "Zodiac", "Position", "Retrograde" if output_type in('html', 'return_html') else "R"]
     if house_positions:
         headers.append("House")
     if not notime:
@@ -2392,14 +2398,19 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_house_cusps}"
 
-    aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
-    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if not hide_planetary_positions:
         if output_type in ("text", "html"):
             print(f"{string_planets_heading}{nobold}{h3_}", end="")
         else:
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
+    if True: #Really if arabic_parts            
+        # Remove Fortune, Spirit and Love from the counts to not mess up the calculations
+        del planet_positions["Fortune"]
+        del planet_positions["Spirit"]
+        del planet_positions["Love"]
+    aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orb, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
+    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
     if not hide_fixed_star_aspects and fixstar_aspects:
