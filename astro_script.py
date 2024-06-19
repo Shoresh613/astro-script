@@ -718,7 +718,7 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
             return_string += f"{minutes} minute"
     return return_string if return_string else "Less than a minute"
 
-def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets"):
+def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -780,7 +780,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         }
 
         ### IMPLEMENT - if arabic_parts:
-        if True:
+        if arabic_parts:
             positions = add_arabic_parts(date, jd, latitude, longitude, positions, output)
 
     # Calculate house positions
@@ -1697,7 +1697,7 @@ def set_orbs(args, def_orbs):
     return orbs
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
-                  minor_aspects, show_brief_aspects, show_score, orb, orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow,
+                  minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
                   transits_location, synastry, remove_saved_names, store_defaults, use_defaults, output_type, guid):
@@ -1718,6 +1718,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Minor Aspects": minor_aspects,
         "Show Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
+        "Show Arabic Parts": show_arabic_parts,
         "Orb": orb,
         "Orb Major": orb_major,
         "Orb Minor": orb_minor,
@@ -1766,9 +1767,10 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
-    parser.add_argument('--minor_aspects', action='store_true', help='Whether to show minor aspects. (Default: false)')
-    parser.add_argument('--brief_aspects', action='store_true', help='Whether to show brief aspects for transits, i.e. Asc, MC. (Default: false)')
-    parser.add_argument('--show_score', action='store_true', help='Whether to show ease of individual aspects (0 not easy, 50 neutral, 100 easy). (Default: false)')
+    parser.add_argument('--minor_aspects', action='store_true', help='Show minor aspects.')
+    parser.add_argument('--brief_aspects', action='store_true', help='Show brief aspects for transits, i.e. Asc, MC.')
+    parser.add_argument('--score', action='store_true', help='Show ease of individual aspects (0 not easy, 50 neutral, 100 easy).')
+    parser.add_argument('--arabic_parts', action='store_true', help='Show Arabic parts.')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
     parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 1.0)', required=False)
     parser.add_argument('--orb_minor', type=float, help='Orb size in degrees for minor aspects. (Default: 1.0)', required=False)
@@ -1813,7 +1815,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Imprecise Aspects": args.imprecise_aspects,
         "Minor Aspects": args.minor_aspects,
         "Show Brief Aspects": args.brief_aspects,
-        "Show Score": args.show_score,
+        "Show Score": args.score,
+        "Show Arabic Parts": args.arabic_parts,
         "Orb": args.orb,
         "Orb Major": args.orb_major,
         "Orb Minor": args.orb_minor,
@@ -2210,6 +2213,11 @@ def main(gui_arguments=None):
     if args["Hide Asteroid Aspects"]:
         if args["Hide Asteroid Aspects"]: hide_asteroid_aspects = True 
 
+    if args["Show Arabic Parts"]:
+        show_arabic_parts = True
+    else:
+        show_arabic_parts = False
+
     if args["Davison"]:
         utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
         place = "Davison chart"
@@ -2280,7 +2288,7 @@ def main(gui_arguments=None):
     # Initialize Colorama, calculations for strings
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
@@ -2404,8 +2412,7 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
-    if True: #Really if arabic_parts            
-        # Remove Fortune, Spirit and Love from the counts to not mess up the calculations
+    if show_arabic_parts:             
         del planet_positions["Fortune"]
         del planet_positions["Spirit"]
         del planet_positions["Love"]
