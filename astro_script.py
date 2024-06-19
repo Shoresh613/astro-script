@@ -1362,6 +1362,9 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
     for planets, aspect_details in aspects.items():
         if (planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME) and notime:
             continue
+        if imprecise_aspects == "off" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
+            if round(OFF_BY.get(planets[0], 0) + OFF_BY.get(planets[1], 0),2) > orb:
+                continue
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
@@ -1419,6 +1422,10 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             soft_count += 1
             soft_count_score += aspect_details['aspect_score']
 
+    # If no aspects found
+    if len(planetary_aspects_table_data) < 1:
+        return ""
+
     # Sorting
     if notime:
         planetary_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
@@ -1430,6 +1437,7 @@ def print_aspects(aspects, planet_positions, transit_planet_positions=None, impr
             headers.remove("Off by")
         except:
             pass
+
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
                      colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
 
@@ -1555,18 +1563,19 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         planet, star_name, aspect_name, angle, house, aspect_score, aspect_comment = aspect
         if planet in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
+        if imprecise_aspects == "off" and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+            continue
         if degree_in_minutes:
             angle = coord_in_minutes(angle, output)
         else:
             angle = f"{angle:.2f}{degree_symbol}".strip("-")
         row = [planet, aspect_name, star_name, angle]
-
         if house_positions and not notime:
             row.append(house)
             row.append(house_positions[planet].get('house', 'Unknown'))
             house_counts[house] += 1
             house_counts[house_positions[planet].get('house', 'Unknown')] += 1
-        elif planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+        if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             row.append(f" ±{OFF_BY[planet]}{degree_symbol}")
 
         if show_aspect_score:
