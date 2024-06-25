@@ -795,7 +795,6 @@ def add_arabic_parts(date, jd, latitude, longitude, positions, output):
     set_year, set_month, set_day, sunset_time = swe.revjul(sunset[1][0]) #[3:]
 
     sunrise_time = sunrise_time % 1
-    sunset_time = sunset_time % 1
 
     total_seconds = sunrise_time * 24 * 3600
     hours = int(total_seconds // 3600)
@@ -804,6 +803,7 @@ def add_arabic_parts(date, jd, latitude, longitude, positions, output):
 
     sunrise_datetime = datetime(rise_year, rise_month, rise_day, hours, minutes, seconds).replace(tzinfo=date.tzinfo)
 
+    sunset_time = sunset_time % 1
     total_seconds = sunset_time * 24 * 3600
     hours = int(total_seconds // 3600)
     minutes = int((total_seconds % 3600) // 60)
