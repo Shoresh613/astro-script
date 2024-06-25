@@ -182,7 +182,9 @@ class InputScreen(Screen):
 
         # Now pass these collected values to your astro_script function
         # Adjust the function call based on actual parameters it needs
-        results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone, davison=None, place=place, # change 'False' to value of davison when implemented 
+        results = astro_script.called_by_gui(name, date, location, latitude, longitude, timezone,
+                                            time_unknown=False,
+                                            davison=None, place=place, # change 'False' to value of davison when implemented 
                                             imprecise_aspects=imprecise_aspects,
                                             minor_aspects=minor_aspects,
                                             show_brief_aspects=False,

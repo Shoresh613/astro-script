@@ -1719,7 +1719,7 @@ def set_orbs(args, def_orbs):
 
     return orbs
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
@@ -1735,6 +1735,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Latitude": latitude,
         "Longitude": longitude,
         "Timezone": timezone,
+        "Time Unknown": time_unknown,
         "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
@@ -1788,6 +1789,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828. (Default: 57.6828)', required=False)
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
+    parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -1835,6 +1837,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Latitude": args.latitude,
         "Longitude": args.longitude,
         "Timezone": args.timezone,
+        "Time Unknown": args.time_unknown,
         "Davison": args.davison,
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
