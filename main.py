@@ -192,6 +192,7 @@ class InputScreen(Screen):
                                             orb_major=None, 
                                             orb_minor=None, 
                                             orb_fixed_star=None,
+                                            orb_asteroid=None,
                                             orb_transit_fast=None, 
                                             orb_transit_slow=None,
                                             orb_synastry_fast=None,

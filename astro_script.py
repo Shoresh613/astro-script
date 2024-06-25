@@ -137,17 +137,6 @@ fall = {
     'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
 }
 
-ORBS = {
-    "Default": None,
-    "Major": None,
-    "Minor": None,
-    "Fixed Star": None,
-    "Transit Fast": None,
-    "Transit Slow": None,
-    "Synastry Fast": None,
-    "Synastry Slow": None
-}
-
 # Global formatting variables set in main depending on output type
 bold = "\033[1m"
 nobold = "\033[0m"
@@ -595,7 +584,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
     - orb (float): Orb value for aspect consideration. Default is 1.0 degree.
     - aspect_types (dict, optional): A dictionary of aspect names and their angular distances.
                                      Defaults to common aspects if None.
-    - all_stars (bool): Whether to include all stars or a predefined list of astrologically significant stars.
+    - all_stars (bool): Whether to include all stars or a predefined list of stars with known astrological meanings.
 
     Returns:
     - list: A list of tuples, each representing an aspect between a planet and a fixed star. Each tuple includes
@@ -611,9 +600,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
     for star_name in fixed_stars.keys():
         try:
             star_long = get_fixed_star_position(star_name, jd) % 360
-            # star_house = next((i + 1 for i, cusp in enumerate(houses) if star_long < cusp), 12)
 
-            # Assign star to house
             house_num = 1  # Begin as house 1 in case nothing else matches
             # Check for each house from 1 to 11 (12 handled separately)
             for i, cusp in enumerate(houses):
@@ -950,7 +937,7 @@ def calculate_planetary_aspects(planet_positions, orbs, output_type, aspect_type
                     }
     return aspects_found
 
-def calculate_aspects_takes_two(natal_positions, second_positions, orb, aspect_types, output_type, type, show_brief_aspects=False):
+def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_types, output_type, type, show_brief_aspects=False):
     """
     Calculate astrological aspects between natal and transit celestial bodies based on their positions,
     excluding predefined pairs such as Sun-Ascendant, and assuming minor aspects
@@ -988,6 +975,19 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orb, aspect_t
 
             for aspect_name, aspect_values in aspect_types.items():
                 aspect_angle, aspect_score, aspect_comment = aspect_values.values()
+                
+                if type == 'transits':
+                    if OFF_BY[planet2] >= 0.5: # 0.5 is the average speed of Mars
+                        orb = orbs['Transit Fast']
+                    else:
+                        orb = orbs['Transit Slow']
+                if type == 'synastry':
+                    if OFF_BY[planet2] >= 0.5: # 0.5 is the average speed of Mars
+                        orb = orbs['Synastry Fast']
+                    else:
+                        orb = orbs['Synastry Slow']
+                if type == 'asteroids':
+                    orb = orbs['Asteroid']
                 
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
@@ -1308,7 +1308,9 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         h3_ = ""
 
     degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
-    orb_string_major_minor = f"({orbs['Major']}{degree_symbol}:{orbs['Minor']}{degree_symbol} orb)" if minor_aspects else f"({orbs['Major']}{degree_symbol} orb)"
+    orb_string_major_minor = f"(major {orbs['Major']}{degree_symbol} minor {orbs['Minor']}{degree_symbol} orb)" if minor_aspects else f"({orbs['Major']}{degree_symbol} orb)"
+    orb_string_transits_fast_slow = f"(fast {orbs['Transit Fast']}{degree_symbol} slow {orbs['Transit Slow']}{degree_symbol} orb)"
+    orb_string_synastry_fast_slow = f"(fast {orbs['Synastry Fast']}{degree_symbol} slow {orbs['Synastry Slow']}{degree_symbol} orb)"
 
     planetary_aspects_table_data = []
     if notime:
@@ -1336,6 +1338,10 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     if output in ('text','html'):
         if type == "Asteroids":
             print(f"{p}{bold}{h3}Asteroid Aspects ({orb}{degree_symbol} orb){nobold}", end="")
+        elif type == "Transit":
+            print(f"{p}{bold}{h3}Planetary Transit Aspects {orb_string_transits_fast_slow}{nobold}", end="")
+        elif type == "Synastry":
+            print(f"{p}{bold}{h3}Planetary Synastry Aspects {orb_string_synastry_fast_slow}{nobold}", end="")
         else:
             # print(f"{p}{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb){nobold}", end="")
             print(f"{p}{bold}{h3}Planetary Aspects {orb_string_major_minor}{nobold}", end="")
@@ -1704,6 +1710,7 @@ def set_orbs(args, def_orbs):
         'Major': args["Orb Major"] if args["Orb Major"] else def_orbs["Orb Major"],
         'Minor': args["Orb Minor"] if args["Orb Minor"] else def_orbs["Orb Minor"],
         'Fixed Star': args["Orb Fixed Star"] if args["Orb Fixed Star"] else def_orbs["Orb Fixed Star"],
+        'Asteroid': args["Orb Asteroid"] if args["Orb Asteroid"] else def_orbs["Orb Asteroid"],
         'Transit Fast': args["Orb Transit Fast"] if args["Orb Transit Fast"] else def_orbs["Orb Transit Fast"],
         'Transit Slow': args["Orb Transit Slow"] if args["Orb Transit Slow"] else def_orbs["Orb Transit Slow"],
         'Synastry Fast': args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else def_orbs["Orb Synastry Fast"],
@@ -1713,7 +1720,7 @@ def set_orbs(args, def_orbs):
     return orbs
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, davison, place, imprecise_aspects,
-                  minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow,
+                  minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
                   transits_location, synastry, remove_saved_names, store_defaults, use_defaults, output_type, guid):
@@ -1739,6 +1746,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, davison, 
         "Orb Major": orb_major,
         "Orb Minor": orb_minor,
         "Orb Fixed Star": orb_fixed_star,
+        "Orb Asteroid": orb_asteroid,
         "Orb Transit Fast": orb_transit_fast,
         "Orb Transit Slow": orb_transit_slow,
         "Orb Synastry Fast": orb_synastry_fast,
@@ -1788,9 +1796,10 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--score', action='store_true', help='Show ease of individual aspects (0 not easy, 50 neutral, 100 easy).')
     parser.add_argument('--arabic_parts', action='store_true', help='Show Arabic parts.')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
-    parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 1.0)', required=False)
-    parser.add_argument('--orb_minor', type=float, help='Orb size in degrees for minor aspects. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 6.0)', required=False)
+    parser.add_argument('--orb_minor', type=float, help='Orb size in degrees for minor aspects. (Default: 3.0)', required=False)
     parser.add_argument('--orb_fixed_star', type=float, help='Orb size in degrees for fixed star aspects. (Default: 1.0)', required=False)
+    parser.add_argument('--orb_asteroid', type=float, help='Orb size in degrees for asteroid aspects. (Default: 1.5)', required=False)
     parser.add_argument('--orb_transit_fast', type=float, help='Orb size in degrees for fast-moving planet transits. (Default: 1.5)', required=False)
     parser.add_argument('--orb_transit_slow', type=float, help='Orb size in degrees for slow-moving planet transits. (Default: 1.0)', required=False)
     parser.add_argument('--orb_synastry_fast', type=float, help='Orb size in degrees for fast-moving planet synastry. (Default: 1.5)', required=False)
@@ -1837,6 +1846,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Orb Major": args.orb_major,
         "Orb Minor": args.orb_minor,
         "Orb Fixed Star": args.orb_fixed_star,
+        "Orb Asteroid": args.orb_asteroid,
         "Orb Transit Fast": args.orb_transit_fast,
         "Orb Transit Slow": args.orb_transit_slow,
         "Orb Synastry Fast": args.orb_synastry_fast,
@@ -1912,6 +1922,7 @@ def main(gui_arguments=None):
         "Orb Major": 6.0,  # Default orb size for major aspects
         "Orb Minor": 1.5,  # Default orb size for minor aspects
         "Orb Fixed Star": 1.0,  # Default orb size for fixed star aspects
+        "Orb Asteroid": 1.5,  # Default orb size for fixed star aspects
         "Orb Transit Fast": 1.5,  # Default orb size for fast-moving planet transits
         "Orb Transit Slow": 1.0,  # Default orb size for slow-moving planet transits
         "Orb Synastry Fast": 3.0,  # Default orb size for fast-moving planet synastry
@@ -2432,14 +2443,14 @@ def main(gui_arguments=None):
         del planet_positions["Spirit"]
         del planet_positions["Love"]
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
-    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orb, MAJOR_ASPECTS, all_stars)
+    fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
     if not hide_fixed_star_aspects and fixstar_aspects:
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
     if not hide_asteroid_aspects:
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
-        asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orb, 
+        asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
             to_return += f"{p}" + print_aspects(asteroid_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
@@ -2469,7 +2480,7 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys)
 
-        transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orb, 
+        transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
         if output_type in ("text",'html'):
             print(f"{string_transits} {name}{transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}")
@@ -2489,7 +2500,7 @@ def main(gui_arguments=None):
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
         synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys)
 
-        synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orb, aspect_types=MAJOR_ASPECTS,
+        synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orbs, aspect_types=MAJOR_ASPECTS,
                                                        output_type=output_type, type='synastry')
         if output_type in ("text",'html'):
             print(f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}")
