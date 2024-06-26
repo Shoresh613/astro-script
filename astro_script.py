@@ -1921,6 +1921,9 @@ def main(gui_arguments=None):
         local_timezone = pytz.timezone(exists['timezone'])
         notime = exists['notime']
         place = exists['location']
+    else:
+        notime = args["Time Unknown"]
+
     try:
         if args["Date"]:
             local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
@@ -2318,6 +2321,7 @@ def main(gui_arguments=None):
                 synastry_local_timezone = pytz.timezone(exists['timezone'])
                 synastry_place = exists['location']
                 synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
+                synastry_notime = True if exists['notime'] else False
                 show_synastry = True
                 hide_planetary_positions = True  
                 hide_planetary_aspects = True
@@ -2328,7 +2332,6 @@ def main(gui_arguments=None):
             return "Invalid second event for synastry."
 
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
-    notime = args["Time Unknown"]
     # notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
     # Save event if name given
