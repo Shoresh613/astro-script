@@ -1337,7 +1337,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     if output in ('text','html'):
         if type == "Asteroids":
-            print(f"{p}{bold}{h3}Asteroid Aspects ({orb}{degree_symbol} orb){nobold}", end="")
+            print(f"{p}{bold}{h3}Asteroid Aspects ({orbs['Asteroid']}{degree_symbol} orb){nobold}", end="")
         elif type == "Transit":
             print(f"{p}{bold}{h3}Planetary Transit Aspects {orb_string_transits_fast_slow}{nobold}", end="")
         elif type == "Synastry":
@@ -1351,9 +1351,13 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         print(f"{h3_}")
     else:
         if type == "Asteroids":
-            to_return = f"{p}{bold}{h3}Asteroid Aspects ({orb}{degree_symbol} orb{nobold})"
+            to_return = f"{p}{bold}{h3}Asteroid Aspects ({orbs['Asteroid']}{degree_symbol} orb{nobold})"
+        elif type == "Transit":
+            to_return += f"{p}{bold}{h3}Planetary Transit Aspects {orb_string_transits_fast_slow}{nobold}"
+        elif type == "Synastry":
+            to_return += f"{p}{bold}{h3}Planetary Synastry Aspects {orb_string_synastry_fast_slow}{nobold}"
         else:
-            to_return = f"{p}{bold}{h3}Planetary Aspects ({orb}{degree_symbol} orb{nobold})"
+            to_return = f"{p}{bold}{h3}Planetary Aspects {orb_string_major_minor}{nobold}"
         if minor_aspects:
             to_return += f"{bold} including minor aspects{nobold}" 
         if notime:
@@ -1705,19 +1709,33 @@ def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
     orbs = {}
 
-    orbs.update({
-        'Orb': args["Orb"] if args["Orb"] else def_orbs["Orb"],
-        'Major': args["Orb Major"] if args["Orb Major"] else def_orbs["Orb Major"],
-        'Minor': args["Orb Minor"] if args["Orb Minor"] else def_orbs["Orb Minor"],
-        'Fixed Star': args["Orb Fixed Star"] if args["Orb Fixed Star"] else def_orbs["Orb Fixed Star"],
-        'Asteroid': args["Orb Asteroid"] if args["Orb Asteroid"] else def_orbs["Orb Asteroid"],
-        'Transit Fast': args["Orb Transit Fast"] if args["Orb Transit Fast"] else def_orbs["Orb Transit Fast"],
-        'Transit Slow': args["Orb Transit Slow"] if args["Orb Transit Slow"] else def_orbs["Orb Transit Slow"],
-        'Synastry Fast': args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else def_orbs["Orb Synastry Fast"],
-        'Synastry Slow': args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else def_orbs["Orb Synastry Slow"]
-    })
+    # Blanket orb setting if "orb" is specified
+    if args["Orb"]:
+        orbs.update({
+            'Orb': args["Orb"],
+            'Major': args["Orb"],
+            'Minor': args["Orb"],
+            'Fixed Star': args["Orb"],
+            'Asteroid': args["Orb"],
+            'Transit Fast': args["Orb"],
+            'Transit Slow': args["Orb"],
+            'Synastry Fast': args["Orb"],
+            'Synastry Slow': args["Orb"]
+        })
+        return orbs
+    else:
+        orbs.update({
+            'Major': args["Orb Major"] if args["Orb Major"] else def_orbs["Orb Major"],
+            'Minor': args["Orb Minor"] if args["Orb Minor"] else def_orbs["Orb Minor"],
+            'Fixed Star': args["Orb Fixed Star"] if args["Orb Fixed Star"] else def_orbs["Orb Fixed Star"],
+            'Asteroid': args["Orb Asteroid"] if args["Orb Asteroid"] else def_orbs["Orb Asteroid"],
+            'Transit Fast': args["Orb Transit Fast"] if args["Orb Transit Fast"] else def_orbs["Orb Transit Fast"],
+            'Transit Slow': args["Orb Transit Slow"] if args["Orb Transit Slow"] else def_orbs["Orb Transit Slow"],
+            'Synastry Fast': args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else def_orbs["Orb Synastry Fast"],
+            'Synastry Slow': args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else def_orbs["Orb Synastry Slow"]
+        })
 
-    return orbs
+        return orbs
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
