@@ -68,7 +68,7 @@ def initialize_db():
     conn.close()
 
 # Function to add or update an event in the database
-def update_event(name, location, datetime_str, timezone, latitude, notime, longitude, guid):
+def update_event(name, location, datetime_str, timezone, latitude, longitude, notime, guid):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
