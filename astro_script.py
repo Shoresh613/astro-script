@@ -1815,7 +1815,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--brief_aspects', action='store_true', help='Show brief aspects for transits, i.e. Asc, MC.')
     parser.add_argument('--score', action='store_true', help='Show ease of individual aspects (0 not easy, 50 neutral, 100 easy).')
     parser.add_argument('--arabic_parts', action='store_true', help='Show Arabic parts.')
-    parser.add_argument('--orb', type=float, help='Orb size in degrees. (Default: 1.0)', required=False)
+    parser.add_argument('--orb', type=float, help='Orb size in degrees. Overrides all orb settings if specified. Use for blanket orb setting.', required=False)
     parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 6.0)', required=False)
     parser.add_argument('--orb_minor', type=float, help='Orb size in degrees for minor aspects. (Default: 3.0)', required=False)
     parser.add_argument('--orb_fixed_star', type=float, help='Orb size in degrees for fixed star aspects. (Default: 1.0)', required=False)
@@ -2325,7 +2325,8 @@ def main(gui_arguments=None):
             return "Invalid second event for synastry."
 
     # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
-    notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
+    notime = args["Time Unknown"]
+    # notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
     # Save event if name given
     if name:
