@@ -15,6 +15,7 @@ def initialize_db():
         timezone TEXT,
         latitude REAL,
         longitude REAL,
+        notime INTEGER DEFAULT FALSE,
         random_column TEXT NULL,
         name TEXT NOT NULL
     )
@@ -67,7 +68,7 @@ def initialize_db():
     conn.close()
 
 # Function to add or update an event in the database
-def update_event(name, location, datetime_str, timezone, latitude, longitude, guid):
+def update_event(name, location, datetime_str, timezone, latitude, notime, longitude, guid):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
@@ -83,14 +84,30 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, gu
             timezone = ?,
             latitude = ?,
             longitude = ?,
+            notime = ?,
             random_column = ?
         WHERE name = ? AND random_column = ?
-        ''', (location, datetime_str, timezone, latitude, longitude, str(guid), name, str(guid)))
+        ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name, str(guid)))
     else:
         if guid:
             cursor.execute('''
             
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, random_column, name)
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, random_column, name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+            location=excluded.location,
+            datetime=excluded.datetime,
+            timezone=excluded.timezone,
+            latitude=excluded.latitude,
+            longitude=excluded.longitude,
+            notime=excluded.notime,
+            random_column=excluded.guid,
+            name=excluded.name
+            ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name))
+        else:
+            cursor.execute('''
+            
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, name)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             location=excluded.location,
@@ -98,22 +115,9 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, gu
             timezone=excluded.timezone,
             latitude=excluded.latitude,
             longitude=excluded.longitude,
-            random_column=excluded.guid,
+            notime=excluded.notime,
             name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, str(guid), name))
-        else:
-            cursor.execute('''
-            
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, name)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-            location=excluded.location,
-            datetime=excluded.datetime,
-            timezone=excluded.timezone,
-            latitude=excluded.latitude,
-            longitude=excluded.longitude,
-            name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, name))
+            ''', (location, datetime_str, timezone, latitude, longitude, notime, name))
 
     conn.commit()
     conn.close()
@@ -134,6 +138,8 @@ def get_event(name, guid=None):
         latitude = cursor.fetchone()
         cursor.execute('SELECT longitude FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
         longitude = cursor.fetchone()
+        cursor.execute('SELECT notime FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
+        notime = cursor.fetchone()
     else:
         cursor.execute('SELECT location FROM myapp_event WHERE name = ?', (name,))
         location = cursor.fetchone()
@@ -145,6 +151,8 @@ def get_event(name, guid=None):
         latitude = cursor.fetchone()
         cursor.execute('SELECT longitude FROM myapp_event WHERE name = ?', (name,))
         longitude = cursor.fetchone()
+        cursor.execute('SELECT notime FROM myapp_event WHERE name = ?', (name,))
+        notime = cursor.fetchone()
 
     conn.close()
 
@@ -155,7 +163,8 @@ def get_event(name, guid=None):
             'datetime': datetime[0],
             'timezone': timezone[0],
             'latitude': latitude[0],
-            'longitude': longitude[0]
+            'longitude': longitude[0],
+            'notime': notime[0]
         }
         return event
     return None

@@ -223,7 +223,8 @@ def get_davison_data(names, guid=None):
     latitudes = []
     
     # Collect the data for each name in the list
-    # names = names.split(',')    
+    # names = names.split(',')
+    ### NEED TO CHECK NOTIME FOR EVENTS HERE
     for name in names:
         name = name.strip()
         event = db_manager.get_event(name, guid)
@@ -1699,7 +1700,8 @@ def load_event(name, guid=None):
             'datetime': event["datetime"],
             'timezone': event["timezone"],
             'latitude': event["latitude"],
-            'longitude': event["longitude"]
+            'longitude': event["longitude"],
+            'notime': True if event["notime"] else False,
         }
     else:
         print(f"No entry found for {name}.")
@@ -1917,6 +1919,7 @@ def main(gui_arguments=None):
         latitude = exists['latitude']
         longitude = exists['longitude']
         local_timezone = pytz.timezone(exists['timezone'])
+        notime = exists['notime']
         place = exists['location']
     try:
         if args["Date"]:
@@ -2330,7 +2333,7 @@ def main(gui_arguments=None):
 
     # Save event if name given
     if name:
-        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, guid=args["Guid"] if args["Guid"] else None)
+        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings
