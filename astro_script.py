@@ -1265,7 +1265,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     nr_day_signs = fire_count + air_count
     nr_night_signs = earth_count + water_count
-    # element_count_table_data.append(SEPARATING_LINE)
+    if output_type in ("text", "return_text"):	
+    	element_count_table_data.append(SEPARATING_LINE)
     element_count_table_data.append(["Day signs", nr_day_signs])
     element_count_table_data.append(["Night signs", nr_night_signs])
 
