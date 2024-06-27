@@ -292,33 +292,35 @@ def assess_planet_strength(planet_signs):
     strength_status = {}
     for planet, sign in planet_signs.items():
         if planet in exaltation and sign == exaltation[planet]:
-            strength_status[planet] = 'Exalted (Strong)'
+            strength_status[planet] = ' Exalted (Strong)'
         elif planet in detriment and sign == detriment[planet]:
-            strength_status[planet] = 'In Detriment (Weak)'
+            strength_status[planet] = ' In Detriment (Weak)'
         elif planet in fall and sign == fall[planet]:
-            strength_status[planet] = 'In Fall (Very Weak)'
+            strength_status[planet] = ' In Fall (Very Weak)'
         else:
             strength_status[planet] = ''
 
     return strength_status
 
 def check_degree(planet_signs, degrees_within_sign):
+    degrees_within_sign = int(degrees_within_sign)
     strength_status = {}
     for planet, sign in planet_signs.items():
         # Check if planet is in critical degrees
-        if 29 < degrees_within_sign < 30:
-            strength_status[planet] += ', Anaretic'
-        if 1 < degrees_within_sign < 1:
-            strength_status[planet] += ', Cusp'
+        if degrees_within_sign == 29:
+            strength_status[planet] = ' Anaretic'
+        if degrees_within_sign == 0:
+            strength_status[planet] = ' Cusp'
+        else:
+            strength_status[planet] = ''
 
-    # Check Critical Degrees for different modalities
-    for planet, sign in planet_signs.items():
-        if sign in ZODIAC_MODALITIES['Cardinal'] and degrees_within_sign in [0, 1, 29, 30]:
-            strength_status[planet] += ', Cardinal'
-        elif sign in ZODIAC_MODALITIES['Fixed'] and degrees_within_sign in [10, 11, 19, 20]:
-            strength_status[planet] += ', Fixed'
-        elif sign in ZODIAC_MODALITIES['Mutable'] and degrees_within_sign in [20, 21, 29, 0]:
-            strength_status[planet] += ', Mutable'
+        # Check Critical Degrees for different modalities
+        if sign in ZODIAC_MODALITIES['Cardinal'] and degrees_within_sign in [0, 13, 16]:
+            strength_status[planet] += ' Critical'
+        elif sign in ZODIAC_MODALITIES['Fixed'] and degrees_within_sign in [8, 9, 21, 22]:
+            strength_status[planet] += ' Critical'
+        elif sign in ZODIAC_MODALITIES['Mutable'] and degrees_within_sign in [4, 17]:
+            strength_status[planet] += ' Critical'
 
     return strength_status
 
@@ -1192,7 +1194,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             planet_house_counts[house_num] += 1
             strength_check = assess_planet_strength(planet_signs)
             elevation_check = is_planet_elevated(planet_positions)
-            degree_check = check_degree(degrees_within_sign)
+            degree_check = check_degree(planet_signs, degrees_within_sign)
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
@@ -1201,7 +1203,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             if notime:
                 row = [planet, zodiac, position, "", retrograde_status]
             else:
-                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + " " + strength_check[planet]) ]
+                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + strength_check[planet] + degree_check[planet]) ]
 
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
