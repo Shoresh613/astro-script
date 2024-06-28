@@ -57,6 +57,8 @@ python astroscript.py --name "John Doe" --date "2021-12-25 15:30" --location "Ne
 - `--timezone`: Timezone of the location.
 - `--house_system`: House system to use, defaults to Placidus.
 - `--output_type`: Format of the output (`text`, `return_text`, `html`).
+- `--save_settings`: Save the specified settings. If no parameter passed, will save "default" settings, that will be used henceforth.
+- `--use_saved_settings`: Loads the specified settings. If no parameter passed, will use "default" settings (will use default settings if saved even if `--use_saved_settings` not passed).
 
 For a complete list of options, call:
 
