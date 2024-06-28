@@ -1895,8 +1895,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
-    parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
-    parser.add_argument('--use_saved_settings', nargs='?', const='default', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
+    parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "default"', required=False)
+    parser.add_argument('--use_saved_settings', nargs='?', const='default', type=str, help='Use settings specified by name <name>. If no name passed will use "default"', required=False)
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -2064,10 +2064,8 @@ def main(gui_arguments=None):
         print(f"Settings stored with the name '{args['Save Settings']}'.")
         return f"Settings stored with the name '{args['Save Settings']}'."
 
-    # Override using stored defaults if requested
-    stored_defaults = None
-    if args["Use Saved Settings"]:
-        stored_defaults = db_manager.read_defaults(args["Use Saved Settings"], args["Guid"] if args["Guid"] else "")            
+    # Override using stored settings (default or specified name)
+    stored_defaults = db_manager.read_defaults(args["Use Saved Settings"] if args["Use Saved Settings"] else "default", args["Guid"] if args["Guid"] else "")            
 
     if stored_defaults:
         if stored_defaults["Location"]:
