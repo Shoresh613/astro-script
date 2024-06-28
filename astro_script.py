@@ -25,10 +25,6 @@ else:
 #Initialize database
 db_manager.initialize_db()
 
-# Can remove these 
-saved_locations_file = 'saved_locations.json'  # File to save locations to
-saved_events_file = 'saved_events.json'
-
 ############### Constants ###############
 ASPECT_TYPES = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60,}
 MINOR_ASPECT_TYPES = {
