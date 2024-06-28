@@ -1,7 +1,6 @@
 import swisseph as swe
 from datetime import datetime, timedelta
 import pytz
-import json
 import os
 import sys
 import argparse
@@ -1841,7 +1840,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Transits Location": transits_location,
         "Synastry": synastry,
         "Saved Names": None,
-        "Store Settings": store_defaults,
+        "Save Settings": store_defaults,
         "Use Saved Settings": use_saved_settings,
         "Output": output_type,
         "Remove Saved Names": remove_saved_names,
@@ -1896,8 +1895,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
-    parser.add_argument('--store_settings', type=str, help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
-    parser.add_argument('--use_saved_settings', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
+    parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
+    parser.add_argument('--use_saved_settings', nargs='?', const='default', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -1944,7 +1943,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Synastry": args.synastry,
         "Saved Names": args.saved_names,
         "Remove Saved Names": args.remove_saved_names,
-        "Store Settings": args.store_settings,
+        "Save Settings": args.save_settings,
         "Use Saved Settings": args.use_saved_settings,
         "Output": args.output_type,
         "Guid": None
@@ -2027,9 +2026,9 @@ def main(gui_arguments=None):
     show_synastry = False
 
     # Store defaults if requested
-    if args["Store Settings"]:
+    if args["Save Settings"]:
         defaults_to_store = {
-            "Name": args["Store Settings"],
+            "Name": args["Save Settings"],
             "GUID": args["Guid"] if args["Guid"] else None,
             "Location": args["Location"] if args["Location"] else None,
             "Timezone": args["Timezone"] if args["Timezone"] else None,
@@ -2062,7 +2061,8 @@ def main(gui_arguments=None):
         }
         
         db_manager.store_defaults(defaults_to_store)
-        return f"Settings stored as defaults with the name '{args['Store Settings']}'."
+        print(f"Settings stored with the name '{args['Save Settings']}'.")
+        return f"Settings stored with the name '{args['Save Settings']}'."
 
     # Override using stored defaults if requested
     stored_defaults = None
