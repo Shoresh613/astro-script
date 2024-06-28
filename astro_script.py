@@ -760,7 +760,9 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         bodies = PLANETS
     elif mode == "asteroids":
         bodies = ASTEROIDS
-
+    elif mode == "stars":
+        stars_with_magnitudes = read_fixed_stars(all_stars=False)
+        bodies = {star: 0 for star in stars_with_magnitudes}
     for planet, id in bodies.items():
         pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
@@ -840,21 +842,17 @@ def add_arabic_parts(date, latitude, longitude, positions, output):
     sunrise = sunrise.replace(tzinfo=date.tzinfo)
     sunset = sunset.replace(tzinfo=date.tzinfo)
 
-    print(f"DEBUG Sunrise: {sunrise}, Sunset: {sunset}")
     is_daytime = sunrise <= date < sunset
 
     fortune_pos = calculate_part_of_fortune(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
     spirit_pos = calculate_part_of_spirit(positions['Sun']['longitude'], positions['Moon']['longitude'], positions['Ascendant']['longitude'], is_daytime)
     love_pos = calculate_part_of_love(positions['Ascendant']['longitude'], positions['Venus']['longitude'], positions['Sun']['longitude'])
-
-    # New Arabic Parts calculations
     marriage_pos = (positions['Venus']['longitude'] + positions['Jupiter']['longitude'] - positions['Saturn']['longitude']) % 360
     friendship_pos = (positions['Moon']['longitude'] + positions['Venus']['longitude'] - positions['Sun']['longitude']) % 360
     death_pos = (positions['Ascendant']['longitude'] + positions['Saturn']['longitude'] - positions['Moon']['longitude']) % 360
     commerce_pos = (positions['Mercury']['longitude'] + positions['Jupiter']['longitude'] - positions['Sun']['longitude']) % 360
     passion_pos = (positions['Ascendant']['longitude'] + positions['Mars']['longitude'] - positions['Venus']['longitude']) % 360
 
-    # Add all Arabic Parts to positions dictionary
     arabic_parts = {
         "Fortune": fortune_pos,
         "Spirit": spirit_pos,
@@ -2556,6 +2554,13 @@ def main(gui_arguments=None):
                 to_return += f"{string_no_transits_tz}"
 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
+                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
+
+        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars")
+        transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
+                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
+
+        to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(star_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
 
     if show_synastry:
