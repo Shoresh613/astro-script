@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from datetime import datetime
 
 # Initialize the database and create tables if they don't exist
@@ -32,36 +33,12 @@ def initialize_db():
 
     # Create the myapp_defaults table
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS myapp_defaults (
+    CREATE TABLE IF NOT EXISTS myapp_usersettings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         setting_name TEXT NOT NULL,
         guid TEXT NULL,
-        location TEXT NULL,
-        timezone TEXT NULL,
-        imprecise_aspects TEXT NULL,
-        minor_aspects BOOLEAN NULL,
-        show_brief_aspects BOOLEAN NULL,
-        show_score BOOLEAN NULL,
-        orb_major FLOAT NULL,
-        orb_minor FLOAT NULL,
-        orb_fixed_star FLOAT NULL,
-        orb_transit_fast FLOAT NULL,
-        orb_transit_slow FLOAT NULL,
-        orb_synastry_fast FLOAT NULL,
-        orb_synastry_slow FLOAT NULL,
-        degree_in_minutes BOOLEAN NULL,
-        node TEXT NULL,
-        all_stars BOOLEAN NULL,
-        house_system TEXT NULL,
-        house_cusps BOOLEAN NULL,
-        hide_planetary_positions BOOLEAN NULL,
-        hide_planetary_aspects BOOLEAN NULL,
-        hide_fixed_star_aspects BOOLEAN NULL,
-        hide_asteroid_aspects BOOLEAN NULL,
-        transits_timezone TEXT NULL,
-        transits_location TEXT NULL,
-        output_type TEXT NULL
-    )
+        settings TEXT NOT NULL,
+        UNIQUE(setting_name, guid));
     ''')
 
     conn.commit()
@@ -305,47 +282,35 @@ def load_location(location_name):
 
 # Function to save default settings in the database
 def store_defaults(defaults):
-                #     setting_name, userid=None, location=None, timezone=None, imprecise_aspects=None,
-                #    minor_aspects=None, show_brief_aspects=None, show_score=None, orb_major=None,
-                #    orb_minor=None, orb_fixed_star=None, orb_transit_fast=None, orb_transit_slow=None,
-                #    orb_synastry_fast=None, orb_synastry_slow=None, degree_in_minutes=None, node=None,
-                #    all_stars=None, house_system=None, house_cusps=None, hide_planetary_positions=None,
-                #    hide_planetary_aspects=None, hide_fixed_star_aspects=None, hide_asteroid_aspects=None,
-                #    transits_timezone=None, transits_location=None, output_type=None):
     """
     Stores the given default settings into the myapp_defaults table.
     """
+
+    # Replace None with an empty string for the GUID
+    guid = defaults["GUID"] if defaults["GUID"] is not None else ""
 
     conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
 
     cursor.execute('''
-        INSERT INTO myapp_defaults (
-            setting_name, guid, location, timezone, imprecise_aspects, minor_aspects, show_brief_aspects, 
-            show_score, orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow, 
-            orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, 
-            house_cusps, hide_planetary_positions, hide_planetary_aspects, hide_fixed_star_aspects, 
-            hide_asteroid_aspects, transits_timezone, transits_location, output_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO myapp_usersettings (setting_name, guid, settings) 
+        VALUES (?, ?, ?)
+        ON CONFLICT(setting_name, guid) 
+        DO UPDATE SET 
+            settings = excluded.settings
     ''', (
-    defaults["Name"], defaults["GUID"], defaults["Location"], defaults["Timezone"], defaults["Imprecise Aspects"], defaults["Minor Aspects"], defaults["Show Brief Aspects"], 
-    defaults["Show Score"], defaults["Orb Major"], defaults["Orb Minor"], defaults["Orb Fixed Star"], defaults["Orb Transit Fast"], defaults["Orb Transit Slow"], 
-    defaults["Orb Synastry Fast"], defaults["Orb Synastry Slow"], defaults["Degree In Minutes"], defaults["Node"], defaults["All Stars"], defaults["House System"], 
-    defaults["House Cusps"], defaults["Hide Planetary Positions"], defaults["Hide Planetary Aspects"], defaults["Hide Fixed Star Aspects"], 
-    defaults["Hide Asteroid Aspects"], defaults["Transits Timezone"], defaults["Transits Location"], defaults["Output Type"]
+    defaults["Name"], guid, json.dumps(defaults)
     ))
 
     conn.commit()
     conn.close()
 
-import sqlite3
-
-def read_defaults(use_defaults, guid=None, db_filename='db.sqlite3'):
+def read_defaults(settings_name, guid="", db_filename='db.sqlite3'):
     """
     Reads the default settings from the myapp_defaults table and returns a dictionary with the values.
 
     Args:
-    use_defaults (str): The name of the default settings to use.
+    settings_name (str): The name of the default settings to use.
     guid (str): The GUID of the user.
     db_filename (str): The path to the SQLite database file.
 
@@ -358,45 +323,15 @@ def read_defaults(use_defaults, guid=None, db_filename='db.sqlite3'):
     try:
         cursor.execute('''
             SELECT 
-                location, timezone, imprecise_aspects, minor_aspects, show_brief_aspects, show_score, 
-                orb_major, orb_minor, orb_fixed_star, orb_transit_fast, orb_transit_slow, 
-                orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, 
-                house_system, house_cusps, hide_planetary_positions, hide_planetary_aspects, 
-                hide_fixed_star_aspects, hide_asteroid_aspects, transits_timezone, transits_location, output_type
-            FROM myapp_defaults
+                settings
+            FROM myapp_usersettings
             WHERE setting_name = ? AND (guid IS NULL OR guid = ?)
-        ''', (use_defaults, guid))
+        ''', (settings_name, guid))
         
         row = cursor.fetchone()
 
         if row:
-            defaults = {
-                "Location": row[0] if row[0] is not None else None,
-                "Timezone": row[1] if row[1] is not None else None,
-                "Imprecise Aspects": row[2] if row[2] is not None else None,
-                "Minor Aspects": row[3] if row[3] is not None else None,
-                "Show Brief Aspects": row[4] if row[4] is not None else None,
-                "Show Score": row[5] if row[5] is not None else None,
-                "Orb Major": row[6] if row[6] is not None else None,
-                "Orb Minor": row[7] if row[7] is not None else None,
-                "Orb Fixed Star": row[8] if row[8] is not None else None,
-                "Orb Transit Fast": row[9] if row[9] is not None else None,
-                "Orb Transit Slow": row[10] if row[10] is not None else None,
-                "Orb Synastry Fast": row[11] if row[11] is not None else None,
-                "Orb Synastry Slow": row[12] if row[12] is not None else None,
-                "Degree in Minutes": row[13] if row[13] is not None else None,
-                "Node": row[14] if row[14] is not None else None,
-                "All Stars": row[15] if row[15] is not None else None,
-                "House System": row[16] if row[16] is not None else None,
-                "House Cusps": row[17] if row[17] is not None else None,
-                "Hide Planetary Positions": row[18] if row[18] is not None else None,
-                "Hide Planetary Aspects": row[19] if row[19] is not None else None,
-                "Hide Fixed Star Aspects": row[20] if row[20] is not None else None,
-                "Hide Asteroid Aspects": row[21] if row[21] is not None else None,
-                "Transits Timezone": row[22] if row[22] is not None else None,
-                "Transits Location": row[23] if row[23] is not None else None,
-                "Output Type": row[24] if row[24] is not None else None
-            }
+            defaults = json.loads(row[0])
         else:
             defaults = {}
         

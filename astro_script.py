@@ -1013,7 +1013,7 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
                     else:
                         orb = orbs['Transit Slow']
                 if type == 'synastry':
-                    if OFF_BY[planet2] >= 0.5: # 0.5 is the average speed of Mars
+                    if OFF_BY[planet2] >= 0.5:
                         orb = orbs['Synastry Fast']
                     else:
                         orb = orbs['Synastry Slow']
@@ -1798,7 +1798,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
-                  transits_location, synastry, remove_saved_names, store_defaults, use_defaults, output_type, guid):
+                  transits_location, synastry, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -1841,8 +1841,8 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Transits Location": transits_location,
         "Synastry": synastry,
         "Saved Names": None,
-        "Store Defaults": store_defaults,
-        "Use Defaults": use_defaults,
+        "Store Settings": store_defaults,
+        "Use Saved Settings": use_saved_settings,
         "Output": output_type,
         "Remove Saved Names": remove_saved_names,
         "Guid": guid if guid else None
@@ -1896,8 +1896,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
-    parser.add_argument('--store_defaults', type=str, help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
-    parser.add_argument('--use_defaults', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
+    parser.add_argument('--store_settings', type=str, help='Store settings as defaults <name>. If no name passed will be stored as "defaults"', required=False)
+    parser.add_argument('--use_saved_settings', type=str, help='Use settings specified by name <name>. If no name passed will use "defaults"', required=False)
     parser.add_argument('--output_type', choices=['text', 'return_text', 'html', 'return_html'], help='Output: Print text or html to stdout, or return text or html. (Default: "text")', required=False)
 
     args = parser.parse_args()
@@ -1944,8 +1944,8 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Synastry": args.synastry,
         "Saved Names": args.saved_names,
         "Remove Saved Names": args.remove_saved_names,
-        "Store Defaults": args.store_defaults,
-        "Use Defaults": args.use_defaults,
+        "Store Settings": args.store_settings,
+        "Use Saved Settings": args.use_saved_settings,
         "Output": args.output_type,
         "Guid": None
     }
@@ -2027,9 +2027,9 @@ def main(gui_arguments=None):
     show_synastry = False
 
     # Store defaults if requested
-    if args["Store Defaults"]:
+    if args["Store Settings"]:
         defaults_to_store = {
-            "Name": args["Store Defaults"],
+            "Name": args["Store Settings"],
             "GUID": args["Guid"] if args["Guid"] else None,
             "Location": args["Location"] if args["Location"] else None,
             "Timezone": args["Timezone"] if args["Timezone"] else None,
@@ -2041,12 +2041,14 @@ def main(gui_arguments=None):
             "Orb Major": args["Orb Major"] if args["Orb Major"] else None,
             "Orb Minor": args["Orb Minor"] if args["Orb Minor"] else None,
             "Orb Fixed Star": args["Orb Fixed Star"] if args["Orb Fixed Star"] else None,
+            "Orb Asteroid": args["Orb Asteroid"] if args["Orb Asteroid"] else None,
             "Orb Transit Fast": args["Orb Transit Fast"] if args["Orb Transit Fast"] else None,
             "Orb Transit Slow": args["Orb Transit Slow"] if args["Orb Transit Slow"] else None,
             "Orb Synastry Fast": args["Orb Synastry Fast"] if args["Orb Synastry Fast"] else None,
             "Orb Synastry Slow": args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else None,
             "Degree in Minutes": args["Degree in Minutes"] if args["Degree in Minutes"] else None,
             "Node": args["Node"] if args["Node"] else None,
+            "Show Arabic Parts": args["Show Arabic Parts"] if args["Show Arabic Parts"] else None,
             "All Stars": args["All Stars"] if args["All Stars"] else None,
             "House System": args["House System"] if args["House System"] else None,
             "House Cusps": args["House Cusps"] if args["House Cusps"] else None,
@@ -2054,16 +2056,18 @@ def main(gui_arguments=None):
             "Hide Planetary Aspects": args["Hide Planetary Aspects"] if args["Hide Planetary Aspects"] else None,
             "Hide Fixed Star Aspects": args["Hide Fixed Star Aspects"] if args["Hide Fixed Star Aspects"] else None,
             "Hide Asteroid Aspects": args["Hide Asteroid Aspects"] if args["Hide Asteroid Aspects"] else None,
-            "Output Type": args["Output"] if args["Output"] else None
+            "Transits Timezone": args["Transits Timezone"] if args["Transits Timezone"] else None,
+            "Transits Location": args["Transits Location"] if args["Transits Location"] else None,
+            "Output": args["Output"] if args["Output"] else None
         }
         
         db_manager.store_defaults(defaults_to_store)
-        return f"Settings stored as defaults with the name '{args['Store Defaults']}'."
+        return f"Settings stored as defaults with the name '{args['Store Settings']}'."
 
     # Override using stored defaults if requested
     stored_defaults = None
-    if args["Use Defaults"]:
-        stored_defaults = db_manager.read_defaults(args["Use Defaults"], args["Guid"] if args["Guid"] else None)            
+    if args["Use Saved Settings"]:
+        stored_defaults = db_manager.read_defaults(args["Use Saved Settings"], args["Guid"] if args["Guid"] else "")            
 
     if stored_defaults:
         if stored_defaults["Location"]:
@@ -2086,6 +2090,8 @@ def main(gui_arguments=None):
             args["Orb Minor"] = stored_defaults["Orb Minor"]
         if stored_defaults["Orb Fixed Star"]:
             args["Orb Fixed Star"] = stored_defaults["Orb Fixed Star"]
+        if stored_defaults["Orb Asteroid"]:
+            args["Orb Asteroid"] = stored_defaults["Orb Asteroid"]
         if stored_defaults["Orb Transit Fast"]:
             args["Orb Transit Fast"] = stored_defaults["Orb Transit Fast"]
         if stored_defaults["Orb Transit Slow"]:
@@ -2096,6 +2102,8 @@ def main(gui_arguments=None):
             args["Orb Synastry Slow"] = stored_defaults["Orb Synastry Slow"]
         if stored_defaults["Degree in Minutes"]:
             args["Degree in Minutes"] = stored_defaults["Degree in Minutes"]
+        if stored_defaults["Show Arabic Parts"]:
+            args["Show Arabic Parts"] = stored_defaults["Show Arabic Parts"]
         if stored_defaults["Node"]:
             args["Node"] = stored_defaults["Node"]
         if stored_defaults["All Stars"]:
@@ -2116,8 +2124,8 @@ def main(gui_arguments=None):
             args["Transits Timezone"] = stored_defaults["Transits Timezone"]
         if stored_defaults["Transits Location"]:
             args["Transits Location"] = stored_defaults["Transits Location"]
-        if stored_defaults["Output Type"]:
-            args["Output Type"] = stored_defaults["Output Type"]
+        if stored_defaults["Output"]:
+            args["Output"] = stored_defaults["Output"]
 
     if args["Location"]: 
         place = args["Location"]
