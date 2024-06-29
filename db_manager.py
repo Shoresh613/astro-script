@@ -53,7 +53,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
     print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude= {longitude} guid={guid}")    
     result = get_event(name, guid)
     if result:
-        print(f"DEBUG: get_event() result{result}")
+        # print(f"DEBUG: get_event() result{result}")
         cursor.execute('''
         UPDATE myapp_event
         SET location = ?,
@@ -167,7 +167,7 @@ def read_saved_names(guid=None, db_filename='db.sqlite3'):
         
         # Execute a query to retrieve the names of the events
         if guid:
-            print(f"DEBUG - read_saved_names() guid: {guid}")
+            # print(f"DEBUG - read_saved_names() guid: {guid}")
             cursor.execute(f"SELECT name FROM myapp_event WHERE random_column=?", (guid, ))
         else:
             cursor.execute("SELECT name FROM myapp_event")
@@ -285,8 +285,6 @@ def store_defaults(defaults):
     """
     Stores the given default settings into the myapp_defaults table.
     """
-
-    # Replace None with an empty string for the GUID
     guid = defaults["GUID"] if defaults["GUID"] is not None else ""
 
     conn = sqlite3.connect("db.sqlite3")

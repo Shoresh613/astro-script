@@ -1,6 +1,6 @@
 # AstroScript
 
-AstroScript is a powerful astrology software tool designed to calculate and interpret astrological charts. It leverages the Swiss Ephemeris for precise planetary and house calculations, and offers extensive features including planet positions, house positions, aspect calculations, and fixed star conjunctions.
+AstroScript is a powerful astrology software tool designed to calculate and astrological charts and data. It leverages the Swiss Ephemeris for precise planetary and house calculations, and Kerykeion for graphical charts, and offers extensive features including planet positions, house positions, aspect calculations, synastry, davision charts, and fixed star and asteroid aspects. It can also output html. 
 
 ## Features
 
@@ -41,10 +41,10 @@ AstroScript is a powerful astrology software tool designed to calculate and inte
 
 ### Command Line Interface
 
-You can run AstroScript with the following command:
+You can run AstroScript with the following command (so far it only accepts date and time in the following format):
 
 ```bash
-python astroscript.py --name "John Doe" --date "2021-12-25 15:30" --location "New York, USA"
+python astroscript.py --name "John Doe" --date "2021-12-25 15:30" --location "New York, USA" --timezone "America/New_York"
 ```
 
 
@@ -104,12 +104,6 @@ AstroScript interacts with various files to store and retrieve data, enhancing f
 - **Location**: `./ephe/`
 - **Purpose**: Store astronomical data needed for precise planetary calculations.
 - **Setup**: Users must download these files from external sources (e.g., [http://www.astro.com/swisseph/](http://www.astro.com/swisseph/)) and place them in the designated directory.
-
-### Location Files
-
-- **Filename**: `saved_locations.json`
-- **Purpose**: Saves geographic coordinates of frequently used locations to minimize repeated API calls.
-- **Usage**: Automatically updated when users add new locations through the GUI or script.
 
 ### Events and Locations File
 

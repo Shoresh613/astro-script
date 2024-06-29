@@ -225,8 +225,8 @@ def get_davison_data(names, guid=None):
         if event:
             datetime_str = event["datetime"]
             timezone_str = event["timezone"]
-            print(f'DEBUG: datetime:{event["datetime"]}')
-            print(f'DEBUG: timezone: {event["timezone"]}')
+            # print(f'DEBUG: datetime:{event["datetime"]}')
+            # print(f'DEBUG: timezone: {event["timezone"]}')
             timezone = pytz.timezone(timezone_str)
             try:
                 dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
@@ -242,32 +242,6 @@ def get_davison_data(names, guid=None):
         else:
             print(f"\nNo data found for {name}. First create the event by specifying the event details including the name.\n")
 
-    
-    # # Calculate the average datetime
-    # if datetimes:
-    #     # Convert all datetimes to UTC for averaging
-    #     total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
-    #     avg_seconds = total_seconds / len(datetimes)
-    #     avg_datetime_utc = datetime(1970, 1, 1, tzinfo=pytz.utc) + timedelta(seconds=avg_seconds)
-    #     avg_datetime_naive = avg_datetime_utc.replace(tzinfo=None)
-    #     # avg_datetime_str = avg_datetime_utc.strftime('%Y-%m-%d %H:%M:%S %Z')
-    # else:
-    #     avg_datetime_str = 'No datetimes to average'
-    
-    # # Calculate the average longitude and latitude
-    # if longitudes:
-    #     avg_longitude = sum(longitudes) / len(longitudes)
-    # else:
-    #     avg_longitude = 'No longitudes to average'
-    
-    # if latitudes:
-    #     avg_latitude = sum(latitudes) / len(latitudes)
-    # else:
-    #     avg_latitude = 'No latitudes to average'
-    
-    # return avg_datetime_naive, avg_longitude, avg_latitude
-
-    # Calculate the average datetime
     if datetimes:
         total_seconds = sum((dt.astimezone(pytz.utc) - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() for dt in datetimes)
         avg_seconds = total_seconds / len(datetimes)
