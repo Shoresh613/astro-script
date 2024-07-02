@@ -704,6 +704,54 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
             return_string += f"{minutes} minute"
     return return_string if return_string else "Less than a minute"
 
+def get_decan_ruler(longitude, zodiac_sign):
+    """
+    Determine the decan ruler of a given zodiac sign based on the longitude of a planet.
+
+    Each zodiac sign is divided into three decans, each spanning 10 degrees. The decan ruler
+    is determined by the planet that rules the corresponding triplicity (element) of the zodiac sign.
+    This function calculates the decan ruler based on the zodiac sign and the planet's longitude.
+
+    Parameters:
+    - longitude (float): The ecliptic longitude of the planet.
+    - zodiac_sign (str): The zodiac sign of the planet.
+
+    Returns:
+    - str: The name of the planet ruling the decan of the zodiac sign.
+    """
+    decan_rulers_classical = { # In case there' will be an option for classical rulers
+        'Aries': ['Mars', 'Sun', 'Jupiter'],
+        'Taurus': ['Venus', 'Mercury', 'Saturn'],
+        'Gemini': ['Mercury', 'Venus', 'Saturn'],
+        'Cancer': ['Moon', 'Mars', 'Jupiter'],
+        'Leo': ['Sun', 'Jupiter', 'Mars'],
+        'Virgo': ['Mercury', 'Saturn', 'Venus'],
+        'Libra': ['Venus', 'Saturn', 'Mercury'],
+        'Scorpio': ['Mars', 'Sun', 'Venus'],
+        'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
+        'Capricorn': ['Saturn', 'Venus', 'Mercury'],
+        'Aquarius': ['Saturn', 'Mercury', 'Venus'],
+        'Pisces': ['Jupiter', 'Mars', 'Sun']
+    }
+
+    decan_rulers = { # Including modern planets
+        'Aries': ['Mars', 'Sun', 'Jupiter'],
+        'Taurus': ['Venus', 'Mercury', 'Saturn'],
+        'Gemini': ['Mercury', 'Venus', 'Uranus'],
+        'Cancer': ['Moon', 'Pluto', 'Neptune'],
+        'Leo': ['Sun', 'Jupiter', 'Mars'],
+        'Virgo': ['Mercury', 'Saturn', 'Venus'],
+        'Libra': ['Venus', 'Uranus', 'Mercury'],
+        'Scorpio': ['Mars', 'Neptune', 'Moon'],
+        'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
+        'Capricorn': ['Saturn', 'Venus', 'Mercury'],
+        'Aquarius': ['Uranus', 'Mercury', 'Venus'],
+        'Pisces': ['Neptune', 'Moon', 'Pluto']
+    }
+
+    decan_index = (int(longitude) // 10) % 3
+    return decan_rulers[zodiac_sign][decan_index]
+
 def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
@@ -745,8 +793,11 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
             'longitude': pos[0],
             'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
             'retrograde': 'R' if pos[3] < 0 else '',
-            'speed': pos[3]  # Speed of the planet in degrees per day
+            'speed': pos[3],  # Speed of the planet in degrees per day
         }
+
+        positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+
         if planet == "North Node":
             # Calculate the South Node
             south_node_longitude = (pos[0] + 180) % 360
@@ -756,6 +807,9 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 'retrograde': '',  # South Node does not have retrograde motion
                 'speed': pos[3]  #Same speed as North Node
             }
+            positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
+
+        positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
@@ -1157,6 +1211,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         headers.append("Dignity")
     if notime:
         headers.insert(3, "Off by")
+    headers.append("Decan ruler" if output_type in('html', 'return_html') else "Decan")
 
     planet_signs = {}
     
@@ -1169,15 +1224,17 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         retrograde = info['retrograde']
         zodiac = info['zodiac_sign']
         retrograde_status = "R" if retrograde else ""
+        decan_ruler = info.get('decan_ruled_by', '')
 
         planet_signs[planet] = zodiac
+        strength_check = assess_planet_strength(planet_signs)
+        elevation_check = is_planet_elevated(planet_positions)
+        degree_check = check_degree(planet_signs, degrees_within_sign)
+
         if not notime:  # assuming that we have the house positions if not notime
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             planet_positions[planet] = house_num
             planet_house_counts[house_num] += 1
-            strength_check = assess_planet_strength(planet_signs)
-            elevation_check = is_planet_elevated(planet_positions)
-            degree_check = check_degree(planet_signs, degrees_within_sign)
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
@@ -1186,7 +1243,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             if notime:
                 row = [planet, zodiac, position, "", retrograde_status]
             else:
-                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + strength_check[planet] + degree_check[planet]) ]
+                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + strength_check[planet] + degree_check[planet]), decan_ruler]
 
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
@@ -1212,12 +1269,11 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(table)
     to_return += table
 
-    sign_count_table_data = list()
-    element_count_table_data = list()
-    modality_count_table_data = list()
-
     ## House counts
     if not notime:
+        sign_count_table_data = list()
+        element_count_table_data = list()
+        modality_count_table_data = list()
         print()
         to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
 
