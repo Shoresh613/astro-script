@@ -16,10 +16,14 @@ except:
 import csv
 from colorama import init, Fore, Style
 import copy
+import json
 
-if (os.name == 'nt'): 
+ephe=os.getenv("PRODUCTION_EPHE")
+if ephe:
+    swe.set_ephe_path(ephe) 
+elif (os.name == 'nt'): 
     swe.set_ephe_path('.\ephe') 
-else: 
+else:
     swe.set_ephe_path('./ephe')
 
 #Initialize database
@@ -94,8 +98,6 @@ ASTEROIDS = {
     'Pallas': swe.PALLAS,
     'Juno': swe.JUNO,
     'Vesta': swe.VESTA,
-    # 'Varuna': swe.VARUNA,
-    # Add more asteroids as needed
 }
 
 ZODIAC_ELEMENTS = {
@@ -115,6 +117,11 @@ ZODIAC_SIGN_TO_MODALITY = {
     'Cancer': 'Cardinal', 'Leo': 'Fixed', 'Virgo': 'Mutable',
     'Libra': 'Cardinal', 'Scorpio': 'Fixed', 'Sagittarius': 'Mutable',
     'Capricorn': 'Cardinal', 'Aquarius': 'Fixed', 'Pisces': 'Mutable',
+}
+
+ZODIAC_DEGREES = {
+    'Aries':0, 'Taurus':30, 'Gemini':60, 'Cancer':90, 'Leo':120, 'Virgo':150,
+    'Libra':180, 'Scorpio':210, 'Sagittarius':240, 'Capricorn':270, 'Aquarius':300, 'Pisces':330
 }
 
 # Dictionary definitions for planet dignity
@@ -2456,7 +2463,14 @@ def main(gui_arguments=None):
                 print(f"{string_synastry_latitude}, {string_synastry_longitude}", end='')
             print(f"{string_synastry_local_time} ", end='')
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
-
+        
+        try:
+            sabian_symbols = json.load(open("sabian.json"))
+            zodiac_sign = planet_positions['Sun']['zodiac_sign']
+            degree = int(planet_positions['Sun']['longitude']) - ZODIAC_DEGREES[zodiac_sign]
+            print(f"{br}{bold}Sabian Symbol:{nobold} {sabian_symbols[zodiac_sign][str(degree)]}{br}", end='')
+        except:
+            print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
     elif output_type in ('return_text', "return_html"):
         if exists or name:
             to_return += f"{string_name}"
