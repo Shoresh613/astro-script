@@ -767,7 +767,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     - dict: A dictionary with each celestial body as keys, and dictionaries containing
       their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
     """
-    swe.set_ephe_path('./ephe/')
+#    swe.set_ephe_path('./ephe/')
     
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
@@ -786,7 +786,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         bodies = ASTEROIDS
     elif mode == "stars":
         stars_with_magnitudes = read_fixed_stars(all_stars=False)
-        bodies = {star: 0 for star in stars_with_magnitudes}
+        bodies = {star: 0 for star in stars_with_magnitudes} #likely cause of error 0, not ids
     for planet, id in bodies.items():
         pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
