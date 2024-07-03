@@ -1025,8 +1025,6 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
 
     for i, planet1 in enumerate(natal_planet_names):
         for planet2 in second_planet_names[i+1:]:
-            # Skip calculation if it's for transits and the transiting planet is in the exclusion list, 
-            # unless the user specified to show brief aspects
             if planet2 in excluded and type == "transits" and not show_brief_aspects:
                 continue
             long1 = natal_positions[planet1]['longitude']
