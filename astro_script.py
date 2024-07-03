@@ -1388,8 +1388,6 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if type == "Star Transit":
             headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
-            headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
-        elif type == "Star Transit":
             headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
         elif type == "Asteroids":
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
@@ -1399,8 +1397,6 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if type == "Transit":
             headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         if type == "Star Transit":
-            headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
-        elif type == "Star Transit":
             headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, house_called, "Aspect", p2_name, house_called, "Degree", "Off by"]
