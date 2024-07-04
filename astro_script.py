@@ -646,7 +646,13 @@ def read_fixed_stars(all_stars=False):
     - FileNotFoundError: If the specified file cannot be found.
     - IOError: If there is an issue reading from the file.
     """
-    filename = './ephe/fixed_stars_all.csv' if all_stars else './ephe/astrologically_known_fixed_stars.csv'
+    
+    ephe=os.getenv("PRODUCTION_EPHE")
+    if ephe:
+        filename = f'{ephe}/fixed_stars_all.csv' if all_stars else f'{ephe}/astrologically_known_fixed_stars.csv'
+    else:
+        filename = './ephe/fixed_stars_all.csv' if all_stars else './ephe/astrologically_known_fixed_stars.csv'
+         
     
     try:
         with open(filename, mode='r', newline='') as file:
@@ -813,9 +819,10 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
-        asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))[1]
+        cusps, asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
         positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
         positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
+        positions['IC'] = {'longitude': cusps[3], 'zodiac_sign': longitude_to_zodiac(cusps[3], output).split()[0], 'retrograde': '', 'speed': 360}
 
         # Fix south node
         PLANETS.update({"South Node": None})  # Add South Node to the list of planets
@@ -1153,6 +1160,30 @@ def calculate_part_of_love(asc_pos, venus_pos, sun_pos):
     part_of_love = asc_pos + venus_pos - sun_pos
     part_of_love = part_of_love % 360
     return part_of_love
+
+def get_sabian_symbol(planet_positions, planet: str):
+    """
+    Retrieve the Sabian symbol for a specific degree within a zodiac sign.
+
+    Parameters:
+    - degree (float): The degree within the zodiac sign for which to retrieve the Sabian symbol.
+    - zodiac_sign (str): The zodiac sign in which the degree is located.
+
+    Returns:
+    - str: The Sabian symbol corresponding to the specified degree within the zodiac sign.
+    """
+    ephe=os.getenv("PRODUCTION_EPHE")
+    if ephe:
+        sabian_symbols = json.load(open(f"{ephe}/sabian.json"))
+    else:
+        if (os.name == 'nt'):         
+            sabian_symbols = json.load(open(".\ephe\sabian.json"))
+        else:
+            sabian_symbols = json.load(open("./ephe/sabian.json"))
+    zodiac_sign = planet_positions['Sun']['zodiac_sign']
+    degree = int(planet_positions['Sun']['longitude']) - ZODIAC_DEGREES[zodiac_sign]
+
+    return sabian_symbols[zodiac_sign][str(degree)]
 
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False):
     """
@@ -2521,10 +2552,7 @@ def main(gui_arguments=None):
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
         
         try:
-            sabian_symbols = json.load(open("sabian.json"))
-            zodiac_sign = planet_positions['Sun']['zodiac_sign']
-            degree = int(planet_positions['Sun']['longitude']) - ZODIAC_DEGREES[zodiac_sign]
-            print(f"{br}{bold}Sabian Symbol:{nobold} {sabian_symbols[zodiac_sign][str(degree)]}{br}", end='')
+            print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
         except:
             print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
     elif output_type in ('return_text', "return_html"):
@@ -2547,10 +2575,7 @@ def main(gui_arguments=None):
 
         to_return += f"{string_ruled_by}"
         try:
-            sabian_symbols = json.load(open("sabian.json"))
-            zodiac_sign = planet_positions['Sun']['zodiac_sign']
-            degree = int(planet_positions['Sun']['longitude']) - ZODIAC_DEGREES[zodiac_sign]
-            to_return += f"{br}{bold}Sabian Symbol:{nobold} {sabian_symbols[zodiac_sign][str(degree)]}{br}"
+            to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
         except:
             to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
 
