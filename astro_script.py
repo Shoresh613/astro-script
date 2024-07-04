@@ -2574,6 +2574,17 @@ def main(gui_arguments=None):
         else: to_return += f"{string_UTC_Time}"
 
         to_return += f"{string_ruled_by}"
+
+        if show_synastry:
+            to_return += f"{string_synastry_name}"
+            to_return += f"{string_synastry_place}"
+            if degree_in_minutes:
+                to_return += f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}"
+            else:
+                to_return += f"{string_synastry_latitude}, {string_synastry_longitude}"
+            to_return += f"{string_synastry_local_time} "
+            to_return += f"{string_synastry_UTC_Time_imprecise}" if notime else f"{string_synastry_UTC_Time}"
+
         try:
             to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
         except:
