@@ -3,7 +3,7 @@ import os
 def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, second_datetime, second_name=None, second_longitude=None, second_latitude=None, second_local_timezone=None, second_place=None, guid=None):
 
     if os.getenv("PRODUCTION_EPHE"):
-        folder = "media"
+        folder = "myapp/media"
         folder_slash = "/"
     else:
         folder = "static"
