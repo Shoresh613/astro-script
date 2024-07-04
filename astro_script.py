@@ -64,7 +64,7 @@ SOFT_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'
 # Movement per day for each planet in degrees
 OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
-          "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360, "Juno": 0.1, "Vesta": 0.12, "Pallas": 0.09, "Pholus": 0.06, "Ceres": 0.08}
+          "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360, "IC": 360, "Juno": 0.1, "Vesta": 0.12, "Pallas": 0.09, "Pholus": 0.06, "Ceres": 0.08}
 
 ALWAYS_EXCLUDE_IF_NO_TIME = ['Ascendant', 'Midheaven', 'IC']  # Aspects that are always excluded if no time of day is specified
 HOUSE_SYSTEMS = {
