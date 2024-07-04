@@ -4,8 +4,10 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
 
     if os.getenv("PRODUCTION_EPHE"):
         folder = "media"
+        folder_slash = "/"
     else:
         folder = "static"
+        folder_slash = ""
 
     try:
         from kerykeion import AstrologicalSubject, KerykeionChartSVG
@@ -44,9 +46,9 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
     chart.makeSVG()
     print(f'</div></table><p><img src="{chart.output_directory}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%">')
     if name:
-        return f'</div></table><p><img src="{folder}/{guid}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+        return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
     else:
-        return f'</div></table><p><img src="{folder}/{guid}/{chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+        return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/{chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
 
     #     return f'</div></table><p><img src="static/{guid}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
     # else:
