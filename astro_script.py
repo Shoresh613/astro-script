@@ -21,10 +21,11 @@ import json
 ephe=os.getenv("PRODUCTION_EPHE")
 if ephe:
     swe.set_ephe_path(ephe) 
-elif (os.name == 'nt'): 
-    swe.set_ephe_path('.\ephe') 
 else:
-    swe.set_ephe_path('./ephe')
+    if (os.name == 'nt'): 
+        swe.set_ephe_path('.\ephe') 
+    else:
+        swe.set_ephe_path('./ephe')
 
 #Initialize database
 db_manager.initialize_db()
@@ -2478,7 +2479,10 @@ def main(gui_arguments=None):
         illumination = f"{illumination:.2f}%"
     
     weekday, ruling_day, ruling_hour = datetime_ruled_by(utc_datetime)
-    
+    if show_synastry:
+        weekday_synastry, ruling_day_synastry, ruling_hour_synastry = datetime_ruled_by(synastry_utc_datetime)
+
+
     string_heading = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
     string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
     string_name = f"{p}{bold}Name:{nobold} {name}".rstrip(", ")
@@ -2509,6 +2513,11 @@ def main(gui_arguments=None):
         string_synastry_local_time = f"{br}{bold}Local Time:{nobold} {synastry_local_datetime} {synastry_local_timezone}"
         string_synastry_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC (imprecise due to time of day missing)"
         string_synastry_UTC_Time = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC"
+        if notime:
+            string_synastry_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday_synastry} {bold}Day ruled by:{nobold} {ruling_day_synastry}"
+        else:
+            string_synastry_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday_synastry} {bold}Day ruled by:{nobold} {ruling_day_synastry} {bold}Hour ruled by:{nobold} {ruling_hour_synastry}"
+
     string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}"
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
@@ -2540,7 +2549,12 @@ def main(gui_arguments=None):
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
 
         print(f"{string_ruled_by}", end='')
-        
+
+        try:
+            print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
+        except:
+            print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
+
         if show_synastry:
             print(f"{string_synastry_name}", end='')
             print(f"{string_synastry_place}", end='')
@@ -2550,11 +2564,8 @@ def main(gui_arguments=None):
                 print(f"{string_synastry_latitude}, {string_synastry_longitude}", end='')
             print(f"{string_synastry_local_time} ", end='')
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
+            print(f"{string_synastry_ruled_by}", end='')
         
-        try:
-            print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
-        except:
-            print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
     elif output_type in ('return_text', "return_html"):
         if exists or name:
             to_return += f"{string_name}"
@@ -2574,6 +2585,10 @@ def main(gui_arguments=None):
         else: to_return += f"{string_UTC_Time}"
 
         to_return += f"{string_ruled_by}"
+        try:
+            to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
+        except:
+            to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
 
         if show_synastry:
             to_return += f"{string_synastry_name}"
@@ -2584,12 +2599,6 @@ def main(gui_arguments=None):
                 to_return += f"{string_synastry_latitude}, {string_synastry_longitude}"
             to_return += f"{string_synastry_local_time} "
             to_return += f"{string_synastry_UTC_Time_imprecise}" if notime else f"{string_synastry_UTC_Time}"
-
-        try:
-            to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
-        except:
-            to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
-
 
     if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}", end="")
