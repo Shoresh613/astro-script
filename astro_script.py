@@ -2586,10 +2586,12 @@ def main(gui_arguments=None):
         else: to_return += f"{string_UTC_Time}"
 
         to_return += f"{string_ruled_by}"
-        try:
-            to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
-        except:
-            to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
+
+        if not show_synastry:
+            try:
+                to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
+            except:
+                to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
 
         if show_synastry:
             to_return += f"{string_synastry_name}"
