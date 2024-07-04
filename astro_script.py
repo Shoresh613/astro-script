@@ -2504,7 +2504,7 @@ def main(gui_arguments=None):
     else:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day} {bold}Hour ruled by:{nobold} {ruling_hour}"
     if show_synastry:
-        string_synastry_name = f"{p}{p}{bold}Name:{nobold} {args['Synastry']}"
+        string_synastry_name = f"{p}{bold}Name:{nobold} {args['Synastry']}"
         string_synastry_place = f"{br}{bold}Place:{nobold} {synastry_place}"
         string_synastry_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(synastry_latitude if show_synastry else 11.12, output_type)}"
         string_synastry_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(synastry_longitude if show_synastry else 22.33, output_type)}"
@@ -2550,10 +2550,11 @@ def main(gui_arguments=None):
 
         print(f"{string_ruled_by}", end='')
 
-        try:
-            print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
-        except:
-            print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
+        if not show_synastry:
+            try:
+                print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
+            except:
+                print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
 
         if show_synastry:
             print(f"{string_synastry_name}", end='')
