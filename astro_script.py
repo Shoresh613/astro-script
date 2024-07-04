@@ -767,7 +767,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     - dict: A dictionary with each celestial body as keys, and dictionaries containing
       their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
     """
-    swe.set_ephe_path('./ephe/')
+#    swe.set_ephe_path('./ephe/')
     
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
@@ -786,7 +786,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         bodies = ASTEROIDS
     elif mode == "stars":
         stars_with_magnitudes = read_fixed_stars(all_stars=False)
-        bodies = {star: 0 for star in stars_with_magnitudes}
+        bodies = {star: 0 for star in stars_with_magnitudes} #likely cause of error 0, not ids
     for planet, id in bodies.items():
         pos, ret = swe.calc_ut(jd, id)
         positions[planet] = {
@@ -1025,8 +1025,6 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
 
     for i, planet1 in enumerate(natal_planet_names):
         for planet2 in second_planet_names[i+1:]:
-            # Skip calculation if it's for transits and the transiting planet is in the exclusion list, 
-            # unless the user specified to show brief aspects
             if planet2 in excluded and type == "transits" and not show_brief_aspects:
                 continue
             long1 = natal_positions[planet1]['longitude']
@@ -1156,7 +1154,7 @@ def calculate_part_of_love(asc_pos, venus_pos, sun_pos):
     part_of_love = part_of_love % 360
     return part_of_love
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text"):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -1211,7 +1209,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         headers.append("Dignity")
     if notime:
         headers.insert(3, "Off by")
-    headers.append("Decan ruler" if output_type in('html', 'return_html') else "Decan")
+    if not hide_decans:
+        headers.append("Decan ruler" if output_type in('html', 'return_html') else "Decan")
 
     planet_signs = {}
     
@@ -1236,19 +1235,19 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
             planet_positions[planet] = house_num
             planet_house_counts[house_num] += 1
 
+        row = [planet, zodiac, position, retrograde_status]
+
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
-            row = [planet, zodiac, position, off_by, retrograde_status]
-        else:            
-            if notime:
-                row = [planet, zodiac, position, "", retrograde_status]
-            else:
-                row = [planet, zodiac, position, retrograde_status, (elevation_check[planet] + strength_check[planet] + degree_check[planet]), decan_ruler]
-
+            row.insert(3, off_by)
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
-            pass
+        if not notime:
+            row.append(elevation_check[planet] + strength_check[planet] + degree_check[planet])
+        if not hide_decans:
+            row.append(decan_ruler)
+
         if planet == "Fortune" and output_type in ('text', 'return_text'):
             zodiac_table_data.append(SEPARATING_LINE)
         zodiac_table_data.append(row)
@@ -1265,15 +1264,17 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     to_return = ''
     table = tabulate(zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
     if output_type in ('text','html'):
         print(table)
     to_return += table
 
+    sign_count_table_data = list()
+    element_count_table_data = list()
+    modality_count_table_data = list()
+
     ## House counts
     if not notime:
-        sign_count_table_data = list()
-        element_count_table_data = list()
-        modality_count_table_data = list()
         print()
         to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
 
@@ -1385,8 +1386,6 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if type == "Star Transit":
             headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
-            headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
-        elif type == "Star Transit":
             headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
         elif type == "Asteroids":
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
@@ -1396,8 +1395,6 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if type == "Transit":
             headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         if type == "Star Transit":
-            headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
-        elif type == "Star Transit":
             headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, house_called, "Aspect", p2_name, house_called, "Degree", "Off by"]
@@ -1829,7 +1826,7 @@ def set_orbs(args, def_orbs):
 def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
-                  hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, transits, transits_timezone, 
+                  hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
                   transits_location, synastry, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
 
     if isinstance(date, datetime):
@@ -1868,6 +1865,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Hide Planetary Aspects": hide_planetary_aspects,
         "Hide Fixed Star Aspects": hide_fixed_star_aspects,
         "Hide Asteroid Aspects": hide_asteroid_aspects,
+        "Hide Decans": hide_decans,
         "Transits": transits,
         "Transits Timezone": transits_timezone,
         "Transits Location": transits_location,
@@ -1922,6 +1920,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--hide_planetary_aspects', action='store_true', help='Output: hide aspects planets are in. (Default: false)')
     parser.add_argument('--hide_fixed_star_aspects', action='store_true', help='Output: hide aspects planets are in to fixed stars. (Default: false)')
     parser.add_argument('--hide_asteroid_aspects', action='store_true', help='Output: hide aspects planets are in to asteroids. (Default: false)')
+    parser.add_argument('--hide_decans', action='store_true', help='Hide the planet ruling the decan of the planet positions. (Default: false)')
     parser.add_argument('--transits', help="Date of the transit event ('YYYY-MM-DD HH:MM' local time, 'now' for current time). (Default: None)", required=False)
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
@@ -1970,6 +1969,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Hide Planetary Aspects": args.hide_planetary_aspects,
         "Hide Fixed Star Aspects": args.hide_fixed_star_aspects,
         "Hide Asteroid Aspects": args.hide_asteroid_aspects,
+        "Hide Decans": args.hide_decans,
         "Transits": args.transits,
         "Transits Timezone": args.transits_timezone,
         "Transits Location": args.transits_location,
@@ -2574,7 +2574,7 @@ def main(gui_arguments=None):
             print(f"{string_planets_heading}{nobold}{h3_}", end="")
         else:
             to_return += f"{string_planets_heading}"
-        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type)
+        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"])
     if show_arabic_parts:   ## Maybe add argument to display aspects with arabic parts
         del planet_positions["Fortune"]
         del planet_positions["Spirit"]

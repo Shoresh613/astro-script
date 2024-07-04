@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--name", "Mikael", "--use_saved_settings", "test"]
+            "args": ["--name", "Mikael", "--transits", "now"]
         }
     ]
 }
