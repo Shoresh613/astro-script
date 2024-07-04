@@ -2546,6 +2546,14 @@ def main(gui_arguments=None):
         else: to_return += f"{string_UTC_Time}"
 
         to_return += f"{string_ruled_by}"
+        try:
+            sabian_symbols = json.load(open("sabian.json"))
+            zodiac_sign = planet_positions['Sun']['zodiac_sign']
+            degree = int(planet_positions['Sun']['longitude']) - ZODIAC_DEGREES[zodiac_sign]
+            to_return += f"{br}{bold}Sabian Symbol:{nobold} {sabian_symbols[zodiac_sign][str(degree)]}{br}"
+        except:
+            to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
+
 
     if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}", end="")
