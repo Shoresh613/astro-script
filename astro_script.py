@@ -18,9 +18,9 @@ from colorama import init, Fore, Style
 import copy
 import json
 
-ephe=os.getenv("PRODUCTION_EPHE")
-if ephe:
-    swe.set_ephe_path(ephe) 
+EPHE=os.getenv("PRODUCTION_EPHE")
+if EPHE:
+    swe.set_ephe_path(EPHE) 
 else:
     if (os.name == 'nt'): 
         swe.set_ephe_path('.\ephe') 
@@ -647,13 +647,12 @@ def read_fixed_stars(all_stars=False):
     - IOError: If there is an issue reading from the file.
     """
     
-    ephe=os.getenv("PRODUCTION_EPHE")
-    if ephe:
-        filename = f'{ephe}/fixed_stars_all.csv' if all_stars else f'{ephe}/astrologically_known_fixed_stars.csv'
+    # If production env
+    if EPHE:
+        filename = f'{EPHE}/fixed_stars_all.csv' if all_stars else f'{EPHE}/astrologically_known_fixed_stars.csv'
     else:
         filename = './ephe/fixed_stars_all.csv' if all_stars else './ephe/astrologically_known_fixed_stars.csv'
-         
-    
+          
     try:
         with open(filename, mode='r', newline='') as file:
             reader = csv.DictReader(file)
@@ -773,8 +772,15 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     - dict: A dictionary with each celestial body as keys, and dictionaries containing
       their ecliptic longitude, zodiac sign, and retrograde status ('R' if retrograde) as values.
     """
-#    swe.set_ephe_path('./ephe/')
-    
+    # For some reason needs to be set again
+    if EPHE:
+        swe.set_ephe_path(EPHE) 
+    else:
+        if (os.name == 'nt'): 
+            swe.set_ephe_path('.\ephe') 
+        else:
+            swe.set_ephe_path('./ephe')
+
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
     if mode == "planets":
@@ -1327,7 +1333,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if not hide_decans:
             row.append(decan_ruler)
 
-        if planet == "Fortune" and output_type in ('text', 'return_text'):
+        if (planet == "Fortune" or planet == "Ascendant") and output_type in ('text', 'return_text'):
             zodiac_table_data.append(SEPARATING_LINE)
         zodiac_table_data.append(row)
 
