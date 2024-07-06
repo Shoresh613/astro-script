@@ -1026,7 +1026,7 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
     - A list of tuples, each representing an aspect found between a natal and a transit celestial body.
       Each tuple includes the names of the bodies, the aspect name, and the exact angle.
     """
-    excluded = [ "Ascendant", "Midheaven" ]
+    excluded = [ "Ascendant", "Midheaven", 'IC', 'DC' ]
     
     aspects_found = {}
     natal_planet_names = list(natal_positions.keys())
@@ -2202,7 +2202,7 @@ def main(gui_arguments=None):
     elif not exists:
         place = def_place_name
     
-    if not args["Location"]:
+    if not args["Location"] and not exists:
         latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
     if not exists:
