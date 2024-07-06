@@ -4,7 +4,7 @@ import pytz
 import os
 import sys
 import argparse
-from math import cos, radians, exp
+from math import sin, cos, radians, exp, pi
 from geopy.geocoders import Nominatim
 from tabulate import tabulate, SEPARATING_LINE
 try:
@@ -1080,6 +1080,49 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
                     }
     return aspects_found
 
+def julian_date_from_unix_time(t):
+    # Not valid for dates before Oct 15, 1582
+    return (t / 86400000) + 2440587.5
+
+def unix_time_from_julian_date(jd):
+    # Not valid for dates before Oct 15, 1582
+    return (jd - 2440587.5) * 86400000
+
+def constrain(d):
+    t = d % 360
+    if t < 0:
+        t += 360
+    return t
+
+def get_illuminated_fraction_of_moon(jd: float):
+    """
+    Calculates the fraction of the moon's illumination based on the Julian Day.
+    This method is based on Meeus' Astronomical Algorithms Second Edition, Chapter 48.
+
+    Parameters:
+    jd (float): The Julian Day for which the moon's illumination fraction is to be calculated.
+
+    Returns:
+    float: The fraction of the moon's disk that is illuminated, ranging from 0 (new moon) to 1 (full moon).
+    """
+#  T is the number of Julian centuries since J2000: T=(jd−2451545)/36525.0
+#  k is the fraction (from 0.0 to 1.0) of the moon (approximated as a perfect sphere) which is illuminated as viewed from the Geocenter.
+
+#  D, M, M′are the Delaunay arguments. Respectively the Moon's mean elongation, the Sun's mean anomaly, and the Moon's mean anomaly.
+
+    to_rad = pi / 180.0
+    T = (jd - 2451545) / 36525.0
+
+    D = constrain(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + 1.0 / 545868.0 * T * T * T - 1.0 / 113065000.0 * T * T * T * T) * to_rad
+    M = constrain(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T + 1.0 / 24490000.0 * T * T * T) * to_rad
+    Mp = constrain(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T + 1.0 / 69699.0 * T * T * T - 1.0 / 14712000.0 * T * T * T * T) * to_rad
+
+    i = constrain(180 - D * 180 / pi - 6.289 * sin(Mp) + 2.1 * sin(M) - 1.274 * sin(2 * D - Mp) - 0.658 * sin(2 * D) - 0.214 * sin(2 * Mp) - 0.11 * sin(D)) * to_rad
+
+    k = (1 + cos(i)) / 2
+    return k
+
+
 def moon_phase(date):
     """
     Calculates the moon phase and illumination for a given date. The function considers 8 distinct phases 
@@ -1099,7 +1142,11 @@ def moon_phase(date):
     moon_pos = swe.calc_ut(jd, swe.MOON)[0][0]
     phase_angle = (moon_pos - sun_pos) % 360
 
-    illumination = 50 - 50 * cos(radians(phase_angle))
+    # Use less precise method for dates before Oct 15, 1582 as precise method can't handle them.
+    if date < datetime(1582, 10, 15, tzinfo=pytz.utc):
+        illumination = 50 - 50 * cos(radians(phase_angle))
+    else:
+        illumination = get_illuminated_fraction_of_moon(jd) * 100
 
     if phase_angle < 45:
         return "New Moon", illumination
