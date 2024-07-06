@@ -282,13 +282,12 @@ def check_degree(planet_signs, degrees_within_sign):
     degrees_within_sign = int(degrees_within_sign)
     strength_status = {}
     for planet, sign in planet_signs.items():
-        # Check if planet is in critical degrees
+        strength_status[planet] = ''
+
         if degrees_within_sign == 29:
             strength_status[planet] = ' Anaretic'
-        if degrees_within_sign == 0:
+        elif degrees_within_sign == 0:
             strength_status[planet] = ' Cusp'
-        else:
-            strength_status[planet] = ''
 
         # Check Critical Degrees for different modalities
         if sign in ZODIAC_MODALITIES['Cardinal'] and degrees_within_sign in [0, 13, 16]:
