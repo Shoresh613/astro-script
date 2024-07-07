@@ -224,8 +224,6 @@ def get_davison_data(names, guid=None):
     longitudes = []
     latitudes = []
     
-    # Collect the data for each name in the list
-    # names = names.split(',')
     ### NEED TO CHECK NOTIME FOR EVENTS HERE
     for name in names:
         name = name.strip()
@@ -1954,7 +1952,7 @@ def set_orbs(args, def_orbs):
 
         return orbs
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, davison, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
@@ -1972,6 +1970,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Timezone": timezone,
         "Time Unknown": time_unknown,
         "LMT": lmt,
+        "List Timezones": list_timezones,
         "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
@@ -2028,6 +2027,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
     parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location.')
+    parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2078,6 +2078,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Timezone": args.timezone,
         "Time Unknown": args.time_unknown,
         "LMT": args.LMT,
+        "List Timezones": args.list_timezones,
         "Davison": args.davison,
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
@@ -2341,6 +2342,16 @@ def main(gui_arguments=None):
 
     output_type = args["Output"] if args["Output"] else def_output_type
 
+    if args["List Timezones"]:
+        to_return = "Available timezones:\n"
+        for tz in pytz.all_timezones:
+            to_return += f"{tz}\n"
+        if output_type in ('text','html'):
+            print(to_return)
+            return
+        else:
+            return to_return
+        
     if args["Remove Saved Names"]:
         to_return = db_manager.remove_saved_names(args["Remove Saved Names"], output_type, guid=args["Guid"] if args["Guid"] else None)
         if output_type in ('text','html'):
