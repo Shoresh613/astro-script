@@ -243,8 +243,10 @@ def get_davison_data(names, guid=None):
                     dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
                 except ValueError as ex:
                     print(f"Error parsing datetime for {name}: ({ex})")
-            dt_with_tz = timezone.localize(dt)
-            datetimes.append(dt_with_tz)
+            # dt_with_tz = timezone.localize(dt)
+            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(dt, timezone, event["longitude"])
+            datetimes.append(utc_datetime.astimezone(pytz.utc))
+            # datetimes.append(dt_with_tz)
             longitudes.append(event["longitude"])
             latitudes.append(event["latitude"])
         else:
@@ -1148,6 +1150,9 @@ def moon_phase(date):
     moon_pos = swe.calc_ut(jd, swe.MOON)[0][0]
     phase_angle = (moon_pos - sun_pos) % 360
 
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=pytz.utc)
+
     # Use less precise method for dates before Oct 15, 1582 as precise method can't handle them.
     if date < datetime(1582, 10, 15, tzinfo=pytz.utc):
         illumination = 50 - 50 * cos(radians(phase_angle))
@@ -1907,16 +1912,12 @@ def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
     >>> print(lmt_dt)
     1776-07-04 16:24:00+00:00
     """
-    # Localize the naive datetime to the specified timezone
     local_dt = local_tz.localize(local_dt)
     
-    # Convert local time to UTC
     utc_dt = local_dt.astimezone(pytz.utc)
     
-    # Calculate LMT offset for the given coordinates
     lmt_offset = calculate_lmt_offset(longitude)
     
-    # Convert UTC to LMT by adding the LMT offset
     lmt_dt = utc_dt + lmt_offset
     
     return utc_dt, lmt_dt
@@ -1953,7 +1954,7 @@ def set_orbs(args, def_orbs):
 
         return orbs
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, davison, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
@@ -1970,6 +1971,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Longitude": longitude,
         "Timezone": timezone,
         "Time Unknown": time_unknown,
+        "LMT": lmt,
         "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
@@ -2025,6 +2027,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
+    parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location.')
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2074,6 +2077,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Longitude": args.longitude,
         "Timezone": args.timezone,
         "Time Unknown": args.time_unknown,
+        "LMT": args.LMT,
         "Davison": args.davison,
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
@@ -2195,6 +2199,7 @@ def main(gui_arguments=None):
             "GUID": args["Guid"] if args["Guid"] else None,
             "Location": args["Location"] if args["Location"] else None,
             "Timezone": args["Timezone"] if args["Timezone"] else None,
+            "LMT": args["LMT"] if args["LMT"] else None,
             "Imprecise Aspects": args["Imprecise Aspects"] if args["Imprecise Aspects"] else None,
             "Minor Aspects": args["Minor Aspects"] if args["Minor Aspects"] else None,
             "Show Brief Aspects": args["Show Brief Aspects"] if args["Show Brief Aspects"] else None,
@@ -2235,6 +2240,8 @@ def main(gui_arguments=None):
             args["Location"] = stored_defaults["Location"]
         if stored_defaults["Timezone"]:
             args["Timezone"] = stored_defaults["Timezone"]
+        if stored_defaults["LMT"]:
+            args["LMT"] = stored_defaults["LMT"]
         if stored_defaults["Imprecise Aspects"]:
             args["Imprecise Aspects"] = stored_defaults["Imprecise Aspects"]
         if stored_defaults["Minor Aspects"]:
@@ -2505,8 +2512,10 @@ def main(gui_arguments=None):
         if place == "Davison chart":
             utc_datetime = local_datetime
         else:
-            utc_datetime = convert_to_utc(local_datetime, local_timezone)
-            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
+            if args["LMT"]: # If the time is Local Mean Time already
+                utc_datetime = convert_to_utc(local_datetime, local_timezone)
+            else:
+                utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
 
 
     if args["Transits"]:
