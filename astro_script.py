@@ -1876,6 +1876,51 @@ def load_event(name, guid=None):
         print(f"No entry found for {name}.")
         return False
 
+def calculate_lmt_offset(longitude):
+    offset_hours = longitude / 15.0
+    hours = int(offset_hours)
+    minutes = int((offset_hours - hours) * 60)
+    return timedelta(hours=hours, minutes=minutes)
+
+def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
+    """
+    Converts a localized datetime to UTC and Local Mean Time (LMT).
+
+    Parameters:
+    local_dt (datetime): The naive datetime object representing the local time.
+    local_tz (pytz.timezone): The timezone object representing the local timezone.
+    longitude (float): The longitude of the location to calculate LMT.
+
+    Returns:
+    tuple: A tuple containing two datetime objects:
+        - utc_dt (datetime): The corresponding time in UTC.
+        - lmt_dt (datetime): The corresponding Local Mean Time (LMT).
+    
+    Example:
+    >>> from pytz import timezone
+    >>> local_dt = datetime(1776, 7, 4, 17, 10)
+    >>> local_tz = timezone('America/New_York')
+    >>> longitude = -75.1652
+    >>> utc_dt, lmt_dt = convert_local_to_utc_and_lmt(local_dt, local_tz, longitude)
+    >>> print(utc_dt)
+    1776-07-04 21:10:00+00:00
+    >>> print(lmt_dt)
+    1776-07-04 16:24:00+00:00
+    """
+    # Localize the naive datetime to the specified timezone
+    local_dt = local_tz.localize(local_dt)
+    
+    # Convert local time to UTC
+    utc_dt = local_dt.astimezone(pytz.utc)
+    
+    # Calculate LMT offset for the given coordinates
+    lmt_offset = calculate_lmt_offset(longitude)
+    
+    # Convert UTC to LMT by adding the LMT offset
+    lmt_dt = utc_dt + lmt_offset
+    
+    return utc_dt, lmt_dt
+
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
     orbs = {}
@@ -2461,6 +2506,8 @@ def main(gui_arguments=None):
             utc_datetime = local_datetime
         else:
             utc_datetime = convert_to_utc(local_datetime, local_timezone)
+            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
+
 
     if args["Transits"]:
         if args["Transits Timezone"]:
@@ -2509,9 +2556,6 @@ def main(gui_arguments=None):
         except:
             print("Invalid second event for synastry", file=sys.stderr)
             return "Invalid second event for synastry."
-
-    # Check if the time is set, or only the date, this is not compatible with people born at midnight (but can set second to 1)
-    # notime = (local_datetime.hour == 0 and local_datetime.minute == 0)
 
     # Save event if name given
     if name:
