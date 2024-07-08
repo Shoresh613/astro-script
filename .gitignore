@@ -171,3 +171,4 @@ cache/kerykeion_geonames_cache.sqlite
 *.svg
 test.html
 events.db
+.kivy/logs/*

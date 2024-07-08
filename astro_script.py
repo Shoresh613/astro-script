@@ -797,31 +797,46 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     elif mode == "asteroids":
         bodies = ASTEROIDS
     elif mode == "stars":
-        stars_with_magnitudes = read_fixed_stars(all_stars=False)
-        bodies = {star: 0 for star in stars_with_magnitudes} #likely cause of error 0, not ids
-    for planet, id in bodies.items():
-        pos, ret = swe.calc_ut(jd, id)
-        positions[planet] = {
-            'longitude': pos[0],
-            'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
-            'retrograde': 'R' if pos[3] < 0 else '',
-            'speed': pos[3],  # Speed of the planet in degrees per day
-        }
+        fixed_stars = read_fixed_stars(all_stars=False) #make it use all-stars
 
-        positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+        for star_name in fixed_stars.keys():
+            try:
+                star_long = get_fixed_star_position(star_name, jd) % 360
+                positions[star_name] = {
+                    'longitude': star_long,
+                    'zodiac_sign': longitude_to_zodiac(star_long, output).split()[0],
+                    'retrograde': '',
+                    'speed': 0,  # Speed of the fix star in degrees per day
+                }
 
-        if planet == "North Node":
-            # Calculate the South Node
-            south_node_longitude = (pos[0] + 180) % 360
-            positions["South Node"] = {
-                'longitude': south_node_longitude,
-                'zodiac_sign': longitude_to_zodiac(south_node_longitude, output).split()[0],
-                'retrograde': '',  # South Node does not have retrograde motion
-                'speed': pos[3]  #Same speed as North Node
+                positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+
+            except:
+                pass
+    if mode in ('planets','asteroids'):
+        for planet, id in bodies.items():
+            pos, ret = swe.calc_ut(jd, id)
+            positions[planet] = {
+                'longitude': pos[0],
+                'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
+                'retrograde': 'R' if pos[3] < 0 else '',
+                'speed': pos[3],  # Speed of the planet in degrees per day
             }
-            positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
 
-        positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+
+            if planet == "North Node":
+                # Calculate the South Node
+                south_node_longitude = (pos[0] + 180) % 360
+                positions["South Node"] = {
+                    'longitude': south_node_longitude,
+                    'zodiac_sign': longitude_to_zodiac(south_node_longitude, output).split()[0],
+                    'retrograde': '',  # South Node does not have retrograde motion
+                    'speed': pos[3]  #Same speed as North Node
+                }
+                positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
+
+            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
