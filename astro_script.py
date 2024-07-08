@@ -1437,17 +1437,6 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
-
-    Parameters:
-    - aspects (dict): Dictionary containing aspect data between celestial bodies.
-    - imprecise_aspects (str): Controls display of imprecise aspects ('off' or 'warn').
-    - minor_aspects (bool): Whether to include minor aspects in the output.
-    - degree_in_minutes (bool): Display angles in degrees, minutes, and seconds format.
-    - house_positions (dict, optional): House positions for additional context, ignored if notime is True.
-    - orb (float): Orb value used for aspect consideration.
-    - notime (bool): If True, time-dependent aspects and house positions are not displayed.
-
-    Directly prints formatted aspect information based on specified parameters.
     """
     if output in ('html', 'return_html'):
         table_format = 'html'
@@ -1488,22 +1477,26 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             headers = ["Natal Planet", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
         if type == "Star Transit":
             headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
+        if type == "Asteroids Transit":
+            headers = ["Natal Asteroid", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
         elif type == "Asteroids":
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
-        else:
+        elif type == 'Natal':
             headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     else:
         if type == "Transit":
             headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         if type == "Star Transit":
             headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
+        if type == "Asteroids Transit":
+            headers = ["Natal Asteroid", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, house_called, "Aspect", p2_name, house_called, "Degree", "Off by"]
         elif type == "Asteroids":
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
-        else:
+        elif type == 'Natal':
             headers = ["Planet", house_called, "Aspect", "Planet", house_called, "Degree", "Off by"]
     if show_aspect_score:
         headers.append("Score")
@@ -1516,6 +1509,8 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             print(f"{p}{bold}{h3}Planetary Transit Aspects {orb_string_transits_fast_slow}{nobold}", end="")
         elif type == "Star Transit":
             print(f"{p}{bold}{h3}Star Transit Aspects {orb_string_transits_fast_slow}{nobold}", end="")
+        elif type == "Asteroids Transit":
+            print(f"{p}{bold}{h3}Asteroid Transit Aspects {orb_string_transits_fast_slow}{nobold}", end="")
         elif type == "Synastry":
             print(f"{p}{bold}{h3}Planetary Synastry Aspects {orb_string_synastry_fast_slow}{nobold}", end="")
         else:
@@ -1531,6 +1526,8 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             to_return += f"{p}{bold}{h3}Planetary Transit Aspects {orb_string_transits_fast_slow}{nobold}"
         elif type == "Star Transit":
             to_return += f"{p}{bold}{h3}Star Transit Aspects {orb_string_transits_fast_slow}{nobold}"
+        elif type == "Asteroids Transit":
+            to_return += f"{p}{bold}{h3}Asteroid Transit Aspects {orb_string_transits_fast_slow}{nobold}"
         elif type == "Synastry":
             to_return += f"{p}{bold}{h3}Planetary Synastry Aspects {orb_string_synastry_fast_slow}{nobold}"
         else:
@@ -1550,7 +1547,6 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     all_aspects = {**SOFT_ASPECTS, **HARD_ASPECTS}
 
-    # degree_symbol = "" if (os.name == 'nt' and output=='html') else "°" # PowerShell doesn't save the degree symbol correctly when piping to an html file 
     off_by_column = False # Check if any planets use the off by column
 
     for planets, aspect_details in aspects.items():
@@ -1577,6 +1573,10 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                 elif type == "Synastry" or type == "Asteroids":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
                 elif type == "Star Transit":
+                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                elif type == "Asteroids Transit":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
@@ -2571,6 +2571,13 @@ def main(gui_arguments=None):
                 return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC)."
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_transits_timezone)
             show_transits = True 
+        # only show transits if environment variable set
+        if EPHE:
+            hide_asteroid_aspects = True
+            hide_fixed_star_aspects = True
+            hide_planetary_aspects = True
+            hide_planetary_positions = True
+            
 
     if args["Synastry"]:
         try:
@@ -2824,6 +2831,13 @@ def main(gui_arguments=None):
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
+
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
+        asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
+                                                aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
+        if asteroid_aspects:
+            to_return += f"{p}" + print_aspects(asteroid_transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
+                                                degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score)
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
