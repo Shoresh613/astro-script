@@ -1593,6 +1593,10 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(copy.deepcopy(planet_positions), planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(copy.deepcopy(planet_positions), planets[1], orb-aspect_details['angle_diff'])]
+                elif type == "Asteroids Transit":
+                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree,
+                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
                 else:
                     row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], planet_positions[planets[1]]["house"], angle_with_degree]
                 if house_counts and not notime and not type == "Natal":
@@ -2835,9 +2839,9 @@ def main(gui_arguments=None):
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
         asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
-        if asteroid_aspects:
-            to_return += f"{p}" + print_aspects(asteroid_transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
-                                                degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score)
+        if asteroid_transit_aspects:
+            to_return += f"{p}" + print_aspects(asteroid_transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
+                                                degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions))
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
