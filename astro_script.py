@@ -233,7 +233,10 @@ def get_davison_data(names, guid=None):
             timezone_str = event["timezone"]
             # print(f'DEBUG: datetime:{event["datetime"]}')
             # print(f'DEBUG: timezone: {event["timezone"]}')
-            timezone = pytz.timezone(timezone_str)
+            if timezone_str == 'LMT':
+                timezone = 'LMT'
+            else:
+                timezone = pytz.timezone(timezone_str)
             try:
                 dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M')
             except ValueError as ex:
@@ -1899,10 +1902,9 @@ def load_event(name, guid=None):
         return False
 
 def calculate_lmt_offset(longitude):
-    offset_hours = longitude / 15.0
-    hours = int(offset_hours)
-    minutes = int((offset_hours - hours) * 60)
-    return timedelta(hours=hours, minutes=minutes)
+    # 4 minutes of time per degree of longitude
+    delta = timedelta(minutes=(longitude * 4)) 
+    return timedelta(seconds=int(delta.total_seconds()))
 
 def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
     """
@@ -1929,6 +1931,38 @@ def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
     >>> print(lmt_dt)
     1776-07-04 16:24:00+00:00
     """
+    lmt_offset = calculate_lmt_offset(longitude)
+    if longitude < 0:
+        lmt_offset = -lmt_offset
+
+    if local_tz == 'LMT': # If the time was already specified as LMT
+        if longitude < 0:
+            utc_dt = local_dt + lmt_offset
+            lmt_dt = local_dt
+        else:
+            utc_dt = local_dt - lmt_offset
+            lmt_dt = local_dt
+    else:
+        # if local_dt.year < 1900:
+            # Manually handle ancient dates as pytz doesn't support them reliably
+        # local_dt = local_dt.replace(tzinfo=local_tz)
+        local_dt = local_tz.localize(local_dt)
+        if local_dt.dst() != timedelta(0):
+            lmt_offset += local_dt.dst()
+            # lmt_offset += timedelta(hours=1)
+        if longitude < 0:
+            utc_dt = local_dt + lmt_offset
+            lmt_dt = utc_dt - lmt_offset
+        else:
+            utc_dt = local_dt - lmt_offset
+            lmt_dt = utc_dt + lmt_offset
+        # else:
+        #     # Use pytz for modern dates
+        #     local_dt = local_tz.localize(local_dt)
+        #     utc_dt = local_dt.astimezone(pytz.utc)
+        #     lmt_offset = calculate_lmt_offset(longitude)
+        #     lmt_dt = utc_dt + lmt_offset
+    return utc_dt, lmt_dt
     local_dt = local_tz.localize(local_dt)
     
     utc_dt = local_dt.astimezone(pytz.utc)
@@ -2543,10 +2577,10 @@ def main(gui_arguments=None):
             utc_datetime = local_datetime
         else:
             if args["LMT"]: # If the time is Local Mean Time already
-                utc_datetime = convert_to_utc(local_datetime, local_timezone)
-            else:
-                utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
-
+                local_timezone = "LMT"
+            #     utc_datetime = convert_to_utc(local_datetime, local_timezone)
+            # else:
+            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
 
     if args["Transits"]:
         if args["Transits Timezone"]:
@@ -2590,7 +2624,10 @@ def main(gui_arguments=None):
                 synastry_local_datetime = datetime.fromisoformat(exists['datetime'])
                 synastry_latitude = exists['latitude']
                 synastry_longitude = exists['longitude']
-                synastry_local_timezone = pytz.timezone(exists['timezone'])
+                if exists['timezone'] == "LMT":
+                    synastry_local_timezone == "LMT"
+                else:
+                    synastry_local_timezone = pytz.timezone(exists['timezone'])
                 synastry_place = exists['location']
                 synastry_utc_datetime = convert_to_utc(synastry_local_datetime, synastry_local_timezone)
                 synastry_notime = True if exists['notime'] else False
