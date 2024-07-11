@@ -245,7 +245,7 @@ def get_davison_data(names, guid=None):
                 except ValueError as ex:
                     print(f"Error parsing datetime for {name}: ({ex})")
             # dt_with_tz = timezone.localize(dt)
-            utc_datetime, lmt_time = convert_to_utc(dt, timezone)
+            utc_datetime = convert_to_utc(dt, timezone)
             datetimes.append(utc_datetime.astimezone(pytz.utc))
             # datetimes.append(dt_with_tz)
             longitudes.append(event["longitude"])
@@ -353,6 +353,18 @@ def datetime_ruled_by(date):
 
     return weekday_name, day_planet, hour_planet
 
+def get_delta_t(date):
+    # Calculate Delta T for the given date
+    # jd = swe.julday(date.year, date.month, date.day)
+    # delta_t = swe.deltat(jd)
+    
+    if date.year >= 1972:
+        T = (date.year - 2000) / 100
+        delta_t = 62.92 + 0.32217 * T + 0.005589 * T**2 - 0.0000274 * T**3 + 0.0000019 * T**4
+        return delta_t
+    else:
+        return 0
+
 def convert_to_utc(local_datetime, local_timezone):
     """
     Convert a naive datetime object to UTC using a specified timezone.
@@ -373,7 +385,10 @@ def convert_to_utc(local_datetime, local_timezone):
     
     # Convert the timezone-aware datetime object to UTC
     utc_datetime = local_datetime.astimezone(pytz.utc)
+    delta_t_adjusted_utc = utc_datetime + timedelta(seconds=get_delta_t(utc_datetime))
     
+    utc_datetime = delta_t_adjusted_utc.astimezone(pytz.utc)
+
     return utc_datetime
 
 def get_coordinates(location_name:str):
@@ -2621,10 +2636,10 @@ def main(gui_arguments=None):
     if args["Name"] and args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
-        string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])} (not stored, --name lacking)"
+        string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}" + " (not stored, --name lacking)" if not EPHE else ""
     string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else f" {local_timezone}"
-    string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
-    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC" 
+    string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to exact time of day missing)"
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (Delta T adjusted)" 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
@@ -2669,7 +2684,7 @@ def main(gui_arguments=None):
         if args["Davison"]:
             print(f"{string_davison}", end='')
 
-        if not args['Davison'] or place != "Davison chart":
+        if not args['Davison'] and place != "Davison chart":
             print(f"{string_local_time} ", end='')
 
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
@@ -2707,7 +2722,9 @@ def main(gui_arguments=None):
         if args["Davison"]:
             to_return += f"{string_davison}"
 
-        to_return += f"{string_local_time}"
+        if not args['Davison'] and place != "Davison chart":
+            to_return += f"{string_local_time}"
+
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
 
@@ -2715,9 +2732,9 @@ def main(gui_arguments=None):
 
         if not show_synastry:
             try:
-                to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}"
+                to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
             except:
-                to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}"
+                to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file"
 
         if show_synastry:
             to_return += f"{string_synastry_name}"
@@ -2803,11 +2820,11 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}" 
 
-        # if not args["Transits Timezone"]:
-        #     if output_type in ("text", "html"):
-        #         print(f"{string_no_transits_tz}")
-        #     else:
-        #         to_return += f"{string_no_transits_tz}"
+        if not args["Transits Timezone"] or not args["Transits Location"]:
+            if output_type in ("text", "html"):
+                print(f"{string_no_transits_tz}")
+            elif not EPHE:
+                to_return += f"{string_no_transits_tz}"
 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
