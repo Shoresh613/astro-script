@@ -245,7 +245,7 @@ def get_davison_data(names, guid=None):
                 except ValueError as ex:
                     print(f"Error parsing datetime for {name}: ({ex})")
             # dt_with_tz = timezone.localize(dt)
-            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(dt, timezone, event["longitude"])
+            utc_datetime, lmt_time = convert_to_utc(dt, timezone)
             datetimes.append(utc_datetime.astimezone(pytz.utc))
             # datetimes.append(dt_with_tz)
             longitudes.append(event["longitude"])
@@ -1931,6 +1931,7 @@ def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
     >>> print(lmt_dt)
     1776-07-04 16:24:00+00:00
     """
+    # tge logic is flaud behind this idea, as ut is all thats needed.
     lmt_offset = calculate_lmt_offset(longitude)
     if longitude < 0:
         lmt_offset = -lmt_offset
@@ -1962,15 +1963,6 @@ def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
         #     utc_dt = local_dt.astimezone(pytz.utc)
         #     lmt_offset = calculate_lmt_offset(longitude)
         #     lmt_dt = utc_dt + lmt_offset
-    return utc_dt, lmt_dt
-    local_dt = local_tz.localize(local_dt)
-    
-    utc_dt = local_dt.astimezone(pytz.utc)
-    
-    lmt_offset = calculate_lmt_offset(longitude)
-    
-    lmt_dt = utc_dt + lmt_offset
-    
     return utc_dt, lmt_dt
 
 def set_orbs(args, def_orbs):
@@ -2580,7 +2572,7 @@ def main(gui_arguments=None):
                 local_timezone = "LMT"
             #     utc_datetime = convert_to_utc(local_datetime, local_timezone)
             # else:
-            utc_datetime, lmt_time = convert_local_to_utc_and_lmt(local_datetime, local_timezone, longitude)
+            utc_datetime = convert_to_utc(local_datetime, local_timezone)
 
     if args["Transits"]:
         if args["Transits Timezone"]:
