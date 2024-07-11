@@ -2556,12 +2556,11 @@ def main(gui_arguments=None):
                 return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC)."
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_transits_timezone)
             show_transits = True 
-        # only show transits if environment variable set
-        if EPHE:
-            hide_asteroid_aspects = True
-            hide_fixed_star_aspects = True
-            hide_planetary_aspects = True
-            hide_planetary_positions = True
+        # only show transits, not the rest
+        hide_asteroid_aspects = True
+        hide_fixed_star_aspects = True
+        hide_planetary_aspects = True
+        hide_planetary_positions = True
             
 
     if args["Synastry"]:
@@ -2623,7 +2622,7 @@ def main(gui_arguments=None):
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])} (not stored, --name lacking)"
-    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else + f" {local_timezone}"
+    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else f" {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC" 
     if notime:
@@ -2654,7 +2653,7 @@ def main(gui_arguments=None):
     string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
     string_transits = f"{p}{bold}{h2}Transits for"
     string_synastry = f"{p}{bold}{h2}Synastry chart for"
-    string_no_transits_tz = f"{p}No timezone specified for transits (--transit_timezone). Using default timezone ({def_transits_tz}) for transits."
+    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transit_timezone, --transit_location).\nUsing default timezone and location ({def_transits_tz}, {def_transits_location}) for transits."
 
     if output_type in ("text","html"):
         print(f"{string_heading}", end='')
@@ -2804,11 +2803,11 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}" 
 
-        if not args["Transits Timezone"]:
-            if output_type in ("text", "html"):
-                print(f"{string_no_transits_tz}")
-            else:
-                to_return += f"{string_no_transits_tz}"
+        # if not args["Transits Timezone"]:
+        #     if output_type in ("text", "html"):
+        #         print(f"{string_no_transits_tz}")
+        #     else:
+        #         to_return += f"{string_no_transits_tz}"
 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
