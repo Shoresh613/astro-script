@@ -1906,64 +1906,20 @@ def calculate_lmt_offset(longitude):
     delta = timedelta(minutes=(longitude * 4)) 
     return timedelta(seconds=int(delta.total_seconds()))
 
-def convert_local_to_utc_and_lmt(local_dt, local_tz, longitude):
+def convert_localtime_in_lmt_to_utc(local_dt, longitude):
     """
-    Converts a localized datetime to UTC and Local Mean Time (LMT).
-
-    Parameters:
-    local_dt (datetime): The naive datetime object representing the local time.
-    local_tz (pytz.timezone): The timezone object representing the local timezone.
-    longitude (float): The longitude of the location to calculate LMT.
-
-    Returns:
-    tuple: A tuple containing two datetime objects:
-        - utc_dt (datetime): The corresponding time in UTC.
-        - lmt_dt (datetime): The corresponding Local Mean Time (LMT).
-    
-    Example:
-    >>> from pytz import timezone
-    >>> local_dt = datetime(1776, 7, 4, 17, 10)
-    >>> local_tz = timezone('America/New_York')
-    >>> longitude = -75.1652
-    >>> utc_dt, lmt_dt = convert_local_to_utc_and_lmt(local_dt, local_tz, longitude)
-    >>> print(utc_dt)
-    1776-07-04 21:10:00+00:00
-    >>> print(lmt_dt)
-    1776-07-04 16:24:00+00:00
+    Supposed to convert a local time in LMT to UTC.
     """
-    # tge logic is flaud behind this idea, as ut is all thats needed.
+    # the logic is flaud behind this idea, as UT is all that's needed.
     lmt_offset = calculate_lmt_offset(longitude)
     if longitude < 0:
         lmt_offset = -lmt_offset
 
-    if local_tz == 'LMT': # If the time was already specified as LMT
-        if longitude < 0:
-            utc_dt = local_dt + lmt_offset
-            lmt_dt = local_dt
-        else:
-            utc_dt = local_dt - lmt_offset
-            lmt_dt = local_dt
+    if longitude < 0:
+        utc_dt = local_dt + lmt_offset
     else:
-        # if local_dt.year < 1900:
-            # Manually handle ancient dates as pytz doesn't support them reliably
-        # local_dt = local_dt.replace(tzinfo=local_tz)
-        local_dt = local_tz.localize(local_dt)
-        if local_dt.dst() != timedelta(0):
-            lmt_offset += local_dt.dst()
-            # lmt_offset += timedelta(hours=1)
-        if longitude < 0:
-            utc_dt = local_dt + lmt_offset
-            lmt_dt = utc_dt - lmt_offset
-        else:
-            utc_dt = local_dt - lmt_offset
-            lmt_dt = utc_dt + lmt_offset
-        # else:
-        #     # Use pytz for modern dates
-        #     local_dt = local_tz.localize(local_dt)
-        #     utc_dt = local_dt.astimezone(pytz.utc)
-        #     lmt_offset = calculate_lmt_offset(longitude)
-        #     lmt_dt = utc_dt + lmt_offset
-    return utc_dt, lmt_dt
+        utc_dt = local_dt - lmt_offset
+    return utc_dt
 
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
@@ -2569,10 +2525,9 @@ def main(gui_arguments=None):
             utc_datetime = local_datetime
         else:
             if args["LMT"]: # If the time is Local Mean Time already
-                local_timezone = "LMT"
-            #     utc_datetime = convert_to_utc(local_datetime, local_timezone)
-            # else:
-            utc_datetime = convert_to_utc(local_datetime, local_timezone)
+                utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
+            else:
+                utc_datetime = convert_to_utc(local_datetime, local_timezone)
 
     if args["Transits"]:
         if args["Transits Timezone"]:
@@ -2650,7 +2605,7 @@ def main(gui_arguments=None):
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
     
-    weekday, ruling_day, ruling_hour = datetime_ruled_by(utc_datetime)
+    weekday, ruling_day, ruling_hour = datetime_ruled_by(local_datetime)
     if show_synastry:
         weekday_synastry, ruling_day_synastry, ruling_hour_synastry = datetime_ruled_by(synastry_utc_datetime)
 
@@ -2668,7 +2623,7 @@ def main(gui_arguments=None):
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])} (not stored, --name lacking)"
-    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime} {local_timezone}"
+    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else + f" {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to time of day missing)"
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC" 
     if notime:
