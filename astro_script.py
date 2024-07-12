@@ -385,9 +385,9 @@ def convert_to_utc(local_datetime, local_timezone):
     
     # Convert the timezone-aware datetime object to UTC
     utc_datetime = local_datetime.astimezone(pytz.utc)
-    delta_t_adjusted_utc = utc_datetime + timedelta(seconds=get_delta_t(utc_datetime))
+    # delta_t_adjusted_utc = utc_datetime + timedelta(seconds=get_delta_t(utc_datetime))
     
-    utc_datetime = delta_t_adjusted_utc.astimezone(pytz.utc)
+    # utc_datetime = delta_t_adjusted_utc.astimezone(pytz.utc)
 
     return utc_datetime
 
