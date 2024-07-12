@@ -854,8 +854,6 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 }
                 positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
 
-            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
-
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
         cusps, asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
@@ -869,7 +867,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         positions["South Node"] = {
             'longitude': (positions["North Node"]['longitude'] + 180) % 360,
             'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
-            'retrograde': '',
+            'retrograde': positions["North Node"]['retrograde'],
             'speed': 0.05
         }
 
