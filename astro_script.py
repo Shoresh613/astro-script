@@ -849,7 +849,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 positions["South Node"] = {
                     'longitude': south_node_longitude,
                     'zodiac_sign': longitude_to_zodiac(south_node_longitude, output).split()[0],
-                    'retrograde': '',  # South Node does not have retrograde motion
+                    'retrograde': 'R' if pos[3] < 0 else '',
                     'speed': pos[3]  #Same speed as North Node
                 }
                 positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
