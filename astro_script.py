@@ -2240,6 +2240,7 @@ def main(gui_arguments=None):
             "Hide Planetary Aspects": args["Hide Planetary Aspects"] if args["Hide Planetary Aspects"] else None,
             "Hide Fixed Star Aspects": args["Hide Fixed Star Aspects"] if args["Hide Fixed Star Aspects"] else None,
             "Hide Asteroid Aspects": args["Hide Asteroid Aspects"] if args["Hide Asteroid Aspects"] else None,
+            "Hide Decans": args["Hide Decans"] if args["Hide Decans"] else None,
             "Transits Timezone": args["Transits Timezone"] if args["Transits Timezone"] else None,
             "Transits Location": args["Transits Location"] if args["Transits Location"] else None,
             "Output": args["Output"] if args["Output"] else None
@@ -2247,7 +2248,9 @@ def main(gui_arguments=None):
         
         db_manager.store_defaults(defaults_to_store)
         print(f"Settings stored with the name '{args['Save Settings']}'.")
-        return f"Settings stored with the name '{args['Save Settings']}'."
+        
+        if not EPHE:
+            return f"Settings stored with the name '{args['Save Settings']}'."
 
     # Override using stored settings (default or specified name)
     stored_defaults = db_manager.read_defaults(args["Use Saved Settings"] if args["Use Saved Settings"] else "default", args["Guid"] if args["Guid"] else "")            
@@ -2639,7 +2642,9 @@ def main(gui_arguments=None):
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}" + " (not stored, --name lacking)" if not EPHE else ""
     string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else f" {local_timezone}"
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to exact time of day missing)"
-    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (Delta T adjusted)" 
+    degree_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
+    
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC ({degree_symbol}-T adjusted)" 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
