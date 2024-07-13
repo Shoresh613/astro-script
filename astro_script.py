@@ -2352,6 +2352,11 @@ def main(gui_arguments=None):
     # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] else def_all_stars
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
+    h_sys_changed = False
+    if h_sys not in ("A",'E','V') and abs(latitude) >= 66:
+        h_sys = def_house_system
+        h_sys_changed = f"House system {args['House System']} not supported at latitudes above |66°|. Reverting to Equal house system."
+
     if args["House System"] and args["House System"] not in HOUSE_SYSTEMS:
         print(f"Invalid house system. Available house systems are: {', '.join(HOUSE_SYSTEMS.keys())}")
         h_sys = def_house_system  # Reverting to default house system if invalid
@@ -2664,7 +2669,7 @@ def main(gui_arguments=None):
         else:
             string_synastry_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday_synastry} {bold}Day ruled by:{nobold} {ruling_day_synastry} {bold}Hour ruled by:{nobold} {ruling_hour_synastry}"
 
-    string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}"
+    string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}" + (h_sys_changed + f"{br}" if h_sys_changed else "")
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
         string_moon_phase_imprecise = f"\n\n{p}{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
