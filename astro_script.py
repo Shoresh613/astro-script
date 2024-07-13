@@ -2364,7 +2364,11 @@ def main(gui_arguments=None):
         local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
     
     def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
-    
+
+    ephemeris_restriction_date = datetime(675, 1, 4, 12, 0)  # Ephemeris data for Chirson is available from 675 AD
+    if local_datetime < ephemeris_restriction_date:
+        PLANETS.pop("Chiron")
+
     # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
     imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects
