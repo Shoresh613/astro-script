@@ -453,8 +453,8 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
     - ValueError: If the time component of the date is exactly midnight, which may result in less accurate calculations.
     """
     # Validate input date has a time component (convention to use 00:00:00 for unknown time )
-    if date.hour == 0 and date.minute == 0:
-        print("Warning: Time is not set. Calculations may be less accurate.")
+    if notime:
+        print("Warning: Time is not set. Houses cannot be reliably calculated.")
 
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
     houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
@@ -1324,10 +1324,9 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     # Define headers based on whether house positions should be included
     headers = ["Planet", "Zodiac", "Position", "Retrograde" if output_type in('html', 'return_html') else "R"]
-    if house_positions:
+    if house_positions and not notime:
         headers.append("House")
-    if not notime:
-        headers.append("Dignity")
+    headers.append("Dignity")
     if notime:
         headers.insert(3, "Off by")
     if not hide_decans:
@@ -1361,11 +1360,12 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
             row.insert(3, off_by)
+        else:
+            row.insert(3, '')
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
-        if not notime:
-            row.append(elevation_check[planet] + strength_check[planet] + degree_check[planet])
+        row.append(elevation_check[planet] + strength_check[planet] + degree_check[planet])
         if not hide_decans:
             row.append(decan_ruler)
 
