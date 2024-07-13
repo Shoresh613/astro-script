@@ -1921,6 +1921,33 @@ def load_event(name, guid=None):
         print(f"No entry found for {name}.")
         return False
 
+def parse_date(date_str):
+    # Split the date string to separate the year from the rest of the date
+    parts = date_str.split(" ")
+    date_part = parts[0]
+    time_part = parts[1] if len(parts) > 1 else "00:00"
+    
+    # Split the date part further to get the year, month, and day
+    date_components = date_part.split("-")
+    
+    # Normalize the year to four digits
+    year = date_components[0]
+    if len(year) == 1:
+        year = "000" + year
+    elif len(year) == 2:
+        year = "00" + year
+    elif len(year) == 3:
+        year = "0" + year
+    
+    normalized_date_str = f"{year}-{date_components[1]}-{date_components[2]} {time_part}"
+    
+    try:
+        local_datetime = datetime.strptime(normalized_date_str, "%Y-%m-%d %H:%M")
+    except ValueError:
+        raise ValueError(f"Invalid date format: {date_str}")
+    
+    return local_datetime
+
 def calculate_lmt_offset(longitude):
     # 4 minutes of time per degree of longitude
     delta = timedelta(minutes=(longitude * 4)) 
@@ -2169,7 +2196,7 @@ def main(gui_arguments=None):
 
     try:
         if args["Date"]:
-            local_datetime = datetime.strptime(args["Date"], "%Y-%m-%d %H:%M")
+            local_datetime = parse_date(args["Date"])
     except ValueError:
         print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
         local_datetime = None
@@ -2647,11 +2674,11 @@ def main(gui_arguments=None):
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}" + " (not stored, --name lacking)" if not EPHE else ""
-    string_local_time = f"{br}{bold}Local Time:{nobold} {local_datetime}" + " LMT" if args["LMT"] else f" {local_timezone}"
-    string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC (imprecise due to exact time of day missing)"
+    string_local_time = f"{br}{bold}Local Time:{nobold} {str(local_datetime).strip('0')}" + " LMT" if args["LMT"] else f" {local_timezone}"
+    string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).strip('0')} UTC (imprecise due to exact time of day missing)"
     degree_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
     
-    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {utc_datetime} UTC ({degree_symbol}-T adjusted)" 
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).strip('0')} UTC ({degree_symbol}-T adjusted)" 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
