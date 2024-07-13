@@ -2620,7 +2620,7 @@ def main(gui_arguments=None):
             transits_location = def_transits_location
         transits_latitude, transits_longitude = get_coordinates(transits_location)
         if transits_latitude is None or transits_longitude is None:
-            location_error_string = f"Transit location '{transits_location}' not found, please check the spelling" + " and internet connection." if not EPHE else ""
+            location_error_string = f"Transit location '{transits_location}' not found, please check the spelling" (+ " and internet connection." if not EPHE else "")
             print(location_error_string)
             return location_error_string
 
