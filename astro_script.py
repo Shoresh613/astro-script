@@ -18,6 +18,12 @@ from colorama import init, Fore, Style
 import copy
 import json
 
+try:
+    from timezonefinder import TimezoneFinder
+    tz_finder_installed = True
+except:
+    tz_finder_installed = False
+
 EPHE=os.getenv("PRODUCTION_EPHE")
 if EPHE:
     swe.set_ephe_path(EPHE) 
@@ -2360,9 +2366,23 @@ def main(gui_arguments=None):
     if not args["Location"] and not exists:
         latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
-    if not exists:
-        local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
-    
+
+    if not exists: 
+        if args["Timezone"]:
+            local_timezone = pytz.timezone(args["Timezone"])
+        elif tz_finder_installed:
+
+            tf = TimezoneFinder()
+            timezone_name = tf.timezone_at(lng=longitude, lat=latitude)
+
+            if timezone_name:
+                local_timezone = pytz.timezone(timezone_name)
+            else:
+                print("Could not determine the timezone automatically. Please specify the timezone using --timezone.")
+                local_timezone = def_tz
+        else:
+            local_timezone = def_tz
+        
     def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
 
     ephemeris_restriction_date = datetime(675, 1, 4, 12, 0)  # Ephemeris data for Chirson is available from 675 AD
