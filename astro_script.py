@@ -2202,7 +2202,6 @@ def main(gui_arguments=None):
     def_degree_in_minutes = False  # Default degree in minutes
     def_node = "true"  # Default node (true node is more accurate than mean node)
     def_all_stars = False  # Default only astrologically known stars
-    def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
 
@@ -2336,6 +2335,9 @@ def main(gui_arguments=None):
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
     if not exists:
         local_timezone = pytz.timezone(args["Timezone"]) if args["Timezone"] else def_tz
+    
+    def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
+    
     # If "off", the script will not show such aspects, if "warn" print a warning for uncertain aspects
     imprecise_aspects = args["Imprecise Aspects"] if args["Imprecise Aspects"] else def_imprecise_aspects
     # If True, the script will include minor aspects
