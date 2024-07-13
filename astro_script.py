@@ -854,6 +854,8 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 }
                 positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
 
+            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
         cusps, asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
@@ -867,7 +869,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
         positions["South Node"] = {
             'longitude': (positions["North Node"]['longitude'] + 180) % 360,
             'zodiac_sign': longitude_to_zodiac((positions["North Node"]['longitude'] + 180) % 360, output).split()[0],
-            'retrograde': positions["North Node"]['retrograde'],
+            'retrograde': '',
             'speed': 0.05
         }
 
@@ -1718,7 +1720,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     return to_return
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text", show_aspect_score=False) -> str:
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text", show_aspect_score=False, all_stars=False) -> str:
     """
     Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
@@ -1842,6 +1844,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             print('<div class="table-container">')
         print(table + f"{br}", end="")
     if output in ('return_html'):
+        if all_stars:
+            to_return += '<div id="allfixedstarsection"">'
         to_return += '<div class="table-container">'
     to_return += f"{br}{br}" + table
 
@@ -1863,6 +1867,9 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output in ('return_text', 'return_html'):
         to_return += f"{br}" + table + f"{br}" + aspect_count_text
         if output == 'return_html':
+            if all_stars:
+                to_return += '<div id="allfixedstarsection"">'
+
             to_return += '</div>'
 
     # House counts
@@ -2195,7 +2202,7 @@ def main(gui_arguments=None):
     def_degree_in_minutes = False  # Default degree in minutes
     def_node = "true"  # Default node (true node is more accurate than mean node)
     def_all_stars = False  # Default only astrologically known stars
-    def_house_system = HOUSE_SYSTEMS["Placidus"]  # Default house system
+    def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
 
@@ -2474,11 +2481,6 @@ def main(gui_arguments=None):
                     .table-container {
                         flex-direction: column;
                     }
-
-                    <!-- table {
-                         /* Ensures each table takes full width of the container on small screens */
-                         flex: 1 0 100%; 
-                     } -->
                 }
             </style>
         </head>
@@ -2708,7 +2710,7 @@ def main(gui_arguments=None):
             else:
                 print(f"{string_synastry_latitude}, {string_synastry_longitude}", end='')
             print(f"{string_synastry_local_time} ", end='')
-            print(f"{string_synastry_UTC_Time_imprecise}", end='') if notime else print(f"{string_synastry_UTC_Time}", end='')
+            print(f"{string_synastry_UTC_Time_imprecise}", end='') if (notime or synastry_notime) else print(f"{string_synastry_UTC_Time}", end='')
             print(f"{string_synastry_ruled_by}", end='')
         
     elif output_type in ('return_text', "return_html"):
@@ -2747,7 +2749,7 @@ def main(gui_arguments=None):
             else:
                 to_return += f"{string_synastry_latitude}, {string_synastry_longitude}"
             to_return += f"{string_synastry_local_time} "
-            to_return += f"{string_synastry_UTC_Time_imprecise}" if notime else f"{string_synastry_UTC_Time}"
+            to_return += f"{string_synastry_UTC_Time_imprecise}" if (notime or synastry_notime) else f"{string_synastry_UTC_Time}"
 
     if output_type in ("text", "html"):
         print(f"{string_house_system_moon_nodes}", end="")
@@ -2783,7 +2785,7 @@ def main(gui_arguments=None):
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
     if not hide_fixed_star_aspects and fixstar_aspects:
-        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type)
+        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type, all_stars)
     if not hide_asteroid_aspects:
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
@@ -2857,7 +2859,7 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}{br}" 
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(synastry_planet_positions), imprecise_aspects, 
-                                            minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], notime, output_type, 
+                                            minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], (notime or synastry_notime), output_type, 
                                             show_score)
 
     # Make SVG chart if output is html

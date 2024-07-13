@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--name", "Freja Viktoria", "--transits", "now"]
+            "args": ["--name", "TestNoTime", "--time_unknown",]
         }
     ]
 }
