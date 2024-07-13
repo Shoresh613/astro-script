@@ -435,6 +435,8 @@ def get_coordinates(location_name:str):
         except Exception as e:
             print(f"Error getting location {location_name}, check internet connection: {e}")
             return None, None
+        if location is None:
+            return None, None
         db_manager.save_location(location_name, location.latitude, location.longitude)
 
         return location.latitude, location.longitude
@@ -2356,8 +2358,9 @@ def main(gui_arguments=None):
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
         if latitude is None or longitude is None:
-            print("Location not found. Please check the spelling and internet connection.")
-            return "Location not found. Please check the spelling and internet connection."
+            location_error_string = f"Location not found, please check the spelling" + " and internet connection." if not EPHE else ""
+            print(location_error_string)
+            return location_error_string
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
@@ -2617,8 +2620,9 @@ def main(gui_arguments=None):
             transits_location = def_transits_location
         transits_latitude, transits_longitude = get_coordinates(transits_location)
         if transits_latitude is None or transits_longitude is None:
-            print(f"Transit location '{transits_location}' not found. Please check the spelling and internet connection.")
-            return f"Transit location '{transits_location}' not found. Please check the spelling and internet connection."
+            location_error_string = f"Transit location '{transits_location}' not found, please check the spelling" + " and internet connection." if not EPHE else ""
+            print(location_error_string)
+            return location_error_string
 
         if args["Transits"] == "now":
             transits_local_datetime = datetime.now()
