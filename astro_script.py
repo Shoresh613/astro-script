@@ -1693,10 +1693,16 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
-    if hard_count+soft_count > 0:
-        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+
+    if output in ("html", "return_html"):
+        div_string = '</div><div class="table-container">'
     else:
-        aspect_count_text = f"{p}No aspects found.{br}"
+        div_string = ""
+
+    if hard_count+soft_count > 0:
+        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+    else:
+        aspect_count_text = f"{div_string}{p}No aspects found.{br}"
     to_return += f"{br}" + table + aspect_count_text
 
     # Print counts of each aspect type
@@ -1861,10 +1867,16 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
     headers = ["Aspect Type", "Count", "Meaning"]
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
-    if hard_count+soft_count > 0:
-        aspect_count_text = f"{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+
+    if output in ("html", "return_html"):
+        div_string = '</div><div class="table-container">'
     else:
-        aspect_count_text = f"{p}No aspects found.{br}"
+        div_string = ''
+
+    if hard_count+soft_count > 0:
+        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+    else:
+        aspect_count_text = f"{div_string}{p}No aspects found.{br}"
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
@@ -2504,13 +2516,6 @@ def main(gui_arguments=None):
                     line-height: 1.6;
                 }
 
-                table {
-                    width: auto;
-                    margin-top: 20px;
-                    border-collapse: collapse;
-                    display: block;
-                }
-
                 th, td {
                     padding: 8px 10px;
                     text-align: left;
@@ -2537,10 +2542,14 @@ def main(gui_arguments=None):
                     margin-bottom: 20px; /* Separation between different blocks */
                 }
                 table {
+                    width: auto;
+                    margin-top: 20px;
+                    border-collapse: collapse;
+                    display: block;
                     flex: 1 1 300px; /* Flex-grow, flex-shrink, and base width */
                     margin: 10px; /* Adds some space between tables */
                     max-width: 100%; /* Ensures table does not overflow its container */
-                    overflow-x: auto; /* Allows horizontal scrolling if needed */
+                    // overflow-x: auto; /* Allows horizontal scrolling if needed */
                     display: block;
                 }
                 .stack-vertical {
