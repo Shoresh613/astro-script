@@ -2718,9 +2718,9 @@ def main(gui_arguments=None):
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}" + " (not stored, --name lacking)" if not EPHE else ""
     string_local_time = (f"{br}{bold}Local Time:{nobold} {str(local_datetime).lstrip('0')}" + " LMT") if args["LMT"] else (f"{br}{bold}Local Time:{nobold} {str(local_datetime).strip('0')} {local_timezone}")
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC (imprecise due to exact time of day missing)"
-    degree_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
+    delta_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
     
-    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC ({degree_symbol}-T adjusted)" 
+    string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
