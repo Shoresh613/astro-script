@@ -2289,7 +2289,9 @@ def main(gui_arguments=None):
         db_manager.store_defaults(defaults_to_store)
         print(f"Settings stored with the name '{args['Save Settings']}'.")
         
-        if not EPHE:
+        if EPHE:
+            return f"Defaults saved."
+        else:
             return f"Settings stored with the name '{args['Save Settings']}'."
 
     # Override using stored settings (default or specified name)
@@ -2630,7 +2632,7 @@ def main(gui_arguments=None):
             transits_location = def_transits_location
         transits_latitude, transits_longitude = get_coordinates(transits_location)
         if transits_latitude is None or transits_longitude is None:
-            location_error_string = f"Transit location '{transits_location}' not found, please check the spelling" (+ " and internet connection." if not EPHE else "")
+            location_error_string = f"Transit location '{transits_location}' not found, please check the spelling and internet connection."
             print(location_error_string)
             return location_error_string
 
@@ -2640,11 +2642,15 @@ def main(gui_arguments=None):
             show_transits = True
         else:
             try:
-                transits_local_datetime = datetime.strptime(args["Transits"], "%Y-%m-%d %H:%M")
+                if EPHE:
+                    transits_local_datetime = args["Transits"]
+                else:
+                    transits_local_datetime = datetime.strptime(args["Transits"], "%Y-%m-%d %H:%M")
             except ValueError:
                 print("Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC).", file=sys.stderr)
                 return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC)."
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_transits_timezone)
+            
             show_transits = True 
         # only show transits, not the rest
         hide_asteroid_aspects = True
