@@ -2030,7 +2030,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
-        "Brief Aspects": show_brief_aspects,
+        "Show Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
         "Arabic Parts": show_arabic_parts,
         "Orb": orb,
@@ -2138,7 +2138,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
         "Minor Aspects": args.minor_aspects,
-        "Brief Aspects": args.brief_aspects,
+        "Show Brief Aspects": args.brief_aspects,
         "Show Score": args.score,
         "Arabic Parts": args.arabic_parts,
         "Orb": args.orb,
@@ -2257,7 +2257,7 @@ def main(gui_arguments=None):
             "LMT": args["LMT"] if args["LMT"] else None,
             "Imprecise Aspects": args["Imprecise Aspects"] if args["Imprecise Aspects"] else None,
             "Minor Aspects": args["Minor Aspects"] if args["Minor Aspects"] else None,
-            "Brief Aspects": args["Brief Aspects"] if args["Brief Aspects"] else None,
+            "Show Brief Aspects": args["Show Brief Aspects"] if args["Show Brief Aspects"] else None,
             "Show Score": args["Show Score"] if args["Show Score"] else None,
             "Orb": args["Orb"] if args["Orb"] else None,
             "Orb Major": args["Orb Major"] if args["Orb Major"] else None,
@@ -2306,8 +2306,8 @@ def main(gui_arguments=None):
             args["Imprecise Aspects"] = stored_defaults["Imprecise Aspects"]
         if stored_defaults["Minor Aspects"]:
             args["Minor Aspects"] = stored_defaults["Minor Aspects"]
-        if stored_defaults["Brief Aspects"]:
-            args["Brief Aspects"] = stored_defaults["Brief Aspects"]
+        if stored_defaults["Show Brief Aspects"]:
+            args["Show Brief Aspects"] = stored_defaults["Show Brief Aspects"]
         if stored_defaults["Show Score"]:
             args["Show Score"] = stored_defaults["Show Score"]
         if stored_defaults["Orb"]:
@@ -2429,7 +2429,7 @@ def main(gui_arguments=None):
     show_house_cusps = True if args["House Cusps"] else def_house_cusps
     
     show_brief_aspects = def_show_brief_aspects # code follows
-    if args["Brief Aspects"]:
+    if args["Show Brief Aspects"]:
         show_brief_aspects = True
     show_score = def_show_score
     if args["Show Score"]:
