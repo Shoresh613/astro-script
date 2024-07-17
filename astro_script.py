@@ -1369,8 +1369,6 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
             row.insert(3, off_by)
-        else:
-            row.insert(3, '')
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
@@ -1773,13 +1771,13 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     degree_symbol = "" if (os.name == 'nt' and output=='html') else "°"
 
     if output in ('text','html'):
-        print(f"{p}{h3}{bold}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
+        print(f"{p}{bold}{h3}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
         print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
     else:
-        to_return += f"{p}{h3}Fixed Star Aspects ({orb}° orb){nobold}"
+        to_return += f"{p}{bold}{h3}Fixed Star Aspects ({orb}° orb){nobold}"
         if minor_aspects:
             to_return += f"{bold} including Minor Aspects{nobold}"
         if notime:
@@ -2032,9 +2030,9 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
         "Minor Aspects": minor_aspects,
-        "Show Brief Aspects": show_brief_aspects,
+        "Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
-        "Show Arabic Parts": show_arabic_parts,
+        "Arabic Parts": show_arabic_parts,
         "Orb": orb,
         "Orb Major": orb_major,
         "Orb Minor": orb_minor,
@@ -2089,7 +2087,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
     parser.add_argument('--minor_aspects', action='store_true', help='Show minor aspects.')
-    parser.add_argument('--brief_aspects', action='store_true', help='Show brief aspects for transits, i.e. Asc, MC.')
+    parser.add_argument('--brief_aspects', action='store_true', help='Show brief aspects for transits, i.e. Asc, MC, DC, Desc.')
     parser.add_argument('--score', action='store_true', help='Show ease of individual aspects (0 not easy, 50 neutral, 100 easy).')
     parser.add_argument('--arabic_parts', action='store_true', help='Show Arabic parts.')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. Overrides all orb settings if specified. Use for blanket orb setting.', required=False)
@@ -2140,9 +2138,9 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
         "Minor Aspects": args.minor_aspects,
-        "Show Brief Aspects": args.brief_aspects,
+        "Brief Aspects": args.brief_aspects,
         "Show Score": args.score,
-        "Show Arabic Parts": args.arabic_parts,
+        "Arabic Parts": args.arabic_parts,
         "Orb": args.orb,
         "Orb Major": args.orb_major,
         "Orb Minor": args.orb_minor,
@@ -2259,7 +2257,7 @@ def main(gui_arguments=None):
             "LMT": args["LMT"] if args["LMT"] else None,
             "Imprecise Aspects": args["Imprecise Aspects"] if args["Imprecise Aspects"] else None,
             "Minor Aspects": args["Minor Aspects"] if args["Minor Aspects"] else None,
-            "Show Brief Aspects": args["Show Brief Aspects"] if args["Show Brief Aspects"] else None,
+            "Brief Aspects": args["Brief Aspects"] if args["Brief Aspects"] else None,
             "Show Score": args["Show Score"] if args["Show Score"] else None,
             "Orb": args["Orb"] if args["Orb"] else None,
             "Orb Major": args["Orb Major"] if args["Orb Major"] else None,
@@ -2272,7 +2270,7 @@ def main(gui_arguments=None):
             "Orb Synastry Slow": args["Orb Synastry Slow"] if args["Orb Synastry Slow"] else None,
             "Degree in Minutes": args["Degree in Minutes"] if args["Degree in Minutes"] else None,
             "Node": args["Node"] if args["Node"] else None,
-            "Show Arabic Parts": args["Show Arabic Parts"] if args["Show Arabic Parts"] else None,
+            "Arabic Parts": args["Arabic Parts"] if args["Arabic Parts"] else None,
             "All Stars": args["All Stars"] if args["All Stars"] else None,
             "House System": args["House System"] if args["House System"] else None,
             "House Cusps": args["House Cusps"] if args["House Cusps"] else None,
@@ -2308,8 +2306,8 @@ def main(gui_arguments=None):
             args["Imprecise Aspects"] = stored_defaults["Imprecise Aspects"]
         if stored_defaults["Minor Aspects"]:
             args["Minor Aspects"] = stored_defaults["Minor Aspects"]
-        if stored_defaults["Show Brief Aspects"]:
-            args["Show Brief Aspects"] = stored_defaults["Show Brief Aspects"]
+        if stored_defaults["Brief Aspects"]:
+            args["Brief Aspects"] = stored_defaults["Brief Aspects"]
         if stored_defaults["Show Score"]:
             args["Show Score"] = stored_defaults["Show Score"]
         if stored_defaults["Orb"]:
@@ -2332,8 +2330,8 @@ def main(gui_arguments=None):
             args["Orb Synastry Slow"] = stored_defaults["Orb Synastry Slow"]
         if stored_defaults["Degree in Minutes"]:
             args["Degree in Minutes"] = stored_defaults["Degree in Minutes"]
-        if stored_defaults["Show Arabic Parts"]:
-            args["Show Arabic Parts"] = stored_defaults["Show Arabic Parts"]
+        if stored_defaults["Arabic Parts"]:
+            args["Arabic Parts"] = stored_defaults["Arabic Parts"]
         if stored_defaults["Node"]:
             args["Node"] = stored_defaults["Node"]
         if stored_defaults["All Stars"]:
@@ -2431,7 +2429,7 @@ def main(gui_arguments=None):
     show_house_cusps = True if args["House Cusps"] else def_house_cusps
     
     show_brief_aspects = def_show_brief_aspects # code follows
-    if args["Show Brief Aspects"]:
+    if args["Brief Aspects"]:
         show_brief_aspects = True
     show_score = def_show_score
     if args["Show Score"]:
@@ -2601,7 +2599,7 @@ def main(gui_arguments=None):
     if args["Hide Asteroid Aspects"]:
         if args["Hide Asteroid Aspects"]: hide_asteroid_aspects = True 
 
-    if args["Show Arabic Parts"]:
+    if args["Arabic Parts"]:
         show_arabic_parts = True
     else:
         show_arabic_parts = False
@@ -2706,7 +2704,7 @@ def main(gui_arguments=None):
 
 
     string_heading = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
-    string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}{br}"
+    string_planets_heading = f"{p}{h3}{bold}Planetary Positions{nobold}{h3_}"
     string_name = f"{p}{bold}Name:{nobold} {name}".rstrip(", ")
     string_place = f"{br}{bold}Place:{nobold} {place}"
     string_latitude_in_minutes = f"{br}{bold}Latitude:{nobold} {coord_in_minutes(latitude, output_type)}"
@@ -2845,7 +2843,7 @@ def main(gui_arguments=None):
 
     if not hide_planetary_positions:
         if output_type in ("text", "html"):
-            print(f"{string_planets_heading}{nobold}{h3_}", end="")
+            print(f"{string_planets_heading}{nobold}{h3_}{br}", end="")
         else:
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"])
