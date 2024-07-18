@@ -1564,7 +1564,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         to_return += f"{h3_}"
 
     aspect_type_counts = {}
-    hard_count = 0 
+    hard_count = 0
     soft_count = 0
     hard_count_score = 0
     soft_count_score = 0
@@ -1583,7 +1583,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if degree_in_minutes:
             angle_with_degree = f"{aspect_details['angle_diff_in_minutes']}".strip("-")
         else:
-            if type == "Transit":
+            if type in ("Transit", "Star Transit", "Asteroids Transit"):
                 angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}"
             else:
                 angle_with_degree = f"{aspect_details['angle_diff']:.2f}{degree_symbol}".strip("-")
@@ -1642,7 +1642,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             row.append(calculate_aspect_score(aspect_details['aspect_name'], aspect_details['angle_diff']))
 
         planetary_aspects_table_data.append(row)
-    
+
         # Add or update the count of the aspect type
         aspect_name = aspect_details['aspect_name']
         if aspect_name in aspect_type_counts:
