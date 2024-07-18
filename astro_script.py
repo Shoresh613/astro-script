@@ -722,7 +722,6 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
     Parameters:
     - planet_positions (dict): Dictionary with each celestial body as keys, containing their
       ecliptic longitude, zodiac sign, retrograde status, and speed.
-    - planet1 (str): The first planet involved in the transit.
     - planet2 (str): The second planet involved in the transit.
     - degrees_to_travel (float): The number of degrees representing the orb of the aspect.
     
@@ -735,7 +734,7 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
     return_string=""
 
     if days > 5:
-        days = int(round(days)) 
+        days = int(round(days))
 
     # Return formatted duration
     if days >= 1 and days < 2:
