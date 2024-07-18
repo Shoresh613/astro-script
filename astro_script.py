@@ -1695,7 +1695,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
 
     if output in ("html", "return_html"):
-        div_string = '</div><div class="table-container">'
+        div_string = '</div><div style="text-align: left; padding-bottom: 20px; padding-left: 20px;">'
     else:
         div_string = ""
 
@@ -1869,38 +1869,37 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     table = tabulate(aspect_data, headers=headers, tablefmt=table_format)
 
     if output in ("html", "return_html"):
-        div_string = '</div><div class="table-container">'
+        div_string = '</div><div style="text-align: left";>'
     else:
         div_string = ''
 
     if hard_count+soft_count > 0:
-        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+f'{br}' 
+        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.') 
     else:
-        aspect_count_text = f"{div_string}{p}No aspects found.{br}"
+        aspect_count_text = f"{div_string}{p}No aspects found."
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
-        print(f"{p}{table}{br}{aspect_count_text}", end="")
+        print(f"{p}{table}{br}{aspect_count_text}")
         if output == 'html':
             print('</div>')
     if output in ('return_text', 'return_html'):
         to_return += f"{br}" + table + f"{br}" + aspect_count_text
-        if output == 'return_html':
-            if all_stars:
-                to_return += '<div id="allfixedstarsection"">'
-
-            to_return += '</div>'
 
     # House counts
     if not notime:
         if output == 'html':
-            print('<div style="text-align: left;">')
             to_return += house_count(house_counts, output, bold, nobold, br)
-            print('</div>')
         elif output == 'return_html':
-            to_return += '<div style="text-align: left;">'
             to_return += house_count(house_counts, output, bold, nobold, br)
-            print('</div>')
+        else:
+            print(house_count(house_counts, output, bold, nobold, br))
+
+    if output == 'return_html':
+        if all_stars:
+            to_return += '</div>'
+
+    to_return += '</div>'
 
     return to_return
 
