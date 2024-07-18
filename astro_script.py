@@ -442,6 +442,30 @@ def get_coordinates(location_name:str):
 
         return location.latitude, location.longitude
 
+
+def calculate_individual_house_position(date, latitude, longitude, planet_longitude, h_sys='P'):
+    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
+    houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
+
+    house_num = 1  # Begin as house 1 in case nothing else matches
+    # Check for each house from 1 to 11 (12 handled separately)
+    for i, cusp in enumerate(houses):
+        next_cusp = houses[(i + 1) % 12]
+        
+        # If at last house and next cusp is less than the current because of wrap-around
+        if next_cusp < cusp:
+            next_cusp += 360
+
+        if cusp <= planet_longitude < next_cusp:
+            house_num = i + 1
+            break
+        elif i == 11 and (planet_longitude >= cusp or planet_longitude < houses[0]):
+            house_num = 12  # Assign to house 12 if nothing else matches
+            break
+
+    return house_num
+
+
 def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False, h_sys='P'):
     """
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
@@ -834,6 +858,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                     'zodiac_sign': longitude_to_zodiac(star_long, output).split()[0],
                     'retrograde': '',
                     'speed': 0,  # Speed of the fix star in degrees per day
+                    'house': calculate_individual_house_position(date, latitude, longitude, star_long, h_sys)
                 }
 
                 positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
@@ -848,6 +873,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
                 'retrograde': 'R' if pos[3] < 0 else '',
                 'speed': pos[3],  # Speed of the planet in degrees per day
+                'house': calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
             }
 
             positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
@@ -1499,11 +1525,11 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     planetary_aspects_table_data = []
     if notime:
         if type == "Transit":
-            headers = ["Natal Planet", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Planet", "Aspect", "Transit Planet","Degree", "Exact", "Rem. Duration"]
         if type == "Star Transit":
-            headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Star", "Aspect", "Transit Planet","Degree", "Exact", "Rem. Duration"]
         if type == "Asteroids Transit":
-            headers = ["Natal Asteroid", "Aspect", "Transit Planet","Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Asteroid", "Aspect", "Transit Planet","Degree", "Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, "Aspect", p2_name, "Degree", "Off by"]
         elif type == "Asteroids":
@@ -1512,11 +1538,11 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             headers = ["Planet", "Aspect", "Planet", "Degree", "Off by"]
     else:
         if type == "Transit":
-            headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Planet", house_called, "Aspect", "Transit Planet", house_called,"Degree", "Exact", "Rem. Duration"]
         if type == "Star Transit":
-            headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Star", house_called, "Aspect", "Transit Planet", house_called,"Degree", "Exact", "Rem. Duration"]
         if type == "Asteroids Transit":
-            headers = ["Natal Asteroid", house_called, "Aspect", "Transit Planet", house_called,"Degree", "From Exact", "Rem. Duration"]
+            headers = ["Natal Asteroid", house_called, "Aspect", "Transit Planet", house_called,"Degree", "Exact", "Rem. Duration"]
         elif type == "Synastry":
             headers = [p1_name, house_called, "Aspect", p2_name, house_called, "Degree", "Off by"]
         elif type == "Asteroids":
@@ -1615,11 +1641,11 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                 elif type == "Synastry" or type == "Asteroids":
                     row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], transit_planet_positions[planets[1]]["house"], angle_with_degree]
                 elif type == "Star Transit":
-                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                    row = [planets[0], star_positions[planets[0]]['house'], aspect_details['aspect_name'], planets[1], transit_planet_positions[planets[1]]["house"], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(copy.deepcopy(planet_positions), planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(copy.deepcopy(planet_positions), planets[1], orb-aspect_details['angle_diff'])]
                 elif type == "Asteroids Transit":
-                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree,
+                    row = [planets[0], star_positions[planets[0]]['house'], aspect_details['aspect_name'], planets[1], transit_planet_positions[planets[1]]["house"], angle_with_degree,
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
                 else:
