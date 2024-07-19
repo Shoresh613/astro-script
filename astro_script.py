@@ -100,7 +100,7 @@ PLANETS = {
 }
 
 ASTEROIDS = {
-    'Ceres': swe.CERES, 
+    'Ceres': swe.CERES,
     'Pholus': swe.PHOLUS,
     'Pallas': swe.PALLAS,
     'Juno': swe.JUNO,
@@ -1712,7 +1712,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     # Convert aspect type dictionary to a list of tuples
     aspect_data = list(aspect_type_counts.items())
     aspect_data.sort(key=lambda x: x[1], reverse=True) # Sort by degree of aspect
-    
+
     # Convert aspect_data to a list of lists
     aspect_data = [[aspect_data[i][0], aspect_data[i][1], list(all_aspects[aspect[0]].values())[2]] for i, aspect in enumerate(aspect_data)]
 
@@ -2730,7 +2730,7 @@ def main(gui_arguments=None):
     else:
         moon_phase_name, illumination = moon_phase(utc_datetime)
         illumination = f"{illumination:.2f}%"
-    
+
     weekday, ruling_day, ruling_hour = datetime_ruled_by(local_datetime)
     if show_synastry:
         weekday_synastry, ruling_day_synastry, ruling_hour_synastry = datetime_ruled_by(synastry_utc_datetime)
@@ -2752,7 +2752,7 @@ def main(gui_arguments=None):
     string_local_time = (f"{br}{bold}Local Time:{nobold} {str(local_datetime).lstrip('0')}" + " LMT") if args["LMT"] else (f"{br}{bold}Local Time:{nobold} {str(local_datetime).strip('0')} {local_timezone}")
     string_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC (imprecise due to exact time of day missing)"
     delta_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
-    
+
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
@@ -2794,7 +2794,7 @@ def main(gui_arguments=None):
             print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
         else:
             print(f"{string_latitude}, {string_longitude}", end='')
-        
+
         if args["Davison"]:
             print(f"{string_davison}", end='')
 
@@ -2821,7 +2821,7 @@ def main(gui_arguments=None):
             print(f"{string_synastry_local_time} ", end='')
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if (notime or synastry_notime) else print(f"{string_synastry_UTC_Time}", end='')
             print(f"{string_synastry_ruled_by}", end='')
-        
+
     elif output_type in ('return_text', "return_html"):
         if exists or name:
             to_return += f"{string_name}"
@@ -2831,8 +2831,6 @@ def main(gui_arguments=None):
             to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
             to_return += f"{string_latitude}, {string_longitude}"
-        if place == "Davison chart" and not args["Davison"]:
-            to_return += f"{string_davison_noname}"
         if args["Davison"]:
             to_return += f"{string_davison}"
 
