@@ -2117,7 +2117,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--longitude', type=float, help='Longitude of the location in degrees, e.g. 11.96. (Default: 11.9624)', required=False)
     parser.add_argument('--timezone', help='Timezone of the location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
-    parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location.')
+    parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location, unless TimezoneFinder is installed.')
     parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
