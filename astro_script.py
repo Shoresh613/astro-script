@@ -286,7 +286,9 @@ def get_davison_data(names, guid=None):
 def assess_planet_strength(planet_signs):
     strength_status = {}
     for planet, sign in planet_signs.items():
-        if planet in EXALTATION and sign == EXALTATION[planet]:
+        if planet in RULERSHIP and sign == RULERSHIP[planet]:
+            strength_status[planet] = ' Domicile'
+        elif planet in EXALTATION and sign == EXALTATION[planet]:
             strength_status[planet] = ' Exalted (Strong)'
         elif planet in DETRIMENT and sign == DETRIMENT[planet]:
             strength_status[planet] = ' In Detriment (Weak)'
