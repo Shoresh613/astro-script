@@ -1856,7 +1856,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     star_aspects_table_data = []
 
     aspect_type_counts = {}
-    hard_count = 0 
+    hard_count = 0
     soft_count = 0
     hard_count_score = 0
     soft_count_score = 0
@@ -1876,7 +1876,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         row = [planet, aspect_name, star_name, angle]
         if house_positions and not notime:
             row.insert(1, house_positions[planet].get('house', 'Unknown')) #Planet house
-            row.insert(3, house) #Star house
+            row.insert(4, house) #Star house
             house_counts[house] += 1
             house_counts[house_positions[planet].get('house', 'Unknown')] += 1
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
@@ -1903,10 +1903,10 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if house_positions and not notime:
         if output in ('html', 'return_html'):
             headers.insert(1,"House")
-            headers.insert(3,"House")
+            headers.insert(4,"House")
         else:
             headers.insert(1,"H")
-            headers.insert(3,"H")
+            headers.insert(4,"H")
 
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
