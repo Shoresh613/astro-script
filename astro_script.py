@@ -1285,9 +1285,8 @@ def house_count(house_counts, output, bold, nobold, br):
                 house_count_string += f"{bold}{house}:{nobold} {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
-        else:
-            house_count_string=''
-        house_count_string = house_count_string[:-2] # Remove the last comma and space
+
+    house_count_string = house_count_string[:-2] # Remove the last comma and space
     return house_count_string
 
 # Arabic Parts
@@ -1332,7 +1331,7 @@ def get_sabian_symbol(planet_positions, planet: str):
     if ephe:
         sabian_symbols = json.load(open(f"{ephe}/sabian.json"))
     else:
-        if (os.name == 'nt'):         
+        if (os.name == 'nt'):
             sabian_symbols = json.load(open(".\ephe\sabian.json"))
         else:
             sabian_symbols = json.load(open("./ephe/sabian.json"))
@@ -1359,7 +1358,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
       This parameter might not be directly used in this function but is included for consistency with the 
       overall structure of the astrological calculations.
     """
-    
+
     sign_counts = {sign: {'count': 0, 'planets':[]} for sign in ZODIAC_ELEMENTS.keys()}
     modality_counts = {modality: {'count': 0, 'planets':[]} for modality in ZODIAC_MODALITIES.keys()}
     element_counts = {'Fire': 0, 'Earth': 0, 'Air': 0, 'Water': 0}
@@ -1461,7 +1460,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     ## House counts
     if not notime:
         if output_type in ('html', 'return_html'):
-            to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
+            to_return += f"<p>" + house_count(planet_house_counts, output_type, bold, nobold, br)
         else:
             print()
             print(house_count(planet_house_counts, output_type, bold, nobold, br))
