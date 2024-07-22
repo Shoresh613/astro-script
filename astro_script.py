@@ -1682,7 +1682,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
                 else:
                     row = [planets[0], planet_positions[planets[0]]["house"], aspect_details['aspect_name'], planets[1], planet_positions[planets[1]]["house"], angle_with_degree]
-                if house_counts and not notime and not type == "Natal":
+                if house_counts and not notime: # and not type == "Natal":
                     if star_positions:
                         house_counts[star_positions[planets[0]]["house"]] += 1
                     else:
