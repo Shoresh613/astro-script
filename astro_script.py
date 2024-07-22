@@ -1276,7 +1276,7 @@ def moon_phase(date):
 def house_count(house_counts, output, bold, nobold, br):
     house_count_string = f'{bold}House count{nobold}  '
     sorted_star_house_counts = sorted(house_counts.items(), key=lambda item: item[1], reverse=True)
-    
+
     for house, count in sorted_star_house_counts:
         if count > 0:
             if output == 'text':
@@ -1285,8 +1285,10 @@ def house_count(house_counts, output, bold, nobold, br):
                 house_count_string += f"{bold}{house}:{nobold} {count}, "
             else:
                 house_count_string += f"{house}: {count}, "
-    house_count_string = house_count_string[:-2] # Remove the last comma and space
-    return f"{br}" + house_count_string
+        else:
+            house_count_string=''
+        house_count_string = house_count_string[:-2] # Remove the last comma and space
+    return house_count_string
 
 # Arabic Parts
 def calculate_part_of_fortune(sun_pos, moon_pos, asc_pos, is_daytime):
@@ -1397,7 +1399,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         headers.append("Decan ruler" if output_type in('html', 'return_html') else "Decan")
 
     planet_signs = {}
-    
+
     for planet, info in planet_positions.items():
         if notime and (planet in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
@@ -1458,10 +1460,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     ## House counts
     if not notime:
-        print()
         if output_type in ('html', 'return_html'):
             to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
         else:
+            print()
             print(house_count(planet_house_counts, output_type, bold, nobold, br))
 
     # Print zodiac sign, element and modality counts
@@ -1759,17 +1761,16 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         div_string = ""
 
     if hard_count+soft_count > 0:
-        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')+'\n'
+        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')
     else:
-        aspect_count_text = f"{div_string}{p}No aspects found.{br}"
+        aspect_count_text = f"{div_string}{p}No aspects found."
     to_return += f"{br}" + table + aspect_count_text
 
     # Print counts of each aspect type
     if output in ('text','html'):
-        print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
+        print(f'{br}'+table + f'{p}' + aspect_count_text)
 
     # House counts only if asteroids or synastry and time specified and more aspects than one, in which case counting is unnecessary
-    # if type in ("Asteroids", 'Synastry'):
     if not notime and len(aspects)>1:
         if output in ('html', 'return_html'):
             to_return += house_count(house_counts, output, bold, nobold, br)
@@ -1943,7 +1944,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
-        print(f"{p}{table}{br}{aspect_count_text}", end="")
+        print(f"{p}{table}{br}{aspect_count_text}")
         if output == 'html':
             print('</div>')
     if output in ('return_text', 'return_html'):
