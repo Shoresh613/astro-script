@@ -837,7 +837,7 @@ def get_decan_ruler(longitude, zodiac_sign):
     decan_index = (int(longitude) // 10) % 3
     return decan_rulers[zodiac_sign][decan_index]
 
-def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False):
+def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -877,7 +877,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
     elif mode == "asteroids":
         bodies = ASTEROIDS
     elif mode == "stars":
-        fixed_stars = read_fixed_stars(all_stars=False) #make it use all-stars
+        fixed_stars = read_fixed_stars(all_stars=all_stars)
 
         for star_name in fixed_stars.keys():
             try:
@@ -1118,14 +1118,14 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
     Parameters:
     - natal_positions: A dictionary with natal celestial bodies as keys, each mapped to 
       a dictionary containing 'longitude' and 'retrograde' status.
-    - transit_positions: A dictionary with transit celestial bodies as keys, each mapped to 
+    - second_positions: A dictionary with another set of celestial bodies as keys, each mapped to 
       a dictionary containing 'longitude' and 'retrograde' status.
     - orb: The maximum orb (in degrees) to consider an aspect valid.
     - aspect_types: A dictionary of aspect names and their exact angles, possibly 
       including minor aspects.
 
     Returns:
-    - A list of tuples, each representing an aspect found between a natal and a transit celestial body.
+    - A list of tuples, each representing an aspect found between a natal and a second celestial body.
       Each tuple includes the names of the bodies, the aspect name, and the exact angle.
     """
     excluded = [ "Ascendant", "Midheaven", 'IC', 'DC' ]
@@ -1158,6 +1158,8 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
                         orb = orbs['Synastry Slow']
                 if type == 'asteroids':
                     orb = orbs['Asteroid']
+                if type == 'stars':
+                    orb = orbs['Fixed Star']
                 
                 if abs(angle_diff - aspect_angle) <= orb:
                     # Check if the aspect is imprecise based on the movement per day of the planets involved
@@ -1866,8 +1868,8 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
             angle = f"{angle:.2f}{degree_symbol}".strip("-")
         row = [planet, aspect_name, star_name, angle]
         if house_positions and not notime:
-            row.append(house)
-            row.append(house_positions[planet].get('house', 'Unknown'))
+            row.insert(1, house_positions[planet].get('house', 'Unknown')) #Planet house
+            row.insert(3, house) #Star house
             house_counts[house] += 1
             house_counts[house_positions[planet].get('house', 'Unknown')] += 1
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
@@ -1893,11 +1895,11 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     if house_positions and not notime:
         if output in ('html', 'return_html'):
-            headers.append("Planet in House")
-            headers.append("Star in House")
+            headers.insert(1,"House")
+            headers.insert(3,"House")
         else:
-            headers.append("P House")
-            headers.append("S House")
+            headers.insert(1,"H")
+            headers.insert(3,"H")
 
     if planet in OFF_BY.keys() and OFF_BY[planet] > orb and notime:
         headers.append("Off by")
@@ -2883,7 +2885,8 @@ def main(gui_arguments=None):
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
     if not hide_fixed_star_aspects and fixstar_aspects:
-        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, house_positions, read_fixed_stars(all_stars), output_type, all_stars)
+        house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
     if not hide_asteroid_aspects:
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
@@ -2934,7 +2937,7 @@ def main(gui_arguments=None):
 
         star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars")
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
-                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
+                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transit', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
