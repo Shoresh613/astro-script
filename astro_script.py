@@ -132,19 +132,29 @@ ZODIAC_DEGREES = {
 }
 
 # Dictionary definitions for planet dignity
-EXALTATION = {
-    'Sun': 'Aries', 'Moon': 'Taurus', 'Mercury': 'Virgo', 'Venus': 'Pisces',
-    'Mars': 'Capricorn', 'Jupiter': 'Cancer', 'Saturn': 'Libra'
-}
-DETRIMENT = {
-    'Sun': 'Libra', 'Moon': 'Scorpio', 'Mercury': 'Pisces', 'Venus': 'Virgo',
-    'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
-}
-FALL = {
-    'Sun': 'Libra', 'Moon': 'Scorpio', 'Mercury': 'Pisces', 'Venus': 'Virgo',
-    'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries'
+RULERSHIP = {
+    'Sun': 'Leo', 'Moon': 'Cancer', 'Mercury': ['Gemini', 'Virgo'], 'Venus': ['Taurus', 'Libra'],
+    'Mars': ['Aries', 'Scorpio'], 'Jupiter': ['Sagittarius', 'Pisces'], 'Saturn': ['Capricorn', 'Aquarius'],
+    'Uranus': 'Aquarius', 'Neptune': 'Pisces', 'Pluto': 'Scorpio'
 }
 
+EXALTATION = {
+    'Sun': 'Aries', 'Moon': 'Taurus', 'Mercury': 'Virgo', 'Venus': 'Pisces',
+    'Mars': 'Capricorn', 'Jupiter': 'Cancer', 'Saturn': 'Libra',
+    'Uranus': 'Scorpio', 'Neptune': 'Leo', 'Pluto': 'Aquarius'
+}
+
+DETRIMENT = {
+    'Sun': 'Aquarius', 'Moon': 'Capricorn', 'Mercury': ['Sagittarius', 'Pisces'], 'Venus': ['Aries', 'Scorpio'],
+    'Mars': ['Taurus', 'Libra'], 'Jupiter': ['Gemini', 'Virgo'], 'Saturn': ['Cancer', 'Leo'],
+    'Uranus': 'Leo', 'Neptune': 'Virgo', 'Pluto': 'Taurus'
+}
+
+FALL = {
+    'Sun': 'Libra', 'Moon': 'Scorpio', 'Mercury': 'Pisces', 'Venus': 'Virgo',
+    'Mars': 'Cancer', 'Jupiter': 'Capricorn', 'Saturn': 'Aries',
+    'Uranus': 'Taurus', 'Neptune': 'Aquarius', 'Pluto': 'Leo'
+}
 # Global formatting variables set in main depending on output type
 bold = "\033[1m"
 nobold = "\033[0m"
@@ -644,7 +654,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
         aspect_types = {'Conjunction': 0, 'Opposition': 180, 'Trine': 120, 'Square': 90, 'Sextile': 60}
 
     fixed_stars = read_fixed_stars(all_stars)
-    jd = swe.julday(date.year, date.month, date.day, date.hour)  # Assumes date includes time information
+    jd = swe.julday(date.year, date.month, date.day, date.hour)
     aspects = []
 
     for star_name in fixed_stars.keys():
@@ -655,7 +665,7 @@ def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, as
             # Check for each house from 1 to 11 (12 handled separately)
             for i, cusp in enumerate(houses):
                 next_cusp = houses[(i + 1) % 12]
-                
+
                 # If at last house and next cusp is less than the current because of wrap-around
                 if next_cusp < cusp:
                     next_cusp += 360
@@ -1769,7 +1779,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     - imprecise_aspects (str): Handle imprecise aspects ('off' or 'warn').
     - notime (bool): Exclude time-dependent data.
     - degree_in_minutes (bool): Show angles in degrees, minutes, and seconds.
-    - house_positions (dict, optional): Mapping of fixed stars to house positions.
+    - house_positions (dict, optional): Mapping of fixed stars to house poitions.
     - all_stars (bool): Include aspects for all stars or significant ones only.
 
     Outputs a formatted list of aspects to the console based on the provided parameters.
