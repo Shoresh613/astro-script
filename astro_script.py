@@ -1286,8 +1286,6 @@ def house_count(house_counts, output, bold, nobold, br):
             else:
                 house_count_string += f"{house}: {count}, "
     house_count_string = house_count_string[:-2] # Remove the last comma and space
-    if output in ('text', 'html'):
-        print(house_count_string)    
     return f"{br}" + house_count_string
 
 # Arabic Parts
@@ -1461,7 +1459,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     ## House counts
     if not notime:
         print()
-        to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
+        if output_type in ('html', 'return_html'):
+            to_return += house_count(planet_house_counts, output_type, bold, nobold, br)
+        else:
+            print(house_count(planet_house_counts, output_type, bold, nobold, br))
 
     # Print zodiac sign, element and modality counts
     if output_type in ('html'):
@@ -1767,9 +1768,13 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         print(f'{br}'+table + f'{p}' + aspect_count_text, end="")
 
     # House counts only if asteroids or synastry and time specified and more aspects than one, in which case counting is unnecessary
-    if type in ("Asteroids", 'Synastry'):
-        if not notime and len(aspects)>1:
+    # if type in ("Asteroids", 'Synastry'):
+    if not notime and len(aspects)>1:
+        if output in ('html', 'return_html'):
             to_return += house_count(house_counts, output, bold, nobold, br)
+        else:
+            print(house_count(house_counts, output, bold, nobold, br))
+
     if output == 'html':
         print('</div>')
     if output == 'return_html':
@@ -1937,17 +1942,17 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     #Print counts of each aspect type
     if output in ('text', 'html'):
-        print(f"{p}{table}{br}{aspect_count_text}")
+        print(f"{p}{table}{br}{aspect_count_text}", end="")
         if output == 'html':
             print('</div>')
     if output in ('return_text', 'return_html'):
         to_return += f"{br}" + table + f"{br}" + aspect_count_text
+        if output == 'return_html':
+            to_return += '</div>'
 
     # House counts
     if not notime:
-        if output == 'html':
-            to_return += house_count(house_counts, output, bold, nobold, br)
-        elif output == 'return_html':
+        if output in ('html', 'return_html'):
             to_return += house_count(house_counts, output, bold, nobold, br)
         else:
             print(house_count(house_counts, output, bold, nobold, br))
@@ -2937,7 +2942,7 @@ def main(gui_arguments=None):
 
         star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars")
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
-                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transit', show_brief_aspects=show_brief_aspects)
+                                             aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
