@@ -2764,7 +2764,10 @@ def main(gui_arguments=None):
     string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}" + (h_sys_changed + f"{br}" if h_sys_changed else "")
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
-        string_moon_phase_imprecise = f"\n\n{p}{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
+        if moon_phase_name1 != moon_phase_name2:
+            string_moon_phase_imprecise = f"\n\n{p}{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
+        else:
+            string_moon_phase_imprecise = f"\n\n{p}{bold}Moon Phase:{nobold} {moon_phase_name1}{br}{bold}Moon Illumination:{nobold} {illumination}"
     else:
         string_moon_phase_imprecise = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name1} to {moon_phase_name2}{br}{bold}Moon Illumination:{nobold} {illumination}"
     string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
