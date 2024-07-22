@@ -148,6 +148,12 @@ CLASSICAL_RULERSHIP = {
     'Saturn': ['Capricorn', 'Aquarius']
 }
 
+FORMER_RULERS = {
+    'Mars': 'Scorpio',
+    'Jupiter': 'Pisces',
+    'Saturn': 'Aquarius'
+}
+
 EXALTATION = {
     'Sun': 'Aries', 'Moon': 'Taurus', 'Mercury': 'Virgo', 'Venus': 'Pisces',
     'Mars': 'Capricorn', 'Jupiter': 'Cancer', 'Saturn': 'Libra',
@@ -298,6 +304,8 @@ def assess_planet_strength(planet_signs, classic_rulership=False):
     for planet, sign in planet_signs.items():
         if planet in (CLASSICAL_RULERSHIP if classic_rulership else RULERSHIP) and sign == (CLASSICAL_RULERSHIP[planet] if classic_rulership else RULERSHIP[planet]):
             strength_status[planet] = ' Domicile'
+        elif planet in FORMER_RULERS and sign == FORMER_RULERS[planet]:
+            strength_status[planet] = ' Co-Ruler'
         elif planet in EXALTATION and sign == EXALTATION[planet]:
             strength_status[planet] = ' Exalted (Strong)'
         elif planet in DETRIMENT and sign == DETRIMENT[planet]:
@@ -2357,65 +2365,20 @@ def main(gui_arguments=None):
     stored_defaults = db_manager.read_defaults(args["Use Saved Settings"] if args["Use Saved Settings"] else "default", args["Guid"] if args["Guid"] else "")            
 
     if stored_defaults:
-        if stored_defaults["Location"]:
-            args["Location"] = stored_defaults["Location"]
-        if stored_defaults["Timezone"]:
-            args["Timezone"] = stored_defaults["Timezone"]
-        if stored_defaults["LMT"]:
-            args["LMT"] = stored_defaults["LMT"]
-        if stored_defaults["Imprecise Aspects"]:
-            args["Imprecise Aspects"] = stored_defaults["Imprecise Aspects"]
-        if stored_defaults["Minor Aspects"]:
-            args["Minor Aspects"] = stored_defaults["Minor Aspects"]
-        if stored_defaults["Show Brief Aspects"]:
-            args["Show Brief Aspects"] = stored_defaults["Show Brief Aspects"]
-        if stored_defaults["Show Score"]:
-            args["Show Score"] = stored_defaults["Show Score"]
-        if stored_defaults["Orb"]:
-            args["Orb"] = stored_defaults["Orb"]
-        if stored_defaults["Orb Major"]:
-            args["Orb Major"] = stored_defaults["Orb Major"]
-        if stored_defaults["Orb Minor"]:
-            args["Orb Minor"] = stored_defaults["Orb Minor"]
-        if stored_defaults["Orb Fixed Star"]:
-            args["Orb Fixed Star"] = stored_defaults["Orb Fixed Star"]
-        if stored_defaults["Orb Asteroid"]:
-            args["Orb Asteroid"] = stored_defaults["Orb Asteroid"]
-        if stored_defaults["Orb Transit Fast"]:
-            args["Orb Transit Fast"] = stored_defaults["Orb Transit Fast"]
-        if stored_defaults["Orb Transit Slow"]:
-            args["Orb Transit Slow"] = stored_defaults["Orb Transit Slow"]
-        if stored_defaults["Orb Synastry Fast"]:
-            args["Orb Synastry Fast"] = stored_defaults["Orb Synastry Fast"]
-        if stored_defaults["Orb Synastry Slow"]:
-            args["Orb Synastry Slow"] = stored_defaults["Orb Synastry Slow"]
-        if stored_defaults["Degree in Minutes"]:
-            args["Degree in Minutes"] = stored_defaults["Degree in Minutes"]
-        if stored_defaults["Arabic Parts"]:
-            args["Arabic Parts"] = stored_defaults["Arabic Parts"]
-        if stored_defaults["Node"]:
-            args["Node"] = stored_defaults["Node"]
-        if stored_defaults["All Stars"]:
-            args["All Stars"] = stored_defaults["All Stars"]
-        if stored_defaults["House System"]:
-            args["House System"] = stored_defaults["House System"]
-        if stored_defaults["House Cusps"]:
-            args["House Cusps"] = stored_defaults["House Cusps"]
-        if stored_defaults["Hide Planetary Positions"]:
-            args["Hide Planetary Positions"] = stored_defaults["Hide Planetary Positions"]
-        if stored_defaults["Hide Planetary Aspects"]:
-            args["Hide Planetary Aspects"] = stored_defaults["Hide Planetary Aspects"]
-        if stored_defaults["Hide Fixed Star Aspects"]:
-            args["Hide Fixed Star Aspects"] = stored_defaults["Hide Fixed Star Aspects"]
-        if stored_defaults["Hide Asteroid Aspects"]:
-            args["Hide Asteroid Aspects"] = stored_defaults["Hide Asteroid Aspects"]
-        if stored_defaults["Transits Timezone"]:
-            args["Transits Timezone"] = stored_defaults["Transits Timezone"]
-        if stored_defaults["Transits Location"]:
-            args["Transits Location"] = stored_defaults["Transits Location"]
-        if stored_defaults["Output"]:
-            args["Output"] = stored_defaults["Output"]
-
+        keys = [
+            "Location", "Timezone", "LMT", "Imprecise Aspects", "Minor Aspects",
+            "Show Brief Aspects", "Show Score", "Orb", "Orb Major", "Orb Minor",
+            "Orb Fixed Star", "Orb Asteroid", "Orb Transit Fast", "Orb Transit Slow",
+            "Orb Synastry Fast", "Orb Synastry Slow", "Degree in Minutes", "Arabic Parts",
+            "Node", "All Stars", "House System", "House Cusps", "Hide Planetary Positions",
+            "Hide Planetary Aspects", "Hide Fixed Star Aspects", "Hide Asteroid Aspects",
+            "Transits Timezone", "Transits Location", "Output"
+        ]
+        
+        for key in keys:
+            if stored_defaults.get(key):
+                args[key] = stored_defaults.get(key)
+        
     if args["Location"]: 
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
