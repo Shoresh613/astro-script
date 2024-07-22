@@ -1061,7 +1061,7 @@ def calculate_planetary_aspects(planet_positions, orbs, output_type, aspect_type
     for i, planet1 in enumerate(planet_names):
         for planet2 in planet_names[i+1:]:
             # Skip calculation if the pair is in the exclusion list or the same planet
-            if {planet1, planet2} or {planet2, planet1} in (excluded_pairs or planet1 == planet2):
+            if ( {planet1, planet2} in excluded_pairs ) or ( {planet2, planet1} in excluded_pairs ):
                 continue
 
             long1 = planet_positions[planet1]['longitude']
