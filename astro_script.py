@@ -1459,11 +1459,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     ## House counts
     if not notime:
-        if output_type in ('html', 'return_html'):
-            to_return += f"<p>" + house_count(planet_house_counts, output_type, bold, nobold, br)
+        if output_type in ('return_text', 'return_html'):
+            to_return += f"{p}" + house_count(planet_house_counts, output_type, bold, nobold, br)
         else:
-            print()
-            print(house_count(planet_house_counts, output_type, bold, nobold, br))
+            print(f"{p}" + house_count(planet_house_counts, output_type, bold, nobold, br))
 
     # Print zodiac sign, element and modality counts
     if output_type in ('html'):
@@ -1769,11 +1768,13 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     if output in ('text','html'):
         print(f'{br}'+table + f'{p}' + aspect_count_text)
 
-    # House counts only if asteroids or synastry and time specified and more aspects than one, in which case counting is unnecessary
+    # House counts only if time specified and more aspects than one, in which case counting is unnecessary
     if not notime and len(aspects)>1:
-        if output in ('html', 'return_html'):
-            to_return += house_count(house_counts, output, bold, nobold, br)
+        if output in ('return_text', 'return_html'):
+            to_return += f"{p}" + house_count(house_counts, output, bold, nobold, br)
         else:
+            if output == 'html':
+                print(p)
             print(house_count(house_counts, output, bold, nobold, br))
 
     if output == 'html':
@@ -1921,7 +1922,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         print(table + f"{br}", end="")
     if output in ('return_html'):
         if all_stars:
-            to_return += '<div id="allfixedstarsection"">'
+            to_return += '<div id="allfixedstarsection">'
         to_return += '<div class="table-container">'
     to_return += f"{br}{br}" + table
 
@@ -1944,25 +1945,32 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     #Print counts of each aspect type
     if output in ('text', 'html'):
         print(f"{p}{table}{br}{aspect_count_text}")
-        if output == 'html':
-            print('</div>')
     if output in ('return_text', 'return_html'):
         to_return += f"{br}" + table + f"{br}" + aspect_count_text
-        if output == 'return_html':
-            to_return += '</div>'
 
     # House counts
     if not notime:
-        if output in ('html', 'return_html'):
+        if output in ('return_text', 'return_html'):
+            if output == 'return_html':
+                to_return += f"{p}"
             to_return += house_count(house_counts, output, bold, nobold, br)
+            if output == 'return_html':
+                to_return += '</div>'
         else:
+            if output == 'html':
+                print(p)
             print(house_count(house_counts, output, bold, nobold, br))
+            if output == 'html':
+                print('</div>')
 
     if output == 'return_html':
         if all_stars:
             to_return += '</div>'
-
-    to_return += '</div>'
+        to_return += '</div>'
+    if output == 'html':
+        if all_stars:
+            print('</div>')
+        print('</div>')
 
     return to_return
 
