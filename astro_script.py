@@ -459,8 +459,12 @@ def find_next_same_degree(dt, planet_name, margin_days=10):
     current_pos, _ = swe.calc(julian_day, planet)
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
+    # Calculate the number of years between the given date and now
+    now = datetime.now()
+    years_diff = now.year - dt.year
+
     # Calculate the start date for searching
-    start_dt = dt + timedelta(days=orbital_period - margin_days)
+    start_dt = dt + timedelta(days=orbital_period - margin_days + years_diff * 365.25)
     one_minute = timedelta(minutes=1)
 
     next_dt = start_dt
@@ -2179,7 +2183,7 @@ def set_orbs(args, def_orbs):
 
         return orbs
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, davison, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, returns, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
@@ -2198,6 +2202,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Time Unknown": time_unknown,
         "LMT": lmt,
         "List Timezones": list_timezones,
+        "Return": returns,
         "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
@@ -2256,6 +2261,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
     parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location, unless TimezoneFinder is installed.')
     parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
+    parser.add_argument('--returns', help='Calculate the next return of named planet to a given datetime or saved named event.', required=False)
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2308,6 +2314,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Time Unknown": args.time_unknown,
         "LMT": args.LMT,
         "List Timezones": args.list_timezones,
+        "Return": args.returns,
         "Davison": args.davison,
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
@@ -2379,6 +2386,15 @@ def main(gui_arguments=None):
     try:
         if args["Date"]:
             local_datetime = parse_date(args["Date"])
+            if args["Return"]:
+                # convert to utc
+                utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
+                return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"].lower())
+                if not return_utc_datetime:
+                    return "No return found for specified planet."
+                else:
+                    utc_datetime = return_utc_datetime
+                     
     except ValueError:
         print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
         local_datetime = None
