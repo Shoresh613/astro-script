@@ -100,43 +100,43 @@ PLANETS = {
 }
 
 PLANET_RETURN_DICT = {
-    'sun': {
+    'Sun': {
         'constant': swe.SUN,
         'orbital_period_days': 365.25  # 1 year
     },
-    'moon': {
+    'Moon': {
         'constant': swe.MOON,
         'orbital_period_days': 27.32  # 27.32 days
     },
-    'mercury': {
+    'Mercury': {
         'constant': swe.MERCURY,
         'orbital_period_days': 87.97  # 88 days
     },
-    'venus': {
+    'Venus': {
         'constant': swe.VENUS,
         'orbital_period_days': 224.70  # 225 days
     },
-    'mars': {
+    'Mars': {
         'constant': swe.MARS,
         'orbital_period_days': 686.98  # 687 days
     },
-    'jupiter': {
+    'Jupiter': {
         'constant': swe.JUPITER,
         'orbital_period_days': 4332.59  # 4333 days (11.86 years)
     },
-    'saturn': {
+    'Saturn': {
         'constant': swe.SATURN,
         'orbital_period_days': 10759.22  # 10759 days (29.46 years)
     },
-    'uranus': {
+    'Uranus': {
         'constant': swe.URANUS,
         'orbital_period_days': 30685.49  # 30685 days (84.01 years)
     },
-    'neptune': {
+    'Neptune': {
         'constant': swe.NEPTUNE,
         'orbital_period_days': 60190.03  # 60190 days (164.8 years)
     },
-    'pluto': {
+    'Pluto': {
         'constant': swe.PLUTO,
         'orbital_period_days': 90560.00  # 90560 days (248 years)
     }
@@ -445,10 +445,10 @@ def get_delta_t(date):
         return 0
 
 def find_next_same_degree(dt, planet_name):
-    if planet_name.lower() not in PLANET_RETURN_DICT:
+    if planet_name.title() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
 
-    planet_info = PLANET_RETURN_DICT[planet_name.lower()]
+    planet_info = PLANET_RETURN_DICT[planet_name.title()]
     planet = planet_info['constant']
     orbital_period = planet_info['orbital_period_days']
 
@@ -2262,7 +2262,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
     parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location, unless TimezoneFinder is installed.')
     parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
-    parser.add_argument('--returns', help='Calculate the next return of named planet to a given datetime or saved named event.', required=False)
+    parser.add_argument('--returns', choices=['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'], help='Calculate the next return of named planet to a given datetime or saved named event.', required=False)
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2396,7 +2396,7 @@ def main(gui_arguments=None):
         if args["Return"]:
             # convert to utc
             utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
-            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"].lower())
+            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"])
             if not return_utc_datetime:
                 return "No return found for specified planet."
     except ValueError:
@@ -2873,6 +2873,8 @@ def main(gui_arguments=None):
     delta_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
 
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
+    string_return = f"{p}{bold}{h2}Return chart for " + ("the " if args['Return'] in ('Moon', 'Sun') else "") + args['Return']
+
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
     else:
@@ -2925,6 +2927,9 @@ def main(gui_arguments=None):
 
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
 
+        if args["Return"]:
+            print(f"{string_return}", end='')
+
         print(f"{string_ruled_by}", end='')
 
         if not show_synastry:
@@ -2961,6 +2966,9 @@ def main(gui_arguments=None):
 
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
+
+        if args["Return"]:
+            to_return += f"{string_return}"
 
         to_return += f"{string_ruled_by}"
 
