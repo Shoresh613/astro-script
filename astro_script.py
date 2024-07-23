@@ -1938,14 +1938,14 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     if output in ('text','html'):
         print(f"{p}{bold}{h3}Fixed Star Aspects ({orb}{degree_symbol} orb){nobold}", end="")
-        print(f"{bold} including Minor Aspects{nobold}" if minor_aspects else "", end="")
+        print(f"{bold} including minor aspects{nobold}" if minor_aspects else "", end="")
         if notime:
             print(f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}", end="")
         print(f"{h3_}")
     else:
         to_return += f"{p}{bold}{h3}Fixed Star Aspects ({orb}° orb){nobold}"
         if minor_aspects:
-            to_return += f"{bold} including Minor Aspects{nobold}"
+            to_return += f"{bold} including minor aspects{nobold}"
         if notime:
             to_return += f"{bold} with Imprecise Aspects set to {imprecise_aspects}{nobold}{br}{br}"
         to_return += f"{h3_}{nobold}"
