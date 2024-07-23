@@ -1275,6 +1275,8 @@ def moon_phase(date):
 
 def house_count(house_counts, output, bold, nobold, br):
     house_count_string = f'{bold}House count{nobold}  '
+    row=[house_count_string]
+
     sorted_star_house_counts = sorted(house_counts.items(), key=lambda item: item[1], reverse=True)
 
     for house, count in sorted_star_house_counts:
@@ -1282,11 +1284,15 @@ def house_count(house_counts, output, bold, nobold, br):
             if output == 'text':
                 house_count_string += f"{bold}{house}:{nobold} {Fore.GREEN}{count}{Style.RESET_ALL}, "
             elif output in ('html', 'return_html'):
-                house_count_string += f"{bold}{house}:{nobold} {count}, "
+                row.append(f"{bold}{house}:{nobold} {count}")
             else:
                 house_count_string += f"{house}: {count}, "
 
-    house_count_string = house_count_string[:-2] # Remove the last comma and space
+    if output in ('html', 'return_html'):
+        table = tabulate([row], tablefmt="unsafehtml")
+        house_count_string = table    
+    else:
+        house_count_string = house_count_string[:-2] # Remove the last comma and space
     return house_count_string
 
 # Arabic Parts
