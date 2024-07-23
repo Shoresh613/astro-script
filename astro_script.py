@@ -452,33 +452,36 @@ def find_next_same_degree(dt, planet_name):
     planet = planet_info['constant']
     orbital_period = planet_info['orbital_period_days']
 
-    # Convert datetime to Julian day
     julian_day = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
 
-    # Get the current position of the planet
     current_pos, _ = swe.calc(julian_day, planet)
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
-    # Calculate the number of years between the given date and now
-    now = datetime.now()
-    years_diff = now.year - dt.year
+    start_dt = datetime.now()
 
-    # Calculate the start date for searching with 1% margin of the orbital period
-    margin_days = orbital_period * 0.01
-    start_dt = dt + timedelta(days=orbital_period - margin_days + years_diff * 365.25)
-    one_minute = timedelta(minutes=1)
+    # Define the search interval (orbital period)
+    end_dt = start_dt + timedelta(days=orbital_period)
 
-    next_dt = start_dt
-
-    while True:
+    def get_next_degree(next_dt):
         julian_day_next = swe.julday(next_dt.year, next_dt.month, next_dt.day, next_dt.hour + next_dt.minute / 60.0)
         next_pos, _ = swe.calc(julian_day_next, planet)
-        next_degree = next_pos[0] % 360  # Normalize to 0-360 degrees
+        return next_pos[0] % 360
+
+    # Binary search-like approach to find the date with the same degree
+    while (end_dt - start_dt).total_seconds() > 30:  # While the interval is larger than 1/2 minute
+        mid_dt = start_dt + (end_dt - start_dt) / 2
+        next_degree = get_next_degree(mid_dt)
 
         if abs(next_degree - current_degree) < 0.01:  # Allow small tolerance due to precision
-            return next_dt
+            return mid_dt
 
-        next_dt += one_minute
+        if next_degree < current_degree:
+            start_dt = mid_dt
+        else:
+            end_dt = mid_dt
+
+    # If not found within the loop, return the closest approximation
+    return start_dt
 
 def convert_to_utc(local_datetime, local_timezone):
     """
