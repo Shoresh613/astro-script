@@ -99,6 +99,49 @@ PLANETS = {
     'Chiron': swe.CHIRON, 'Lilith': swe.MEAN_APOG, 'North Node': swe.TRUE_NODE, 
 }
 
+PLANET_RETURN_DICT = {
+    'sun': {
+        'constant': swe.SUN,
+        'orbital_period_days': 365.25  # 1 year
+    },
+    'moon': {
+        'constant': swe.MOON,
+        'orbital_period_days': 27.32  # 27.32 days
+    },
+    'mercury': {
+        'constant': swe.MERCURY,
+        'orbital_period_days': 87.97  # 88 days
+    },
+    'venus': {
+        'constant': swe.VENUS,
+        'orbital_period_days': 224.70  # 225 days
+    },
+    'mars': {
+        'constant': swe.MARS,
+        'orbital_period_days': 686.98  # 687 days
+    },
+    'jupiter': {
+        'constant': swe.JUPITER,
+        'orbital_period_days': 4332.59  # 4333 days (11.86 years)
+    },
+    'saturn': {
+        'constant': swe.SATURN,
+        'orbital_period_days': 10759.22  # 10759 days (29.46 years)
+    },
+    'uranus': {
+        'constant': swe.URANUS,
+        'orbital_period_days': 30685.49  # 30685 days (84.01 years)
+    },
+    'neptune': {
+        'constant': swe.NEPTUNE,
+        'orbital_period_days': 60190.03  # 60190 days (164.8 years)
+    },
+    'pluto': {
+        'constant': swe.PLUTO,
+        'orbital_period_days': 90560.00  # 90560 days (248 years)
+    }
+}
+
 ASTEROIDS = {
     'Ceres': swe.CERES,
     'Pholus': swe.PHOLUS,
@@ -400,6 +443,37 @@ def get_delta_t(date):
         return delta_t
     else:
         return 0
+
+def find_next_same_degree(dt, planet_name, margin_days=10):
+    if planet_name.lower() not in PLANET_RETURN_DICT:
+        raise ValueError("Invalid planet name provided.")
+
+    planet_info = PLANET_RETURN_DICT[planet_name.lower()]
+    planet = planet_info['constant']
+    orbital_period = planet_info['orbital_period_days']
+
+    # Convert datetime to Julian day
+    julian_day = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+
+    # Get the current position of the planet
+    current_pos, _ = swe.calc(julian_day, planet)
+    current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
+
+    # Calculate the start date for searching
+    start_dt = dt + timedelta(days=orbital_period - margin_days)
+    one_minute = timedelta(minutes=1)
+
+    next_dt = start_dt
+
+    while True:
+        julian_day_next = swe.julday(next_dt.year, next_dt.month, next_dt.day, next_dt.hour + next_dt.minute / 60.0)
+        next_pos, _ = swe.calc(julian_day_next, planet)
+        next_degree = next_pos[0] % 360  # Normalize to 0-360 degrees
+
+        if abs(next_degree - current_degree) < 0.01:  # Allow small tolerance due to precision
+            return next_dt
+
+        next_dt += one_minute
 
 def convert_to_utc(local_datetime, local_timezone):
     """
@@ -1962,7 +2036,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if output in ('text', 'html'):
         print(f"{p}{table}{br}{aspect_count_text}")
     if output in ('return_text', 'return_html'):
-        to_return += f"{br}" + table + f"{br}" + aspect_count_text
+        to_return += f"{br}" + table + aspect_count_text
 
     # House counts
     if not notime:
