@@ -1765,7 +1765,12 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         div_string = ""
 
     if hard_count+soft_count > 0:
-        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')
+        if output in ('html, return_html'):
+            row = [f"{bold}Hard Aspects:{nobold}", hard_count, f"{bold}Soft Aspects:{nobold}", soft_count, f"{bold}Score:{nobold}", f"{(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')]
+            score_table = tabulate([row], tablefmt="unsafehtml")
+            aspect_count_text = f"{div_string}{p}{score_table}"
+        else:
+            aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')
     else:
         aspect_count_text = f"{div_string}{p}No aspects found."
     to_return += f"{br}" + table + aspect_count_text
@@ -1944,7 +1949,12 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         div_string = ''
 
     if hard_count+soft_count > 0:
-        aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.') 
+        if output in ('html, return_html'):
+            row = [f"{bold}Hard Aspects:{nobold}", hard_count, f"{bold}Soft Aspects:{nobold}", soft_count, f"{bold}Score:{nobold}", f"{(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')]
+            score_table = tabulate([row], tablefmt="unsafehtml")
+            aspect_count_text = f"{div_string}{p}{score_table}"
+        else:
+            aspect_count_text = f"{div_string}{p}{bold}Hard Aspects:{nobold} {hard_count}, {bold}Soft Aspects:{nobold} {soft_count}, {bold}Score:{nobold} {(hard_count_score + soft_count_score)/(hard_count+soft_count):.1f}".rstrip('0').rstrip('.')
     else:
         aspect_count_text = f"{div_string}{p}No aspects found."
 
