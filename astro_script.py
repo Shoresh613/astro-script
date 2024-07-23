@@ -444,7 +444,7 @@ def get_delta_t(date):
     else:
         return 0
 
-def find_next_same_degree(dt, planet_name):
+def find_next_same_degree(dt, planet_name, nextprev=next):
     if planet_name.title() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
 
@@ -457,7 +457,10 @@ def find_next_same_degree(dt, planet_name):
     current_pos, _ = swe.calc(julian_day, planet)
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
-    start_dt = datetime.now()
+    if nextprev == next:
+        start_dt = datetime.now()
+    else:
+        start_dt = datetime.now() - timedelta(days=orbital_period)
 
     # Define the search interval (orbital period)
     end_dt = start_dt + timedelta(days=orbital_period)
@@ -2250,6 +2253,12 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
     text = main(arguments)
     return text
 
+class ReturnAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) != 2 or values[0] not in ['prev', 'next'] or values[1] not in ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']:
+            parser.error(f"The {self.dest} argument must be followed by 'prev' or 'next' and then a valid planet name.")
+        setattr(namespace, self.dest, values)
+
 def argparser():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
 If a name is passed, the script will look up the record for that name in the JSON file and overwrite other passed values,
@@ -2265,7 +2274,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--time_unknown', action='store_true', help='Whether the exact time is unknown (affects e.g. house calculations).')
     parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location, unless TimezoneFinder is installed.')
     parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
-    parser.add_argument('--returns', choices=['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'], help='Calculate the next return of named planet to a given datetime or saved named event.', required=False)
+    parser.add_argument('--returns', nargs=2, action=ReturnAction, metavar=('DIRECTION', 'PLANET'), help='Calculate the next or previous return of the named planet to a given datetime or saved named event. Format: prev/next PLANET')
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2399,7 +2408,7 @@ def main(gui_arguments=None):
         if args["Return"]:
             # convert to utc
             utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
-            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"])
+            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"][1], args["Return"][0])
             if not return_utc_datetime:
                 return "No return found for specified planet."
     except ValueError:
@@ -2876,7 +2885,7 @@ def main(gui_arguments=None):
     delta_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
 
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
-    string_return = f"{p}{bold}{h2}Return chart for " + ("the " if args['Return'] in ('Moon', 'Sun') else "") + args['Return']
+    string_return = f"{p}{bold}{h2}Return chart for " + ("the " if args['Return'][1] in ('Moon', 'Sun') else "") + args['Return'][1]
 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
