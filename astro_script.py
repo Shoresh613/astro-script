@@ -2885,7 +2885,9 @@ def main(gui_arguments=None):
     delta_symbol = "Delta" if (os.name == 'nt' and output_type == 'html') else "Δ"
 
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
-    string_return = f"{p}{bold}{h2}Return chart for " + ("the " if args['Return'][1] in ('Moon', 'Sun') else "") + args['Return'][1]
+    if args["Return"] is not None:
+        planet = args["Return"][1]
+        string_return = f"{p}{bold}{h2}Return chart for " + ("the " if planet in ('Moon', 'Sun') else "") + planet
 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
