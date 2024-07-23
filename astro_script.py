@@ -444,7 +444,7 @@ def get_delta_t(date):
     else:
         return 0
 
-def find_next_same_degree(dt, planet_name, margin_days=10):
+def find_next_same_degree(dt, planet_name):
     if planet_name.lower() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
 
@@ -463,7 +463,8 @@ def find_next_same_degree(dt, planet_name, margin_days=10):
     now = datetime.now()
     years_diff = now.year - dt.year
 
-    # Calculate the start date for searching
+    # Calculate the start date for searching with 1% margin of the orbital period
+    margin_days = orbital_period * 0.01
     start_dt = dt + timedelta(days=orbital_period - margin_days + years_diff * 365.25)
     one_minute = timedelta(minutes=1)
 
@@ -2385,20 +2386,22 @@ def main(gui_arguments=None):
 
     try:
         if args["Date"]:
-            local_datetime = parse_date(args["Date"])
-            if args["Return"]:
-                # convert to utc
-                utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
-                return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"].lower())
-                if not return_utc_datetime:
-                    return "No return found for specified planet."
-                else:
-                    utc_datetime = return_utc_datetime
-                     
+            local_datetime = parse_date(args["Date"])                     
     except ValueError:
         print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
         local_datetime = None
         return "Invalid date format. Please use YYYY-MM-DD HH:MM."
+
+    try:
+        if args["Return"]:
+            # convert to utc
+            utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
+            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"].lower())
+            if not return_utc_datetime:
+                return "No return found for specified planet."
+    except ValueError:
+        print("Planet not found.")
+        return "Planet not found."
 
     ######### Default settings if no arguments are passed #########
     def_tz = pytz.timezone('Europe/Stockholm')  # Default timezone
@@ -2528,7 +2531,11 @@ def main(gui_arguments=None):
 
     if not exists: 
         if args["Timezone"]:
-            local_timezone = pytz.timezone(args["Timezone"])
+            try:
+                local_timezone = pytz.timezone(args["Timezone"])
+            except:
+                print("Invalid timezone")
+                return "Invalid timezone"
         elif tz_finder_installed:
 
             tf = TimezoneFinder()
@@ -2544,7 +2551,7 @@ def main(gui_arguments=None):
         
     def_house_system = HOUSE_SYSTEMS["Placidus"] if abs(latitude) < 66 else HOUSE_SYSTEMS['Equal (Ascendant cusp 1)'] # Default house system
 
-    ephemeris_restriction_date = datetime(675, 1, 4, 12, 0)  # Ephemeris data for Chirson is available from 675 AD
+    ephemeris_restriction_date = datetime(675, 1, 4, 12, 0)  # Ephemeris data for Chiron is available from 675 AD
     if local_datetime < ephemeris_restriction_date:
         PLANETS.pop("Chiron")
 
@@ -2758,6 +2765,8 @@ def main(gui_arguments=None):
         else:
             if args["LMT"]: # If the time is Local Mean Time already
                 utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
+            elif args["Return"]:
+                utc_datetime = return_utc_datetime
             else:
                 utc_datetime = convert_to_utc(local_datetime, local_timezone)
 
@@ -2823,8 +2832,8 @@ def main(gui_arguments=None):
             print("Invalid second event for synastry", file=sys.stderr)
             return "Invalid second event for synastry."
 
-    # Save event if name given
-    if name:
+    # Save event if name given and not already stored
+    if name and not exists:
         db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
