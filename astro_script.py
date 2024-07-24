@@ -444,7 +444,7 @@ def get_delta_t(date):
     else:
         return 0
 
-def find_next_same_degree(dt, planet_name, nextprev=next):
+def find_next_same_degree(dt, planet_name, nextprev='next'):
     if planet_name.title() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
 
@@ -457,7 +457,7 @@ def find_next_same_degree(dt, planet_name, nextprev=next):
     current_pos, _ = swe.calc(julian_day, planet)
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
-    if nextprev == next:
+    if nextprev == 'next':
         start_dt = datetime.now()
     else:
         start_dt = datetime.now() - timedelta(days=orbital_period)
@@ -475,7 +475,7 @@ def find_next_same_degree(dt, planet_name, nextprev=next):
         mid_dt = start_dt + (end_dt - start_dt) / 2
         next_degree = get_next_degree(mid_dt)
 
-        if abs(next_degree - current_degree) < 0.01:  # Allow small tolerance due to precision
+        if abs(next_degree - current_degree) < 0.005:  # Allow small tolerance due to precision
             return mid_dt
 
         if next_degree < current_degree:
@@ -484,6 +484,7 @@ def find_next_same_degree(dt, planet_name, nextprev=next):
             end_dt = mid_dt
 
     # If not found within the loop, return the closest approximation
+    print("Exact return not found")
     return start_dt
 
 def convert_to_utc(local_datetime, local_timezone):
@@ -2009,7 +2010,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if show_aspect_score:
         headers.append("Score")
 
-    star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
+    star_aspects_table_data.sort(key=lambda x: x[5]) # Sort by degree of aspect
 
     table = tabulate(star_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f")
     if output in ('text','html'):
@@ -2408,7 +2409,9 @@ def main(gui_arguments=None):
         if args["Return"]:
             # convert to utc
             utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
-            return_utc_datetime = find_next_same_degree(utc_datetime, args["Return"][1], args["Return"][0])
+            nextprev = args["Return"][0]
+            returning_planet = args["Return"][1]
+            return_utc_datetime = find_next_same_degree(utc_datetime, returning_planet, nextprev)
             if not return_utc_datetime:
                 return "No return found for specified planet."
     except ValueError:
@@ -2886,8 +2889,7 @@ def main(gui_arguments=None):
 
     string_UTC_Time = f"{br}{bold}UTC Time:{nobold} {str(utc_datetime).lstrip('0')} UTC" #({delta_symbol}-T adjusted)" 
     if args["Return"]:
-        planet = args["Return"][1]
-        string_return = f"{p}{bold}{h2}Return chart for " + ("the " if planet in ('Moon', 'Sun') else "") + planet
+        string_return = f"{p}{bold}Return chart for " + ("the " if returning_planet in ('Moon', 'Sun') else "") + returning_planet + f", {nextprev}{nobold}"
 
     if notime:
         string_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
@@ -2924,6 +2926,8 @@ def main(gui_arguments=None):
 
     if output_type in ("text","html"):
         print(f"{string_heading}", end='')
+        if args["Return"]:
+            print(f"{string_return}", end='')
         if exists or name:
             print(f"{string_name}", end='')
         if place:
@@ -2940,9 +2944,6 @@ def main(gui_arguments=None):
             print(f"{string_local_time} ", end='')
 
         print(f"{string_UTC_Time_imprecise}", end='') if notime else print(f"{string_UTC_Time}", end='')
-
-        if args["Return"]:
-            print(f"{string_return}", end='')
 
         print(f"{string_ruled_by}", end='')
 
@@ -2964,6 +2965,8 @@ def main(gui_arguments=None):
             print(f"{string_synastry_ruled_by}", end='')
 
     elif output_type in ('return_text', "return_html"):
+        if args["Return"]:
+            to_return += f"{string_return}"
         if exists or name:
             to_return += f"{string_name}"
         if place:
@@ -2980,9 +2983,6 @@ def main(gui_arguments=None):
 
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
-
-        if args["Return"]:
-            to_return += f"{string_return}"
 
         to_return += f"{string_ruled_by}"
 
