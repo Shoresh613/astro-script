@@ -2192,7 +2192,7 @@ def set_orbs(args, def_orbs):
         return orbs
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, returns, davison, place, imprecise_aspects,
-                  minor_aspects, show_brief_aspects, show_score, show_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
+                  minor_aspects, show_brief_aspects, show_score, show_arabic_parts, aspects_to_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
                   transits_location, synastry, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
@@ -2218,6 +2218,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Show Brief Aspects": show_brief_aspects,
         "Show Score": show_score,
         "Arabic Parts": show_arabic_parts,
+        "Aspects To Arabic Parts": aspects_to_arabic_parts,
         "Classical Rulership": classical,
         "Orb": orb,
         "Orb Major": orb_major,
@@ -2283,6 +2284,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--brief_aspects', action='store_true', help='Show brief aspects for transits, i.e. Asc, MC, DC, Desc.')
     parser.add_argument('--score', action='store_true', help='Show ease of individual aspects (0 not easy, 50 neutral, 100 easy).')
     parser.add_argument('--arabic_parts', action='store_true', help='Show Arabic parts.')
+    parser.add_argument('--aspects_to_arabic_parts', action='store_true', help='Include aspects to Arabic parts. Requires --arabic_parts.')
     parser.add_argument('--classical', action='store_true', help='Use classical sign rulership, as before discovery of modern planets.')
     parser.add_argument('--orb', type=float, help='Orb size in degrees. Overrides all orb settings if specified. Use for blanket orb setting.', required=False)
     parser.add_argument('--orb_major', type=float, help='Orb size in degrees for major aspects. (Default: 6.0)', required=False)
@@ -2336,6 +2338,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Show Brief Aspects": args.brief_aspects,
         "Show Score": args.score,
         "Arabic Parts": args.arabic_parts,
+        "Aspects To Arabic Parts": args.aspects_to_arabic_parts,
         "Classical Rulership": args.classical,
         "Orb": args.orb,
         "Orb Major": args.orb_major,
@@ -3022,7 +3025,7 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"])
-    if show_arabic_parts:   ## Maybe add argument to display aspects with arabic parts
+    if show_arabic_parts and not args["Aspects To Arabic Parts"]:
         del planet_positions["Fortune"]
         del planet_positions["Spirit"]
         del planet_positions["Love"]
