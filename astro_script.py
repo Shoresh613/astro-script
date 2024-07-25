@@ -2011,7 +2011,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         headers.append("Score")
 
     if notime:
-        planetary_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
+        star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
     else:
         star_aspects_table_data.sort(key=lambda x: x[5]) # Sort by degree of aspect
 
