@@ -1655,7 +1655,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
     """
     if output in ('html', 'return_html'):
-        table_format = 'html'
+        table_format = 'unsafehtml'
         house_called = "House"
         bold = "<b>"
         nobold = "</b>"
@@ -1917,10 +1917,10 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     if t_squares:
         if output in ('text', 'html'):
-            print(f"{p}{bold}{h3}T-Squares{nobold}")
+            print(f"{p}{bold}{h3}T-Squares{h3_}{nobold}")
         else:
-            to_return += f"{p}{bold}{h3}T-Squares{nobold}{h3_}"
-        headers = ["Planet 1", "Planet 2", "Planet 3", "Opposition diff", "Square diff 1", "Square diff 2"]
+            to_return += f"{p}{bold}{h3}T-Squares{h3_}{nobold}"
+        headers = ["Planet 1", "Planet 2", f"{bold}Planet 3{nobold}", "Opposition diff", "Square diff 1", "Square diff 2"]
         row = []
 
         for ts in t_squares:
@@ -1933,18 +1933,18 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                 sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
                 sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
 
-            row.append([ts[0], ts[1], ts[2], opp_deg, sq_deg1, sq_deg2])
+            row.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
     
         table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
 
         if output == 'text':
             print(table + f'{p}')
         elif output == 'html':
-            print(f'{br}'+table + f'{p}')
+            print(table + f'{p}')
         elif output == 'return_text':
             to_return += table + f"{p}"
         elif output == 'return_html':
-            to_return += f"{br}" + table + f"{p}"
+            to_return += table + f"{p}"
 
     if output == 'html':
         print('</div>')
