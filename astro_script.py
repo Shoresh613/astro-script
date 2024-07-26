@@ -1920,7 +1920,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             print(f"{p}{bold}{h3}T-Squares{h3_}{nobold}")
         else:
             to_return += f"{p}{bold}{h3}T-Squares{h3_}{nobold}"
-        headers = ["Planet 1", "Planet 2", f"{bold}Planet 3{nobold}", "Opposition diff", "Square diff 1", "Square diff 2"]
+        headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition diff", "Square diff 1", "Square diff 2"]
         row = []
 
         for ts in t_squares:
