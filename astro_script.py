@@ -362,7 +362,7 @@ def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
                 for p3 in planets:
                     if p3 == p1 or p3 == p2:
                         continue
-                    if aspect_diff(planet_positions[p1]['longitude'], positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square) and \
+                    if aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square) and \
                        aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square):
                         t_squares.append((p1, p2, p3))
 
@@ -1461,7 +1461,7 @@ def get_sabian_symbol(planet_positions, planet: str):
 
     return sabian_symbols[zodiac_sign][str(degree)]
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False, t_squares=None):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -1509,7 +1509,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°" # If running on Windows, don't use degree symbol for html output
 
     # Define headers based on whether house positions should be included
-    headers = ["Planet", "Zodiac", "Position", "Retrograde" if output_type in('html', 'return_html') else "R"]
+    headers = ["Planet", "Zodiac", "Degree", "Retrograde" if output_type in('html', 'return_html') else "R"]
     if house_positions and not notime:
         headers.append("House")
     headers.append("Dignity")
@@ -1545,8 +1545,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
-        else: off_by = ""
-        row.insert(3, off_by)
+            row.insert(3, off_by)
+        # else: off_by = ""
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
@@ -1574,6 +1574,10 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     if output_type in ('text','html'):
         print(table)
     to_return += table
+
+    if t_squares:
+        for ts in t_squares:
+            print(f"T-square found: {ts[0]}, {ts[1]}, {ts[2]}")
 
     sign_count_table_data = list()
     element_count_table_data = list()
@@ -1637,7 +1641,6 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     elif output_type == 'return_html':
         to_return += '</div>'
 
-    find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6)
     return to_return
 
 def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None):
@@ -2894,6 +2897,7 @@ def main(gui_arguments=None):
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+    t_squares = find_t_squares(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
     if notime:
@@ -3058,7 +3062,7 @@ def main(gui_arguments=None):
             print(f"{string_planets_heading}{nobold}{h3_}{br}", end="")
         else:
             to_return += f"{string_planets_heading}"
-        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"])
+        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"], t_squares)
     if show_arabic_parts and not args["Aspects To Arabic Parts"]:
         del planet_positions["Fortune"]
         del planet_positions["Spirit"]
