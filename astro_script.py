@@ -351,25 +351,36 @@ def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
         diff = abs(angle1 - angle2) % 360
         return min(diff, 360 - diff)
 
+    # Remove unnecessary points
+    unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
+    for point in unnecessary_points:
+        planet_positions.pop(point, None)
+
     # Find T-squares
     t_squares = []
-    planets = planet_positions.keys()
-    for p1 in planets:
-        for p2 in planets:
-            if p1 >= p2:
-                continue
-            if aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude']) in range(180 - orb_opposition, 180 + orb_opposition):
+    planets = list(planet_positions.keys())
+    
+    # print(f"Analyzing {len(planets)} planets: {planets}")
+    # print(f"Orb for opposition: {orb_opposition}, Orb for square: {orb_square}")
+
+    for i, p1 in enumerate(planets):
+        for j, p2 in enumerate(planets[i+1:], start=i+1):
+            opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            # print(f"Opposition between {p1} and {p2}: {opposition_diff:.2f}°")
+            if abs(opposition_diff - 180) <= orb_opposition:
+                # print(f"Found opposition between {p1} and {p2}")
+                square_diff_opp = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+                # if abs(square_diff_opp - 90) <= orb_square:
+                    # print(f"{p1} and {p2} are also square: {square_diff_opp:.2f}°")
                 for p3 in planets:
-                    if p3 == p1 or p3 == p2:
-                        continue
-                    if aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square) and \
-                       aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square):
-                        t_squares.append((p1, p2, p3))
-
-    # Convert to planet names
-    t_squares_named = [(swe.get_planet_name(p1), swe.get_planet_name(p2), swe.get_planet_name(p3)) for p1, p2, p3 in t_squares]
-
-    return t_squares_named
+                    if p3 != p1 and p3 != p2:
+                        square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                        square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        # print(f"Squares: {p1}-{p3}: {square_diff1:.2f}°, {p2}-{p3}: {square_diff2:.2f}°")
+                        if abs(square_diff1 - 90) <= orb_square and abs(square_diff2 - 90) <= orb_square:
+                            # print(f"Found T-square: {p1}, {p2}, {p3}, Opposition diff: {opposition_diff}, Square diffs: {square_diff1:.2f}°, {square_diff2:.2f}°")
+                            t_squares.append((p1, p2, p3, abs(180-opposition_diff), abs(90-square_diff1), abs(90-square_diff2)))
+    return t_squares
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
     strength_status = {}
@@ -1461,7 +1472,7 @@ def get_sabian_symbol(planet_positions, planet: str):
 
     return sabian_symbols[zodiac_sign][str(degree)]
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False, t_squares=None):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -1575,10 +1586,6 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         print(table)
     to_return += table
 
-    if t_squares:
-        for ts in t_squares:
-            print(f"T-square found: {ts[0]}, {ts[1]}, {ts[2]}")
-
     sign_count_table_data = list()
     element_count_table_data = list()
     modality_count_table_data = list()
@@ -1643,7 +1650,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None):
+def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None, t_squares=None):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
     """
@@ -1907,6 +1914,37 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             if output == 'html':
                 print(p)
             print(house_count(house_counts, output, bold, nobold, br))
+
+    if t_squares:
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h3}T-Squares{nobold}")
+        else:
+            to_return += f"{p}{bold}{h3}T-Squares{nobold}{h3_}"
+        headers = ["Planet 1", "Planet 2", "Planet 3", "Opposition diff", "Square diff 1", "Square diff 2"]
+        row = []
+
+        for ts in t_squares:
+            if degree_in_minutes:
+                opp_deg = coord_in_minutes(ts[3], output)
+                sq_deg1 = coord_in_minutes(ts[4], output) if degree_in_minutes else ts[4]
+                sq_deg2 = coord_in_minutes(ts[5], output) if degree_in_minutes else ts[5]
+            else:
+                opp_deg = f"{ts[3]:.2f}{degree_symbol}"
+                sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
+                sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
+
+            row.append([ts[0], ts[1], ts[2], opp_deg, sq_deg1, sq_deg2])
+    
+        table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(f'{br}'+table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += f"{br}" + table + f"{p}"
 
     if output == 'html':
         print('</div>')
@@ -2897,6 +2935,10 @@ def main(gui_arguments=None):
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts)
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+    if show_arabic_parts and not args["Aspects To Arabic Parts"]:
+        ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
+        for part in ar_parts:
+            del planet_positions[part]
     t_squares = find_t_squares(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
@@ -3062,20 +3104,12 @@ def main(gui_arguments=None):
             print(f"{string_planets_heading}{nobold}{h3_}{br}", end="")
         else:
             to_return += f"{string_planets_heading}"
-        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"], t_squares)
-    if show_arabic_parts and not args["Aspects To Arabic Parts"]:
-        del planet_positions["Fortune"]
-        del planet_positions["Spirit"]
-        del planet_positions["Love"]
-        del planet_positions["Marriage"]
-        del planet_positions["Death"]
-        del planet_positions["Commerce"]
-        del planet_positions["Passion"]
-        del planet_positions["Friendship"]
+        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"])
+
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score)
+        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, t_squares=t_squares)
     if not hide_fixed_star_aspects and fixstar_aspects:
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
