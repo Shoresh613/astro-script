@@ -1295,10 +1295,8 @@ def calculate_aspects_takes_two(natal_positions, second_positions, orbs, aspect_
                         for planet in (planet1, planet2)
                     )
                     
-                    # Create a tuple for the planets involved in the aspect
                     planets_pair = (planet1, planet2)
                     
-                    # Update the aspects_found dictionary
                     angle_diff = angle_diff - aspect_angle # Just show the difference
 
                     aspects_found[planets_pair] = {
