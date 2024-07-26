@@ -335,12 +335,41 @@ def get_davison_data(names, guid=None):
         avg_datetime_naive = avg_datetime_utc.replace(tzinfo=None)
     else:
         avg_datetime_str = 'No datetimes to average'
-    
+
     # Calculate the average longitude and latitude
     avg_longitude = sum(longitudes) / len(longitudes) if longitudes else 'No longitudes to average'
     avg_latitude = sum(latitudes) / len(latitudes) if latitudes else 'No latitudes to average'
-    
+
     return avg_datetime_naive, avg_longitude, avg_latitude
+
+def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
+    # Convert to Julian Day
+    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+
+    # Helper function to calculate aspect difference
+    def aspect_diff(angle1, angle2):
+        diff = abs(angle1 - angle2) % 360
+        return min(diff, 360 - diff)
+
+    # Find T-squares
+    t_squares = []
+    planets = planet_positions.keys()
+    for p1 in planets:
+        for p2 in planets:
+            if p1 >= p2:
+                continue
+            if aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude']) in range(180 - orb_opposition, 180 + orb_opposition):
+                for p3 in planets:
+                    if p3 == p1 or p3 == p2:
+                        continue
+                    if aspect_diff(planet_positions[p1]['longitude'], positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square) and \
+                       aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude']) in range(90 - orb_square, 90 + orb_square):
+                        t_squares.append((p1, p2, p3))
+
+    # Convert to planet names
+    t_squares_named = [(swe.get_planet_name(p1), swe.get_planet_name(p2), swe.get_planet_name(p3)) for p1, p2, p3 in t_squares]
+
+    return t_squares_named
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
     strength_status = {}
@@ -1608,6 +1637,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     elif output_type == 'return_html':
         to_return += '</div>'
 
+    find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6)
     return to_return
 
 def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None):
