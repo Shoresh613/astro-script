@@ -343,44 +343,56 @@ def get_davison_data(names, guid=None):
     return avg_datetime_naive, avg_longitude, avg_latitude
 
 def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
-    # Convert to Julian Day
     jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
 
-    # Helper function to calculate aspect difference
     def aspect_diff(angle1, angle2):
         diff = abs(angle1 - angle2) % 360
         return min(diff, 360 - diff)
 
-    # Remove unnecessary points
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     for point in unnecessary_points:
         planet_positions.pop(point, None)
 
-    # Find T-squares
     t_squares = []
     planets = list(planet_positions.keys())
     
-    # print(f"Analyzing {len(planets)} planets: {planets}")
-    # print(f"Orb for opposition: {orb_opposition}, Orb for square: {orb_square}")
-
     for i, p1 in enumerate(planets):
-        for j, p2 in enumerate(planets[i+1:], start=i+1):
+        for p2 in planets[i+1:]:
             opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
-            # print(f"Opposition between {p1} and {p2}: {opposition_diff:.2f}°")
             if abs(opposition_diff - 180) <= orb_opposition:
-                # print(f"Found opposition between {p1} and {p2}")
-                square_diff_opp = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
-                # if abs(square_diff_opp - 90) <= orb_square:
-                    # print(f"{p1} and {p2} are also square: {square_diff_opp:.2f}°")
                 for p3 in planets:
                     if p3 != p1 and p3 != p2:
                         square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
                         square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
-                        # print(f"Squares: {p1}-{p3}: {square_diff1:.2f}°, {p2}-{p3}: {square_diff2:.2f}°")
                         if abs(square_diff1 - 90) <= orb_square and abs(square_diff2 - 90) <= orb_square:
-                            # print(f"Found T-square: {p1}, {p2}, {p3}, Opposition diff: {opposition_diff}, Square diffs: {square_diff1:.2f}°, {square_diff2:.2f}°")
                             t_squares.append((p1, p2, p3, abs(180-opposition_diff), abs(90-square_diff1), abs(90-square_diff2)))
     return t_squares
+
+def find_yod(dt, planet_positions, orb_opposition=8, orb_square=6):
+    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+
+    def aspect_diff(angle1, angle2):
+        diff = abs(angle1 - angle2) % 360
+        return min(diff, 360 - diff)
+
+    unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
+    for point in unnecessary_points:
+        planet_positions.pop(point, None)
+
+    fingers_of_god = []
+    planets = list(planet_positions.keys())
+    
+    for i, p1 in enumerate(planets):
+        for p2 in planets[i+1:]:
+            opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            if abs(opposition_diff - 60) <= orb_opposition:
+                for p3 in planets:
+                    if p3 != p1 and p3 != p2:
+                        square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                        square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(square_diff1 - 150) <= orb_square and abs(square_diff2 - 150) <= orb_square:
+                            fingers_of_god.append((p1, p2, p3, abs(60-opposition_diff), abs(150-square_diff1), abs(150-square_diff2)))
+    return fingers_of_god
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
     strength_status = {}
@@ -1648,7 +1660,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None, t_squares=None):
+def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None, complex_aspects=None):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
     """
@@ -1913,36 +1925,69 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                 print(p)
             print(house_count(house_counts, output, bold, nobold, br))
 
-    if t_squares:
-        if output in ('text', 'html'):
-            print(f"{p}{bold}{h4}T-Squares{h4_}{nobold}")
-        else:
-            to_return += f"{p}{bold}{h4}T-Squares{h4_}{nobold}"
-        headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition", "Square 1", "Square 2"]
-        row = []
-
-        for ts in t_squares:
-            if degree_in_minutes:
-                opp_deg = coord_in_minutes(ts[3], output)
-                sq_deg1 = coord_in_minutes(ts[4], output) if degree_in_minutes else ts[4]
-                sq_deg2 = coord_in_minutes(ts[5], output) if degree_in_minutes else ts[5]
+    if complex_aspects:
+        if complex_aspects.get("T Squares", False):
+            if output in ('text', 'html'):
+                print(f"{p}{bold}{h4}T-Squares{h4_}{nobold}")
             else:
-                opp_deg = f"{ts[3]:.2f}{degree_symbol}"
-                sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
-                sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
+                to_return += f"{p}{bold}{h4}T-Squares{h4_}{nobold}"
+            headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition", "Square 1", "Square 2"]
+            row = []
+            t_squares = complex_aspects.get("T Squares", False)
+            for ts in t_squares:
+                if degree_in_minutes:
+                    opp_deg = coord_in_minutes(ts[3], output)
+                    sq_deg1 = coord_in_minutes(ts[4], output) if degree_in_minutes else ts[4]
+                    sq_deg2 = coord_in_minutes(ts[5], output) if degree_in_minutes else ts[5]
+                else:
+                    opp_deg = f"{ts[3]:.2f}{degree_symbol}"
+                    sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
+                    sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
 
-            row.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
-    
-        table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
+                row.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+        
+            table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
 
-        if output == 'text':
-            print(table + f'{p}')
-        elif output == 'html':
-            print(table + f'{p}')
-        elif output == 'return_text':
-            to_return += table + f"{p}"
-        elif output == 'return_html':
-            to_return += table + f"{p}"
+            if output == 'text':
+                print(table + f'{p}')
+            elif output == 'html':
+                print(table + f'{p}')
+            elif output == 'return_text':
+                to_return += table + f"{p}"
+            elif output == 'return_html':
+                to_return += table + f"{p}"
+
+        if complex_aspects["Yods"]:
+            if output in ('text', 'html'):
+                print(f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}")
+            else:
+                to_return += f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}"
+            headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Sextile", "Quincunx 1", "Quincunx 2"]
+            row = []
+            yods = complex_aspects["Yods"]
+
+            for yod in yods:
+                if degree_in_minutes:
+                    opp_deg = coord_in_minutes(yod[3], output)
+                    sq_deg1 = coord_in_minutes(yod[4], output) if degree_in_minutes else yod[4]
+                    sq_deg2 = coord_in_minutes(yod[5], output) if degree_in_minutes else yod[5]
+                else:
+                    opp_deg = f"{yod[3]:.2f}{degree_symbol}"
+                    sq_deg1 = f"{yod[4]:.2f}{degree_symbol}"
+                    sq_deg2 = f"{yod[5]:.2f}{degree_symbol}"
+
+                row.append([yod[0], yod[1], f"{bold}{yod[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+        
+            table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+            if output == 'text':
+                print(table + f'{p}')
+            elif output == 'html':
+                print(table + f'{p}')
+            elif output == 'return_text':
+                to_return += table + f"{p}"
+            elif output == 'return_html':
+                to_return += table + f"{p}"
 
     if output == 'html':
         print('</div>')
@@ -2937,7 +2982,9 @@ def main(gui_arguments=None):
         ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
         for part in ar_parts:
             del planet_positions[part]
-    t_squares = find_t_squares(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
+    complex_aspects = {}
+    complex_aspects["T Squares"] = find_t_squares(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
+    complex_aspects["Yods"] = find_yod(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
     if notime:
@@ -3107,7 +3154,7 @@ def main(gui_arguments=None):
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, t_squares=t_squares)
+        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, complex_aspects=complex_aspects)
     if not hide_fixed_star_aspects and fixstar_aspects:
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
