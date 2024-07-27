@@ -394,6 +394,68 @@ def find_yod(dt, planet_positions, orb_opposition=8, orb_square=6):
                             fingers_of_god.append((p1, p2, p3, abs(60-opposition_diff), abs(150-square_diff1), abs(150-square_diff2)))
     return fingers_of_god
 
+def find_grand_crosses(dt, planet_positions, orb_opposition=8, orb_square=6):
+    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+    
+    def aspect_diff(angle1, angle2):
+        diff = abs(angle1 - angle2) % 360
+        return min(diff, 360 - diff)
+
+    unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
+    for point in unnecessary_points:
+        planet_positions.pop(point, None)
+
+    grand_crosses = []
+    planets = list(planet_positions.keys())
+    
+    for i, p1 in enumerate(planets):
+        for j in range(i + 1, len(planets)):
+            p2 = planets[j]
+            opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            if abs(opposition_diff - 180) <= orb_opposition:
+                for k in range(len(planets)):
+                    if k != i and k != j:
+                        p3 = planets[k]
+                        square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                        square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(square_diff1 - 90) <= orb_square and abs(square_diff2 - 90) <= orb_square:
+                            for l in range(len(planets)):
+                                if l != i and l != j and l != k:
+                                    p4 = planets[l]
+                                    square_diff3 = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
+                                    opposition_diff2 = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
+                                    square_diff4 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
+                                    square_diff5 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p4]['longitude'])
+                                    if abs(square_diff3 - 90) <= orb_square and abs(opposition_diff2 - 180) <= orb_opposition and abs(square_diff4 - 90) <= orb_square and abs(square_diff5 - 90) <= orb_square:
+                                        grand_crosses.append((p1, p2, p3, p4, abs(180 - opposition_diff), abs(90 - square_diff1), abs(90 - square_diff2), abs(90 - square_diff3), abs(90 - square_diff4), abs(90 - square_diff5), abs(180 - opposition_diff2)))
+    return grand_crosses
+
+def find_grand_cross(dt, planet_positions, orb_opposition=8, orb_square=6):
+    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+
+    def aspect_diff(angle1, angle2):
+        diff = abs(angle1 - angle2) % 360
+        return min(diff, 360 - diff)
+
+    unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
+    for point in unnecessary_points:
+        planet_positions.pop(point, None)
+
+    fingers_of_god = []
+    planets = list(planet_positions.keys())
+    
+    for i, p1 in enumerate(planets):
+        for p2 in planets[i+1:]:
+            opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            if abs(opposition_diff - 60) <= orb_opposition:
+                for p3 in planets:
+                    if p3 != p1 and p3 != p2:
+                        square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                        square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(square_diff1 - 150) <= orb_square and abs(square_diff2 - 150) <= orb_square:
+                            fingers_of_god.append((p1, p2, p3, abs(60-opposition_diff), abs(150-square_diff1), abs(150-square_diff2)))
+    return fingers_of_god
+
 def assess_planet_strength(planet_signs, classic_rulership=False):
     strength_status = {}
     for planet, sign in planet_signs.items():
@@ -1932,7 +1994,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             else:
                 to_return += f"{p}{bold}{h4}T-Squares{h4_}{nobold}"
             headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition", "Square 1", "Square 2"]
-            row = []
+            rows = []
             t_squares = complex_aspects.get("T Squares", False)
             for ts in t_squares:
                 if degree_in_minutes:
@@ -1944,9 +2006,9 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                     sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
                     sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
 
-                row.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+                rows.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
         
-            table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
+            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
 
             if output == 'text':
                 print(table + f'{p}')
@@ -1957,13 +2019,13 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             elif output == 'return_html':
                 to_return += table + f"{p}"
 
-        if complex_aspects["Yods"]:
+        if complex_aspects.get("Yods", False):
             if output in ('text', 'html'):
                 print(f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}")
             else:
                 to_return += f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}"
             headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Sextile", "Quincunx 1", "Quincunx 2"]
-            row = []
+            rows = []
             yods = complex_aspects["Yods"]
 
             for yod in yods:
@@ -1976,9 +2038,9 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                     sq_deg1 = f"{yod[4]:.2f}{degree_symbol}"
                     sq_deg2 = f"{yod[5]:.2f}{degree_symbol}"
 
-                row.append([yod[0], yod[1], f"{bold}{yod[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+                rows.append([yod[0], yod[1], f"{bold}{yod[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
         
-            table = tabulate(row, headers=headers, tablefmt=table_format, floatfmt=".2f")
+            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
 
             if output == 'text':
                 print(table + f'{p}')
@@ -2983,8 +3045,8 @@ def main(gui_arguments=None):
         for part in ar_parts:
             del planet_positions[part]
     complex_aspects = {}
-    complex_aspects["T Squares"] = find_t_squares(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
-    complex_aspects["Yods"] = find_yod(utc_datetime, planet_positions, orb_opposition=8, orb_square=6) 
+    complex_aspects["T Squares"] = find_t_squares(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Yods"] = find_yod(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
     if notime:
