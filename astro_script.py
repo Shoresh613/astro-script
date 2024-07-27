@@ -430,7 +430,7 @@ def find_grand_crosses(dt, planet_positions, orb_opposition=8, orb_square=6):
                                 ))
     return grand_crosses
 
-def find_grand_trines(dt, planet_positions, orb_opposition=8, orb_square=6):
+def find_grand_trines(dt, planet_positions, orb=8):
 
     def aspect_diff(angle1, angle2):
         diff = abs(angle1 - angle2) % 360
@@ -446,13 +446,13 @@ def find_grand_trines(dt, planet_positions, orb_opposition=8, orb_square=6):
     for i, p1 in enumerate(planets):
         for p2 in planets[i+1:]:
             first_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
-            if abs(first_trine_diff - 60) <= orb_opposition:
+            if abs(first_trine_diff - 120) <= orb:
                 for p3 in planets:
                     if p3 != p1 and p3 != p2:
                         second_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
                         third_tine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
-                        if abs(second_trine_diff - 60) <= orb_square and abs(third_tine_diff - 60) <= orb_square:
-                            grand_trines.append((p1, p2, p3, abs(60-first_trine_diff), abs(60-second_trine_diff), abs(60-third_tine_diff)))
+                        if abs(second_trine_diff - 120) <= orb and abs(third_tine_diff - 120) <= orb:
+                            grand_trines.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_tine_diff)))
     return grand_trines
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
@@ -3121,7 +3121,7 @@ def main(gui_arguments=None):
     complex_aspects["T Squares"] = find_t_squares(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
     complex_aspects["Yods"] = find_yod(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
     complex_aspects["Grand Crosses"] = find_grand_crosses(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
-    complex_aspects["Grand Trines"] = find_grand_trines(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Grand Trines"] = find_grand_trines(utc_datetime, copy.deepcopy(planet_positions), orb=8) 
 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
