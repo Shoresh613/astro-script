@@ -444,15 +444,15 @@ def find_grand_trines(dt, planet_positions, orb=8):
     planets = list(planet_positions.keys())
     
     for i, p1 in enumerate(planets):
-        for p2 in planets[i+1:]:
+        for j, p2 in enumerate(planets[i+1:], start=i+1):
             first_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
             if abs(first_trine_diff - 120) <= orb:
-                for p3 in planets:
+                for p3 in planets[j+1:]:
                     if p3 != p1 and p3 != p2:
                         second_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
-                        third_tine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
-                        if abs(second_trine_diff - 120) <= orb and abs(third_tine_diff - 120) <= orb:
-                            grand_trines.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_tine_diff)))
+                        third_trine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(second_trine_diff - 120) <= orb and abs(third_trine_diff - 120) <= orb:
+                            grand_trines.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff)))
     return grand_trines
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
@@ -1543,6 +1543,145 @@ def get_sabian_symbol(planet_positions, planet: str):
 
     return sabian_symbols[zodiac_sign][str(degree)]
 
+def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p):
+    if complex_aspects.get("T Squares", False):
+        plur = "s" if len(complex_aspects["T Squares"]) > 1 else ""
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h4}T-Square{plur}{h4_}{nobold}")
+        else:
+            to_return += f"{p}{bold}{h4}T-Square{plur}{h4_}{nobold}"
+        headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition", "Square 1", "Square 2"]
+        rows = []
+        t_squares = complex_aspects.get("T Squares", False)
+        for ts in t_squares:
+            if degree_in_minutes:
+                opp_deg = coord_in_minutes(ts[3], output)
+                sq_deg1 = coord_in_minutes(ts[4], output) if degree_in_minutes else ts[4]
+                sq_deg2 = coord_in_minutes(ts[5], output) if degree_in_minutes else ts[5]
+            else:
+                opp_deg = f"{ts[3]:.2f}{degree_symbol}"
+                sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
+                sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
+
+            rows.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+    
+        table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += table + f"{p}"
+
+    if complex_aspects.get("Yods", False):
+        plur = "s" if len(complex_aspects["Yods"]) > 1 else ""
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h4}Yod{plur} (Finger{plur} of God){h4_}{nobold}")
+        else:
+            to_return += f"{p}{bold}{h4}Yod{plur} (Finger{plur} of God){h4_}{nobold}"
+        headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Sextile", "Quincunx 1", "Quincunx 2"]
+        rows = []
+        yods = complex_aspects["Yods"]
+
+        for yod in yods:
+            if degree_in_minutes:
+                opp_deg = coord_in_minutes(yod[3], output)
+                sq_deg1 = coord_in_minutes(yod[4], output) if degree_in_minutes else yod[4]
+                sq_deg2 = coord_in_minutes(yod[5], output) if degree_in_minutes else yod[5]
+            else:
+                opp_deg = f"{yod[3]:.2f}{degree_symbol}"
+                sq_deg1 = f"{yod[4]:.2f}{degree_symbol}"
+                sq_deg2 = f"{yod[5]:.2f}{degree_symbol}"
+
+            rows.append([yod[0], yod[1], f"{bold}{yod[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
+    
+        table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += table + f"{p}"
+
+    if complex_aspects.get("Grand Crosses", False):
+        plur = "es" if len(complex_aspects["Grand Crosses"]) > 1 else ""
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h4}Grand Cross{plur}{h4_}{nobold}")
+        else:
+            to_return += f"{p}{bold}{h4}Grand Cross{plur}{h4_}{nobold}"
+            
+        headers = ["Planet 1", "Planet 2", "Planet 3", f"{bold}Planet 4{nobold}", "Opposition 1", "Square 1", "Square 2", "Opposition 2", "Square 3", "Square 4"]
+        rows = []
+        grand_crosses = complex_aspects.get("Grand Crosses", False)
+        
+        for gc in grand_crosses:
+            if degree_in_minutes:
+                opp_deg1 = coord_in_minutes(gc[4], output)
+                sq_deg1 = coord_in_minutes(gc[5], output)
+                sq_deg2 = coord_in_minutes(gc[6], output)
+                opp_deg2 = coord_in_minutes(gc[10], output)
+                sq_deg3 = coord_in_minutes(gc[7], output)
+                sq_deg4 = coord_in_minutes(gc[8], output)
+            else:
+                opp_deg1 = f"{gc[4]:.2f}{degree_symbol}"
+                sq_deg1 = f"{gc[5]:.2f}{degree_symbol}"
+                sq_deg2 = f"{gc[6]:.2f}{degree_symbol}"
+                opp_deg2 = f"{gc[10]:.2f}{degree_symbol}"
+                sq_deg3 = f"{gc[7]:.2f}{degree_symbol}"
+                sq_deg4 = f"{gc[8]:.2f}{degree_symbol}"
+
+            rows.append([gc[0], gc[1], gc[2], f"{bold}{gc[3]}{nobold}", opp_deg1, sq_deg1, sq_deg2, opp_deg2, sq_deg3, sq_deg4])
+        
+        table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
+        
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += table + f"{p}"
+
+    if complex_aspects.get("Grand Trines", False):
+        plur = "s" if len(complex_aspects["Grand Trines"]) > 1 else ""
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h4}Grand Trine{plur}{h4_}{nobold}")
+        else:
+            to_return += f"{p}{bold}{h4}Grand Trine{plur}{h4_}{nobold}"
+        headers = ["Planet 1", "Sextile 1", "Planet 2", "Sextile 2", "Planet 3", "Sextile 3"]
+        rows = []
+        grand_trines = complex_aspects["Grand Trines"]
+
+        for trine in grand_trines:
+            if degree_in_minutes:
+                trine1_diff = coord_in_minutes(trine[3], output)
+                trine2_diff = coord_in_minutes(trine[4], output) if degree_in_minutes else trine[4]
+                trine3_diff = coord_in_minutes(trine[5], output) if degree_in_minutes else trine[5]
+            else:
+                trine1_diff = f"{trine[3]:.2f}{degree_symbol}"
+                trine2_diff = f"{trine[4]:.2f}{degree_symbol}"
+                trine3_diff = f"{trine[5]:.2f}{degree_symbol}"
+
+            rows.append([trine[0], trine1_diff, trine[1], trine2_diff, trine[2], trine3_diff])
+    
+        table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += table + f"{p}"
+
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
@@ -1987,141 +2126,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             print(house_count(house_counts, output, bold, nobold, br))
 
     if complex_aspects:
-        if complex_aspects.get("T Squares", False):
-            if output in ('text', 'html'):
-                print(f"{p}{bold}{h4}T-Squares{h4_}{nobold}")
-            else:
-                to_return += f"{p}{bold}{h4}T-Squares{h4_}{nobold}"
-            headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Opposition", "Square 1", "Square 2"]
-            rows = []
-            t_squares = complex_aspects.get("T Squares", False)
-            for ts in t_squares:
-                if degree_in_minutes:
-                    opp_deg = coord_in_minutes(ts[3], output)
-                    sq_deg1 = coord_in_minutes(ts[4], output) if degree_in_minutes else ts[4]
-                    sq_deg2 = coord_in_minutes(ts[5], output) if degree_in_minutes else ts[5]
-                else:
-                    opp_deg = f"{ts[3]:.2f}{degree_symbol}"
-                    sq_deg1 = f"{ts[4]:.2f}{degree_symbol}"
-                    sq_deg2 = f"{ts[5]:.2f}{degree_symbol}"
-
-                rows.append([ts[0], ts[1], f"{bold}{ts[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
-        
-            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
-
-            if output == 'text':
-                print(table + f'{p}')
-            elif output == 'html':
-                print(table + f'{p}')
-            elif output == 'return_text':
-                to_return += table + f"{p}"
-            elif output == 'return_html':
-                to_return += table + f"{p}"
-
-        if complex_aspects.get("Yods", False):
-            if output in ('text', 'html'):
-                print(f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}")
-            else:
-                to_return += f"{p}{bold}{h4}Yods (Finger of God){h4_}{nobold}"
-            headers = ["Planet 1", "Planet 2", f"{bold}Apex{nobold}", "Sextile", "Quincunx 1", "Quincunx 2"]
-            rows = []
-            yods = complex_aspects["Yods"]
-
-            for yod in yods:
-                if degree_in_minutes:
-                    opp_deg = coord_in_minutes(yod[3], output)
-                    sq_deg1 = coord_in_minutes(yod[4], output) if degree_in_minutes else yod[4]
-                    sq_deg2 = coord_in_minutes(yod[5], output) if degree_in_minutes else yod[5]
-                else:
-                    opp_deg = f"{yod[3]:.2f}{degree_symbol}"
-                    sq_deg1 = f"{yod[4]:.2f}{degree_symbol}"
-                    sq_deg2 = f"{yod[5]:.2f}{degree_symbol}"
-
-                rows.append([yod[0], yod[1], f"{bold}{yod[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
-        
-            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
-
-            if output == 'text':
-                print(table + f'{p}')
-            elif output == 'html':
-                print(table + f'{p}')
-            elif output == 'return_text':
-                to_return += table + f"{p}"
-            elif output == 'return_html':
-                to_return += table + f"{p}"
-
-        if complex_aspects.get("Grand Crosses", False):
-            plur = "es" if len(complex_aspects["Grand Crosses"]) > 1 else ""
-            if output in ('text', 'html'):
-                print(f"{p}{bold}{h4}Grand Cross{plur}{h4_}{nobold}")
-            else:
-                to_return += f"{p}{bold}{h4}Grand Cross{plur}{h4_}{nobold}"
-                
-            headers = ["Planet 1", "Planet 2", "Planet 3", f"{bold}Planet 4{nobold}", "Opposition 1", "Square 1", "Square 2", "Opposition 2", "Square 3", "Square 4"]
-            rows = []
-            grand_crosses = complex_aspects.get("Grand Crosses", False)
-            
-            for gc in grand_crosses:
-                if degree_in_minutes:
-                    opp_deg1 = coord_in_minutes(gc[4], output)
-                    sq_deg1 = coord_in_minutes(gc[5], output)
-                    sq_deg2 = coord_in_minutes(gc[6], output)
-                    opp_deg2 = coord_in_minutes(gc[10], output)
-                    sq_deg3 = coord_in_minutes(gc[7], output)
-                    sq_deg4 = coord_in_minutes(gc[8], output)
-                else:
-                    opp_deg1 = f"{gc[4]:.2f}{degree_symbol}"
-                    sq_deg1 = f"{gc[5]:.2f}{degree_symbol}"
-                    sq_deg2 = f"{gc[6]:.2f}{degree_symbol}"
-                    opp_deg2 = f"{gc[10]:.2f}{degree_symbol}"
-                    sq_deg3 = f"{gc[7]:.2f}{degree_symbol}"
-                    sq_deg4 = f"{gc[8]:.2f}{degree_symbol}"
-
-                rows.append([gc[0], gc[1], gc[2], f"{bold}{gc[3]}{nobold}", opp_deg1, sq_deg1, sq_deg2, opp_deg2, sq_deg3, sq_deg4])
-            
-            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
-            
-            if output == 'text':
-                print(table + f'{p}')
-            elif output == 'html':
-                print(table + f'{p}')
-            elif output == 'return_text':
-                to_return += table + f"{p}"
-            elif output == 'return_html':
-                to_return += table + f"{p}"
-
-        if complex_aspects.get("Grand Trines", False):
-            plur = "s" if len(complex_aspects["Grand Trines"]) > 1 else ""
-            if output in ('text', 'html'):
-                print(f"{p}{bold}{h4}Grand Trines{plur}{h4_}{nobold}")
-            else:
-                to_return += f"{p}{bold}{h4}Grand Trines{plur}{h4_}{nobold}"
-            headers = ["Planet 1", "Planet 2", "Planet 2", "Sextile 1", "Sextile 2", "Sextile 3"]
-            rows = []
-            grand_trines = complex_aspects["Grand Trines"]
-
-            for trine in grand_trines:
-                if degree_in_minutes:
-                    opp_deg = coord_in_minutes(trine[3], output)
-                    sq_deg1 = coord_in_minutes(trine[4], output) if degree_in_minutes else trine[4]
-                    sq_deg2 = coord_in_minutes(trine[5], output) if degree_in_minutes else trine[5]
-                else:
-                    opp_deg = f"{trine[3]:.2f}{degree_symbol}"
-                    sq_deg1 = f"{trine[4]:.2f}{degree_symbol}"
-                    sq_deg2 = f"{trine[5]:.2f}{degree_symbol}"
-
-                rows.append([trine[0], trine[1], f"{bold}{trine[2]}{nobold}", opp_deg, sq_deg1, sq_deg2])
-        
-            table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
-
-            if output == 'text':
-                print(table + f'{p}')
-            elif output == 'html':
-                print(table + f'{p}')
-            elif output == 'return_text':
-                to_return += table + f"{p}"
-            elif output == 'return_html':
-                to_return += table + f"{p}"
+        print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p)
 
     if output == 'html':
         print('</div>')
