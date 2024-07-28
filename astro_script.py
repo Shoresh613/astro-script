@@ -1853,7 +1853,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     for sign, data in sign_counts.items():
         if data['count'] > 0:
-            row = [sign, data['count'], ', '.join(data['planets'])]
+            row = [sign, data['count'], ', '.join(data['planets']) + ( ' (stellium)' if data['count'] >= 4 else '')]
             sign_count_table_data.append(row)
 
     table = tabulate(sign_count_table_data, headers=["Sign","Nr","Planets in Sign".title()], tablefmt=table_format, floatfmt=".2f")
