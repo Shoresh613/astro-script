@@ -353,10 +353,10 @@ def find_t_squares(planet_positions, orb_opposition=8, orb_square=6):
     t_squares = []
 
     for i, p1 in enumerate(planets):
-        for p2 in planets[i+1:]:
+        for j, p2 in enumerate(planets[i+1:], start=i+1):
             opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
             if abs(opposition_diff - 180) <= orb_opposition:
-                for p3 in planets:
+                for p3 in planets[j+1:]:
                     if p3 != p1 and p3 != p2:
                         square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
                         square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
@@ -422,6 +422,32 @@ def find_grand_trines(planet_positions, orb=8):
                         if abs(second_trine_diff - 120) <= orb and abs(third_trine_diff - 120) <= orb:
                             grand_trines.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff)))
     return grand_trines
+
+def find_kites(planet_positions, orb=8):
+    unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
+    planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
+
+    kites = []
+
+    for i, p1 in enumerate(planets):
+        for j, p2 in enumerate(planets[i+1:], start=i+1):
+            first_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            if abs(first_trine_diff - 120) <= orb:
+                for p3 in planets[j+1:]:
+                    if p3 != p1 and p3 != p2:
+                        second_trine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        third_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(second_trine_diff - 120) <= orb and abs(third_trine_diff - 120) <= orb:
+                            for p4 in planets:
+                                if p4 != p1 and p4 != p2 and p4 != p3:
+                                    oppo_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
+                                    oppo_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p4]['longitude'])
+                                    oppo_diff3 = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
+                                    oppo_diff = min(oppo_diff1, oppo_diff2, oppo_diff3)
+
+                                    if abs(oppo_diff1 - 180) <= orb or abs(oppo_diff2 - 180) <= orb or abs(oppo_diff3 - 180) <= orb:
+                                            kites.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff)))
+    return kites
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
     strength_status = {}
