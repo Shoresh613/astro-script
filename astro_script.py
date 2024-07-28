@@ -342,20 +342,18 @@ def get_davison_data(names, guid=None):
 
     return avg_datetime_naive, avg_longitude, avg_latitude
 
-def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
-    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
-
-    def aspect_diff(angle1, angle2):
+def aspect_diff(angle1, angle2):
         diff = abs(angle1 - angle2) % 360
         return min(diff, 360 - diff)
 
+def find_t_squares(planet_positions, orb_opposition=8, orb_square=6):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     for point in unnecessary_points:
         planet_positions.pop(point, None)
 
     t_squares = []
     planets = list(planet_positions.keys())
-    
+
     for i, p1 in enumerate(planets):
         for p2 in planets[i+1:]:
             opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
@@ -368,20 +366,14 @@ def find_t_squares(dt, planet_positions, orb_opposition=8, orb_square=6):
                             t_squares.append((p1, p2, p3, abs(180-opposition_diff), abs(90-square_diff1), abs(90-square_diff2)))
     return t_squares
 
-def find_yod(dt, planet_positions, orb_opposition=8, orb_square=6):
-    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
-
-    def aspect_diff(angle1, angle2):
-        diff = abs(angle1 - angle2) % 360
-        return min(diff, 360 - diff)
-
+def find_yod(planet_positions, orb_opposition=8, orb_square=6):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     for point in unnecessary_points:
         planet_positions.pop(point, None)
 
     fingers_of_god = []
     planets = list(planet_positions.keys())
-    
+
     for i, p1 in enumerate(planets):
         for p2 in planets[i+1:]:
             opposition_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
@@ -394,16 +386,12 @@ def find_yod(dt, planet_positions, orb_opposition=8, orb_square=6):
                             fingers_of_god.append((p1, p2, p3, abs(60-opposition_diff), abs(150-square_diff1), abs(150-square_diff2)))
     return fingers_of_god
 
-def find_grand_crosses(dt, planet_positions, orb_opposition=8, orb_square=6):
-    def aspect_diff(angle1, angle2):
-        diff = abs(angle1 - angle2) % 360
-        return min(diff, 360 - diff)
-
+def find_grand_crosses(planet_positions, orb_opposition=8, orb_square=6):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
 
     grand_crosses = []
-    
+
     for p1 in planets:
         for p2 in planets:
             opposition_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
@@ -430,19 +418,14 @@ def find_grand_crosses(dt, planet_positions, orb_opposition=8, orb_square=6):
                                 ))
     return grand_crosses
 
-def find_grand_trines(dt, planet_positions, orb=8):
-
-    def aspect_diff(angle1, angle2):
-        diff = abs(angle1 - angle2) % 360
-        return min(diff, 360 - diff)
-
+def find_grand_trines(planet_positions, orb=8):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     for point in unnecessary_points:
         planet_positions.pop(point, None)
 
     grand_trines = []
     planets = list(planet_positions.keys())
-    
+
     for i, p1 in enumerate(planets):
         for j, p2 in enumerate(planets[i+1:], start=i+1):
             first_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
@@ -750,6 +733,12 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
                 break
 
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
+
+    #Always in same houses, so as not to inflate house counts
+    keys_to_update = ['Ascendant', 'Midheaven', 'IC', 'DC']
+    for key in keys_to_update:
+        if key in house_positions:
+            house_positions[key]['house'] = ""
 
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
@@ -1760,7 +1749,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if not notime:  # assuming that we have the house positions if not notime
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             planet_positions[planet] = house_num
-            planet_house_counts[house_num] += 1
+            if house_num:
+                planet_house_counts[house_num] += 1
 
         row = [planet, zodiac, position, retrograde_status]
 
@@ -3123,10 +3113,10 @@ def main(gui_arguments=None):
             del planet_positions[part]
 
     complex_aspects = {}
-    complex_aspects["T Squares"] = find_t_squares(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
-    complex_aspects["Yods"] = find_yod(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
-    complex_aspects["Grand Crosses"] = find_grand_crosses(utc_datetime, copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
-    complex_aspects["Grand Trines"] = find_grand_trines(utc_datetime, copy.deepcopy(planet_positions), orb=8) 
+    complex_aspects["T Squares"] = find_t_squares(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Yods"] = find_yod(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Grand Crosses"] = find_grand_crosses(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Grand Trines"] = find_grand_trines(copy.deepcopy(planet_positions), orb=8) 
 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
