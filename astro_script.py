@@ -1544,7 +1544,7 @@ def get_sabian_symbol(planet_positions, planet: str):
     return sabian_symbols[zodiac_sign][str(degree)]
 
 def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p):
-
+    to_return = ""
     if complex_aspects.get("T Squares", False):
         plur = "s" if len(complex_aspects["T Squares"]) > 1 else ""
         if output in ('text', 'html'):
@@ -1717,7 +1717,7 @@ def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_sym
             to_return += table + f"{p}"
         elif output == 'return_html':
             to_return += table + f"{p}"
-
+    return to_return
 
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
     """
@@ -2166,7 +2166,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             print(house_count(house_counts, output, bold, nobold, br))
 
     if complex_aspects:
-        print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p)
+        to_return += print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p)
 
     if output == 'html':
         print('</div>')
