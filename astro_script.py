@@ -348,11 +348,9 @@ def aspect_diff(angle1, angle2):
 
 def find_t_squares(planet_positions, orb_opposition=8, orb_square=6):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
-    for point in unnecessary_points:
-        planet_positions.pop(point, None)
+    planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
 
     t_squares = []
-    planets = list(planet_positions.keys())
 
     for i, p1 in enumerate(planets):
         for p2 in planets[i+1:]:
@@ -368,11 +366,9 @@ def find_t_squares(planet_positions, orb_opposition=8, orb_square=6):
 
 def find_yod(planet_positions, orb_opposition=8, orb_square=6):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
-    for point in unnecessary_points:
-        planet_positions.pop(point, None)
+    planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
 
     fingers_of_god = []
-    planets = list(planet_positions.keys())
 
     for i, p1 in enumerate(planets):
         for p2 in planets[i+1:]:
@@ -386,45 +382,32 @@ def find_yod(planet_positions, orb_opposition=8, orb_square=6):
                             fingers_of_god.append((p1, p2, p3, abs(60-opposition_diff), abs(150-square_diff1), abs(150-square_diff2)))
     return fingers_of_god
 
-def find_grand_crosses(planet_positions, orb_opposition=8, orb_square=6):
+def find_grand_crosses(planet_positions, orb=8):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
     planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
 
     grand_crosses = []
 
-    for p1 in planets:
-        for p2 in planets:
-            opposition_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
-            if abs(opposition_diff1 - 180) <= orb_opposition:
-                for p3 in planets:
-                    square_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
-                    square_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
-                    if abs(square_diff1 - 90) <= orb_square and abs(square_diff2 - 90) <= orb_square:
-                        for p4 in planets:
-                            square_diff3 = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
-                            opposition_diff2 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
-                            square_diff4 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p4]['longitude'])
-                            if (abs(square_diff3 - 90) <= orb_square and 
-                                abs(opposition_diff2 - 180) <= orb_opposition and 
-                                abs(square_diff4 - 90) <= orb_square):
-                                grand_crosses.append((
-                                    p1, p2, p3, p4, 
-                                    round(abs(180 - opposition_diff1), 2),
-                                    round(abs(90 - square_diff1), 2), 
-                                    round(abs(90 - square_diff2), 2),
-                                    round(abs(90 - square_diff3), 2),
-                                    round(abs(90 - square_diff4), 2),
-                                    round(abs(180 - opposition_diff2), 2)
-                                ))
+    for i, p1 in enumerate(planets):
+        for j, p2 in enumerate(planets[i+1:], start=i+1):
+            first_square_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p2]['longitude'])
+            if abs(first_square_diff - 90) <= orb:
+                for k, p3 in enumerate(planets[j+1:], start=j+1):
+                    if p3 != p1 and p3 != p2:
+                        second_square_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        if abs(second_square_diff - 90) <= orb:
+                            for l, p4 in enumerate(planets[k+1:], start=k+1):
+                                third_square_diff = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
+                                fourth_square_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
+                                if abs(third_square_diff - 90) <= orb and abs(fourth_square_diff - 90) <= orb:
+                                    grand_crosses.append((p1, p2, p3, abs(90-first_square_diff), abs(90-second_square_diff), abs(120-third_square_diff), abs(120-fourth_square_diff)))
     return grand_crosses
 
 def find_grand_trines(planet_positions, orb=8):
     unnecessary_points = ['Ascendant', 'Midheaven', 'IC', 'DC', 'North Node', 'South Node']
-    for point in unnecessary_points:
-        planet_positions.pop(point, None)
+    planets = [p for p in planet_positions.keys() if p not in unnecessary_points]
 
     grand_trines = []
-    planets = list(planet_positions.keys())
 
     for i, p1 in enumerate(planets):
         for j, p2 in enumerate(planets[i+1:], start=i+1):
@@ -432,8 +415,8 @@ def find_grand_trines(planet_positions, orb=8):
             if abs(first_trine_diff - 120) <= orb:
                 for p3 in planets[j+1:]:
                     if p3 != p1 and p3 != p2:
-                        second_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
-                        third_trine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        second_trine_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p3]['longitude'])
+                        third_trine_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
                         if abs(second_trine_diff - 120) <= orb and abs(third_trine_diff - 120) <= orb:
                             grand_trines.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff)))
     return grand_trines
@@ -3115,7 +3098,7 @@ def main(gui_arguments=None):
     complex_aspects = {}
     complex_aspects["T Squares"] = find_t_squares(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
     complex_aspects["Yods"] = find_yod(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
-    complex_aspects["Grand Crosses"] = find_grand_crosses(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
+    complex_aspects["Grand Crosses"] = find_grand_crosses(copy.deepcopy(planet_positions), orb=8) 
     complex_aspects["Grand Trines"] = find_grand_trines(copy.deepcopy(planet_positions), orb=8) 
 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
