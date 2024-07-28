@@ -400,7 +400,9 @@ def find_grand_crosses(planet_positions, orb=8):
                                 third_square_diff = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
                                 fourth_square_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
                                 if abs(third_square_diff - 90) <= orb and abs(fourth_square_diff - 90) <= orb:
-                                    grand_crosses.append((p1, p2, p3, abs(90-first_square_diff), abs(90-second_square_diff), abs(120-third_square_diff), abs(120-fourth_square_diff)))
+                                    first_oppo_diff = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p3]['longitude'])
+                                    second_oppo_diff = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p4]['longitude'])
+                                    grand_crosses.append((p1, p2, p3, p4, abs(90-first_square_diff), abs(90-second_square_diff), abs(90-third_square_diff), abs(90-fourth_square_diff), abs(180-first_oppo_diff), abs(180-second_oppo_diff)))
     return grand_crosses
 
 def find_grand_trines(planet_positions, orb=8):
@@ -1516,6 +1518,7 @@ def get_sabian_symbol(planet_positions, planet: str):
     return sabian_symbols[zodiac_sign][str(degree)]
 
 def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_symbol, table_format, notime, bold, nobold, h4, h4_, p):
+
     if complex_aspects.get("T Squares", False):
         plur = "s" if len(complex_aspects["T Squares"]) > 1 else ""
         if output in ('text', 'html'):
@@ -1588,27 +1591,27 @@ def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_sym
         else:
             to_return += f"{p}{bold}{h4}Grand Cross{plur}{h4_}{nobold}"
             
-        headers = ["Planet 1", "Planet 2", "Planet 3", f"{bold}Planet 4{nobold}", "Opposition 1", "Square 1", "Square 2", "Opposition 2", "Square 3", "Square 4"]
+        headers = ["Planet 1", "Sq 1", "Planet 2", "Sq 2", "Planet 3", "Sq 3", "Planet 4", "Sq 4", "Opp 1", "Opp 2"]
         rows = []
         grand_crosses = complex_aspects.get("Grand Crosses", False)
         
         for gc in grand_crosses:
             if degree_in_minutes:
-                opp_deg1 = coord_in_minutes(gc[4], output)
-                sq_deg1 = coord_in_minutes(gc[5], output)
-                sq_deg2 = coord_in_minutes(gc[6], output)
-                opp_deg2 = coord_in_minutes(gc[10], output)
-                sq_deg3 = coord_in_minutes(gc[7], output)
-                sq_deg4 = coord_in_minutes(gc[8], output)
+                sq_deg1 = coord_in_minutes(gc[4], output)
+                sq_deg2 = coord_in_minutes(gc[5], output)
+                sq_deg3 = coord_in_minutes(gc[6], output)
+                sq_deg4 = coord_in_minutes(gc[7], output)
+                opp_deg1 = coord_in_minutes(gc[8], output)
+                opp_deg2 = coord_in_minutes(gc[9], output)
             else:
-                opp_deg1 = f"{gc[4]:.2f}{degree_symbol}"
-                sq_deg1 = f"{gc[5]:.2f}{degree_symbol}"
-                sq_deg2 = f"{gc[6]:.2f}{degree_symbol}"
-                opp_deg2 = f"{gc[10]:.2f}{degree_symbol}"
-                sq_deg3 = f"{gc[7]:.2f}{degree_symbol}"
-                sq_deg4 = f"{gc[8]:.2f}{degree_symbol}"
+                sq_deg1 = f"{gc[4]:.2f}{degree_symbol}"
+                sq_deg2 = f"{gc[5]:.2f}{degree_symbol}"
+                sq_deg3 = f"{gc[6]:.2f}{degree_symbol}"
+                sq_deg4 = f"{gc[7]:.2f}{degree_symbol}"
+                opp_deg1 = f"{gc[8]:.2f}{degree_symbol}"
+                opp_deg2 = f"{gc[9]:.2f}{degree_symbol}"
 
-            rows.append([gc[0], gc[1], gc[2], f"{bold}{gc[3]}{nobold}", opp_deg1, sq_deg1, sq_deg2, opp_deg2, sq_deg3, sq_deg4])
+            rows.append([gc[0], sq_deg1, gc[1], sq_deg2, gc[2], sq_deg3, gc[3], sq_deg4, opp_deg1, opp_deg2])
         
         table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
         
@@ -2002,9 +2005,11 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                     if star_positions:
                         house_counts[star_positions[planets[0]]["house"]] += 1
                     else:
-                        house_counts[planet_positions[planets[0]]["house"]] += 1
+                        if planet_positions[planets[0]].get("house", False):
+                            house_counts[planet_positions[planets[0]]["house"]] += 1
                     if not type == "Natal":
-                        house_counts[transit_planet_positions[planets[1]]["house"]] += 1
+                        if transit_planet_positions[planets[0]].get("house", False):
+                            house_counts[transit_planet_positions[planets[1]]["house"]] += 1
 
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
             if float(OFF_BY[planets[0]]) > orb or float(OFF_BY[planets[1]]) > orb:
