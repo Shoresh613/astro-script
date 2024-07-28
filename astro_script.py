@@ -443,10 +443,10 @@ def find_kites(planet_positions, orb=8):
                                     oppo_diff1 = aspect_diff(planet_positions[p1]['longitude'], planet_positions[p4]['longitude'])
                                     oppo_diff2 = aspect_diff(planet_positions[p2]['longitude'], planet_positions[p4]['longitude'])
                                     oppo_diff3 = aspect_diff(planet_positions[p3]['longitude'], planet_positions[p4]['longitude'])
-                                    oppo_diff = min(oppo_diff1, oppo_diff2, oppo_diff3)
+                                    oppo_diff = min(abs(180-oppo_diff1), abs(180-oppo_diff2), abs(180-oppo_diff3))
 
                                     if abs(oppo_diff1 - 180) <= orb or abs(oppo_diff2 - 180) <= orb or abs(oppo_diff3 - 180) <= orb:
-                                            kites.append((p1, p2, p3, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff)))
+                                        kites.append((p1, p2, p3, p4, abs(120-first_trine_diff), abs(120-second_trine_diff), abs(120-third_trine_diff), oppo_diff))
     return kites
 
 def assess_planet_strength(planet_signs, classic_rulership=False):
@@ -1682,6 +1682,42 @@ def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_sym
             to_return += table + f"{p}"
         elif output == 'return_html':
             to_return += table + f"{p}"
+
+    if complex_aspects.get("Kites", False):
+        plur = "s" if len(complex_aspects["Kites"]) > 1 else ""
+        if output in ('text', 'html'):
+            print(f"{p}{bold}{h4}Kite{plur}{h4_}{nobold}")
+        else:
+            to_return += f"{p}{bold}{h4}Kite{plur}{h4_}{nobold}"
+        headers = ["Planet 1", "Sextile 1", "Planet 2", "Sextile 2", "Planet 3", "Sextile 3", "Opposition", "Degree"]
+        rows = []
+        kites = complex_aspects["Kites"]
+
+        for trine in kites:
+            if degree_in_minutes:
+                trine1_diff = coord_in_minutes(trine[4], output)
+                trine2_diff = coord_in_minutes(trine[5], output)
+                trine3_diff = coord_in_minutes(trine[6], output)
+                oppo_diff = coord_in_minutes(trine[7], output)
+            else:
+                trine1_diff = f"{trine[4]:.2f}{degree_symbol}"
+                trine2_diff = f"{trine[5]:.2f}{degree_symbol}"
+                trine3_diff = f"{trine[6]:.2f}{degree_symbol}"
+                oppo_diff = f"{trine[7]:.2f}{degree_symbol}"
+
+            rows.append([trine[0], trine1_diff, trine[1], trine2_diff, trine[2], trine3_diff, trine[3], oppo_diff])
+    
+        table = tabulate(rows, headers=headers, tablefmt=table_format, floatfmt=".2f")
+
+        if output == 'text':
+            print(table + f'{p}')
+        elif output == 'html':
+            print(table + f'{p}')
+        elif output == 'return_text':
+            to_return += table + f"{p}"
+        elif output == 'return_html':
+            to_return += table + f"{p}"
+
 
 def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
     """
@@ -3131,6 +3167,7 @@ def main(gui_arguments=None):
     complex_aspects["Yods"] = find_yod(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
     complex_aspects["Grand Crosses"] = find_grand_crosses(copy.deepcopy(planet_positions), orb=8) 
     complex_aspects["Grand Trines"] = find_grand_trines(copy.deepcopy(planet_positions), orb=8) 
+    complex_aspects["Kites"] = find_kites(copy.deepcopy(planet_positions), orb=8) 
 
     moon_phase_name1, illumination1 = moon_phase(utc_datetime)
     moon_phase_name2, illumination2 = moon_phase(utc_datetime + timedelta(days=1))
