@@ -2070,7 +2070,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                         if planet_positions[planets[0]].get("house", False):
                             house_counts[planet_positions[planets[0]]["house"]] += 1
                     if not type == "Natal":
-                        if transit_planet_positions[planets[0]].get("house", False):
+                        if transit_planet_positions[planets[1]].get("house", False):
                             house_counts[transit_planet_positions[planets[1]]["house"]] += 1
 
         if imprecise_aspects == "warn" and ((planets[0] in OFF_BY.keys() or planets[1] in OFF_BY.keys())) and notime:
