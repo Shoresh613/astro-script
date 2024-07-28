@@ -751,6 +751,12 @@ def calculate_house_positions(date, latitude, longitude, planets_positions, noti
 
         house_positions[planet] = {'longitude': planet_longitude, 'house': house_num}
 
+    #Always in same houses, so as not to inflate house counts
+    keys_to_update = ['Ascendant', 'Midheaven', 'IC', 'DC']
+    for key in keys_to_update:
+        if key in house_positions:
+            house_positions[key]['house'] = ""
+
     return house_positions, houses[:13]  # Return house positions and cusps (including Ascendant)
 
 def longitude_to_zodiac(longitude, output):
@@ -1621,7 +1627,8 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if not notime:  # assuming that we have the house positions if not notime
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             planet_positions[planet] = house_num
-            planet_house_counts[house_num] += 1
+            if house_num:
+                planet_house_counts[house_num] += 1
 
         row = [planet, zodiac, position, retrograde_status]
 
