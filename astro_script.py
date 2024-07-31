@@ -2492,7 +2492,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, aspects_to_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
-                  transits_location, synastry, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
+                  transits_location, synastry, progressed, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
 
     if isinstance(date, datetime):
         date = date.strftime("%Y-%m-%d %H:%M")
@@ -2540,6 +2540,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Transits Timezone": transits_timezone,
         "Transits Location": transits_location,
         "Synastry": synastry,
+        'Progressed': progressed,
         "Saved Names": None,
         "Save Settings": store_defaults,
         "Use Saved Settings": use_saved_settings,
@@ -2606,6 +2607,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
+    parser.add_argument('--progressed', help='Days to progress the natal chart, or 'now' for the current year', required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
     parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "default"', required=False)
@@ -2660,6 +2662,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Transits Timezone": args.transits_timezone,
         "Transits Location": args.transits_location,
         "Synastry": args.synastry,
+        'Progressed': args.progressed,
         "Saved Names": args.saved_names,
         "Remove Saved Names": args.remove_saved_names,
         "Save Settings": args.save_settings,
