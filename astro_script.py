@@ -2673,7 +2673,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
 
     return arguments
 
-def main(gui_arguments=None):    
+def main(gui_arguments=None):
     if gui_arguments:
         args = gui_arguments
     else:
@@ -2702,11 +2702,17 @@ def main(gui_arguments=None):
 
     try:
         if args["Date"]:
-            local_datetime = parse_date(args["Date"])                     
+            local_datetime = parse_date(args["Date"])
     except ValueError:
         print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
         local_datetime = None
         return "Invalid date format. Please use YYYY-MM-DD HH:MM."
+
+    try:
+        if args["Progressed"]: # Use new method instead of this
+            local_datetime = parse_date(args["Progressed"])
+    except ValueError:
+        pass
 
     try:
         if args["Return"]:
@@ -2732,7 +2738,7 @@ def main(gui_arguments=None):
     def_minor_aspects = False  # Default minor aspects
     def_show_brief_aspects = False  # Default brief aspects
     def_show_score = False  # Default minor aspects
-    
+
     def_orbs = {
         "Orb": 1,  # General default orb size
         "Orb Major": 6.0,  # Default orb size for major aspects
@@ -2795,10 +2801,10 @@ def main(gui_arguments=None):
             "Transits Location": args["Transits Location"] if args["Transits Location"] else None,
             "Output": args["Output"] if args["Output"] else None
         }
-        
+
         db_manager.store_defaults(defaults_to_store)
         print(f"Settings stored with the name '{args['Save Settings']}'.")
-        
+
         if EPHE:
             return f"Defaults saved."
         else:
@@ -2817,11 +2823,11 @@ def main(gui_arguments=None):
             "Hide Planetary Aspects", "Hide Fixed Star Aspects", "Hide Asteroid Aspects",
             "Transits Timezone", "Transits Location", "Output"
         ]
-        
+
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
-        
+
     if args["Location"]: 
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
@@ -2837,7 +2843,7 @@ def main(gui_arguments=None):
         </head>
         <body><div><p>{location_error_string}</div>"
     </html>''' if args["Output"] in ("html", "return_html") else location_error_string
-        
+
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
