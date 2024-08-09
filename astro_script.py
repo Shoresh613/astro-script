@@ -2607,7 +2607,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
-    parser.add_argument('--progressed', help='Days to progress the natal chart, or 'now' for the current year', required=False)
+    parser.add_argument('--progressed', help='Days to progress the natal chart, or "now" for the current year', required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
     parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "default"', required=False)
