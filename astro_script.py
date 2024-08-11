@@ -2748,6 +2748,9 @@ def main(gui_arguments=None):
 
     try:
         if args["Return"]:
+            if not args["Name"]:
+                print("No named event specified for return.")
+                return "No named event specified for return."
             # convert to utc
             utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
             nextprev = args["Return"][0]
