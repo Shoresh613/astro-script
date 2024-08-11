@@ -988,7 +988,7 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
             return_string += f"{minutes} minute"
     return return_string if return_string else "Less than a minute"
 
-def get_decan_ruler(longitude, zodiac_sign):
+def get_decan_ruler(longitude, zodiac_sign, classic_rulers):
     """
     Determine the decan ruler of a given zodiac sign based on the longitude of a planet.
 
@@ -1003,40 +1003,41 @@ def get_decan_ruler(longitude, zodiac_sign):
     Returns:
     - str: The name of the planet ruling the decan of the zodiac sign.
     """
-    decan_rulers_classical = { # In case there' will be an option for classical rulers
-        'Aries': ['Mars', 'Sun', 'Jupiter'],
-        'Taurus': ['Venus', 'Mercury', 'Saturn'],
-        'Gemini': ['Mercury', 'Venus', 'Saturn'],
-        'Cancer': ['Moon', 'Mars', 'Jupiter'],
-        'Leo': ['Sun', 'Jupiter', 'Mars'],
-        'Virgo': ['Mercury', 'Saturn', 'Venus'],
-        'Libra': ['Venus', 'Saturn', 'Mercury'],
-        'Scorpio': ['Mars', 'Sun', 'Venus'],
-        'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
-        'Capricorn': ['Saturn', 'Venus', 'Mercury'],
-        'Aquarius': ['Saturn', 'Mercury', 'Venus'],
-        'Pisces': ['Jupiter', 'Mars', 'Sun']
-    }
-
-    decan_rulers = { # Including modern planets
-        'Aries': ['Mars', 'Sun', 'Jupiter'],
-        'Taurus': ['Venus', 'Mercury', 'Saturn'],
-        'Gemini': ['Mercury', 'Venus', 'Uranus'],
-        'Cancer': ['Moon', 'Pluto', 'Neptune'],
-        'Leo': ['Sun', 'Jupiter', 'Mars'],
-        'Virgo': ['Mercury', 'Saturn', 'Venus'],
-        'Libra': ['Venus', 'Uranus', 'Mercury'],
-        'Scorpio': ['Mars', 'Neptune', 'Moon'],
-        'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
-        'Capricorn': ['Saturn', 'Venus', 'Mercury'],
-        'Aquarius': ['Uranus', 'Mercury', 'Venus'],
-        'Pisces': ['Neptune', 'Moon', 'Pluto']
-    }
+    if classic_rulers:
+        decan_rulers = { # In case there' will be an option for classical rulers
+            'Aries': ['Mars', 'Sun', 'Jupiter'],
+            'Taurus': ['Venus', 'Mercury', 'Saturn'],
+            'Gemini': ['Mercury', 'Venus', 'Saturn'],
+            'Cancer': ['Moon', 'Mars', 'Jupiter'],
+            'Leo': ['Sun', 'Jupiter', 'Mars'],
+            'Virgo': ['Mercury', 'Saturn', 'Venus'],
+            'Libra': ['Venus', 'Saturn', 'Mercury'],
+            'Scorpio': ['Mars', 'Sun', 'Venus'],
+            'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
+            'Capricorn': ['Saturn', 'Venus', 'Mercury'],
+            'Aquarius': ['Saturn', 'Mercury', 'Venus'],
+            'Pisces': ['Jupiter', 'Mars', 'Sun']
+        }
+    else:
+        decan_rulers = { # Including modern planets
+            'Aries': ['Mars', 'Sun', 'Jupiter'],
+            'Taurus': ['Venus', 'Mercury', 'Saturn'],
+            'Gemini': ['Mercury', 'Venus', 'Uranus'],
+            'Cancer': ['Moon', 'Pluto', 'Neptune'],
+            'Leo': ['Sun', 'Jupiter', 'Mars'],
+            'Virgo': ['Mercury', 'Saturn', 'Venus'],
+            'Libra': ['Venus', 'Uranus', 'Mercury'],
+            'Scorpio': ['Mars', 'Neptune', 'Moon'],
+            'Sagittarius': ['Jupiter', 'Mars', 'Sun'],
+            'Capricorn': ['Saturn', 'Venus', 'Mercury'],
+            'Aquarius': ['Uranus', 'Mercury', 'Venus'],
+            'Pisces': ['Neptune', 'Moon', 'Pluto']
+        }
 
     decan_index = (int(longitude) // 10) % 3
     return decan_rulers[zodiac_sign][decan_index]
 
-def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False):
+def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False, classic_rulers=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -1089,7 +1090,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                     'house': calculate_individual_house_position(date, latitude, longitude, star_long, h_sys)
                 }
 
-                positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+                positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
             except:
                 pass
@@ -1104,7 +1105,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                 'house': calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
             }
 
-            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
             if planet == "North Node":
                 # Calculate the South Node
@@ -1115,9 +1116,9 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
                     'retrograde': 'R' if pos[3] < 0 else '',
                     'speed': pos[3]  #Same speed as North Node
                 }
-                positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'])})
+                positions["South Node"].update({'decan_ruled_by': get_decan_ruler(south_node_longitude, positions[planet]['zodiac_sign'], classic_rulers)})
 
-            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'])})
+            positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets":
@@ -3177,7 +3178,7 @@ def main(gui_arguments=None):
     # Initialize Colorama, calculations for strings
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts)
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts, classic_rulers=args["Classical Rulership"])
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
     if show_arabic_parts and not args["Aspects To Arabic Parts"]:
         ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
@@ -3365,7 +3366,7 @@ def main(gui_arguments=None):
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
     if not hide_asteroid_aspects:
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
@@ -3393,8 +3394,8 @@ def main(gui_arguments=None):
     name = f"{args['Name']} " if args["Name"] else ""
 
     if show_transits:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys)
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
 
         transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
@@ -3412,14 +3413,14 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
 
-        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars")
+        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars", classic_rulers=args["Classical Rulership"])
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
 
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids")
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
         asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_transit_aspects:
@@ -3427,8 +3428,8 @@ def main(gui_arguments=None):
                                                 degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions))
 
     if show_synastry:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys)
-        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys)
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
 
         synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orbs, aspect_types=MAJOR_ASPECTS,
                                                        output_type=output_type, type='synastry')
