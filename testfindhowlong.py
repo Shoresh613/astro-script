@@ -2,7 +2,7 @@ import swisseph as swe
 from datetime import datetime, timedelta
 
 def find_aspect_timings(body1, body2, target_angle, orb, reference_date, max_days=5):
-    swe.set_ephe_path('/path/to/ephemeris/files')  # Set the path to your ephemeris files
+    swe.set_ephe_path('./ephe/')  # Set the path to your ephemeris files
 
     def calculate_angle(time):
         jd = swe.julday(time.year, time.month, time.day, time.hour + time.minute / 60.0 + time.second / 3600.0)

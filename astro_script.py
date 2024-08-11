@@ -1277,7 +1277,7 @@ def calculate_planetary_aspects(planet_positions, orbs, output_type, aspect_type
     # Pairs to exclude from the aspect calculations
     excluded_pairs = [
         {"Sun", "Ascendant"}, {"Sun", "Midheaven"}, {"DC", "Ascendant"}, {"DC", "Midheaven"}, {"DC", "IC"},
-        {"Ascendant", "Midheaven"}, {"South Node", "North Node"}, {"Midheaven", "IC"}
+        {"Ascendant", "Midheaven"}, {"South Node", "North Node"}, {"Midheaven", "IC"}, {"Ascendant", "IC"}
     ]
 
     aspects_found = {}
