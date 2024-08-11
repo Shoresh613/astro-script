@@ -2506,7 +2506,7 @@ def set_orbs(args, def_orbs):
 
         return orbs
 
-def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, returns, davison, place, imprecise_aspects,
+def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, returns, save_as, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, aspects_to_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
                   orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
@@ -2526,6 +2526,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "LMT": lmt,
         "List Timezones": list_timezones,
         "Return": returns,
+        "Save As": save_as,
         "Davison": davison,
         "Place": place,
         "Imprecise Aspects": imprecise_aspects,
@@ -2597,7 +2598,7 @@ If a name is passed, the script will look up the record for that name in the JSO
 provided there are such values stored in the file (only the first 6 types are stored). 
 If no record is found, default values will be used.''', formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('--name', help='Name to look up the record for. (Default: None)', required=False)
+    parser.add_argument('--name', help='Name to look up the record for. Will auto save event using this name, if not already saved.', required=False)
     parser.add_argument('--date', help='Date of the event (YYYY-MM-DD HH:MM local time). (Default: None)', required=False)
     parser.add_argument('--location', type=str, help='Name of location for lookup of coordinates, e.g. "Sahlgrenska, Göteborg, Sweden". (Default: "Sahlgrenska")', required=False)
     parser.add_argument('--latitude', type=float, help='Latitude of the location in degrees, e.g. 57.6828. (Default: 57.6828)', required=False)
@@ -2607,6 +2608,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--LMT', action='store_true', help='Indicates that the specified time is in Local Mean Time (pre standardized timezones). Still requires a timezone for the location, unless TimezoneFinder is installed.')
     parser.add_argument('--list_timezones', action='store_true', help='Prints all available timezones. Overrides all other arguments if specified.')
     parser.add_argument('--returns', nargs=2, action=ReturnAction, metavar=('DIRECTION', 'PLANET'), help='Calculate the next or previous return of the named planet to a given datetime or saved named event. Format: prev/next PLANET')
+    parser.add_argument('--save_as', help='Store event using the name specified here. Useful for returns, and e.g. being able to check for synastry with the natal chart.', required=False)
     parser.add_argument('--davison', type=str, nargs='+', metavar='EVENT', help='A Davison relationship chart requires at least two saved events (e.g. "John, \'Jane Smith\'").', required=False)
     parser.add_argument('--place', help='Name of location without lookup of coordinates. (Default: None)', required=False)
     parser.add_argument('--imprecise_aspects', choices=['off', 'warn'], help='Whether to not show imprecise aspects or just warn. (Default: "warn")', required=False)
@@ -2662,6 +2664,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "LMT": args.LMT,
         "List Timezones": args.list_timezones,
         "Return": args.returns,
+        "Save As": args.save_as,
         "Davison": args.davison,
         "Place": args.place,
         "Imprecise Aspects": args.imprecise_aspects,
@@ -2730,6 +2733,9 @@ def main(gui_arguments=None):
         notime = exists['notime']
         place = exists['location']
     else:
+        if args["Return"]:
+            print("No valid event specified for return.")
+            return "No valid event specified for return."
         notime = args["Time Unknown"]
 
     try:
@@ -3193,6 +3199,8 @@ def main(gui_arguments=None):
     # Save event if name given and not already stored
     if name and not exists:
         db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
+    if args["Save As"]:
+        db_manager.update_event(args["Save As"], place, (utc_datetime + utc_datetime.astimezone(local_timezone).utcoffset()).isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings
