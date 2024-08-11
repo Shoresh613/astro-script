@@ -2559,6 +2559,20 @@ class ReturnAction(argparse.Action):
             parser.error(f"The {self.dest} argument must be followed by 'prev' or 'next' and then a valid planet name.")
         setattr(namespace, self.dest, values)
 
+class ProgressedAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values == "now":
+            setattr(namespace, self.dest, values)
+        else:
+            try:
+                int_value = int(values)
+                if int_value <= 1 or int_value >= 361:
+                    raise ValueError
+            except ValueError:
+                parser.error(f"The {self.dest} argument must be 'now' or an integer between 1 and 360.")
+
+            setattr(namespace, self.dest, int_value)
+
 def argparser():
     parser = argparse.ArgumentParser(description='''If no arguments are passed, values entered in the script will be used.
 If a name is passed, the script will look up the record for that name in the JSON file and overwrite other passed values,
@@ -2607,7 +2621,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--transits_timezone', help='Timezone of the transit location (e.g. "Europe/Stockholm"). See README.md for all available tz. (Default: "Europe/Stockholm")', required=False)
     parser.add_argument('--transits_location', type=str, help='Name of location for lookup of transit coordinates, e.g. "Göteborg, Sweden". (Default: "Göteborg")', required=False)
     parser.add_argument('--synastry', help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)", required=False)
-    parser.add_argument('--progressed', help='Days to progress the natal chart, or "now" for the current year', required=False)
+    parser.add_argument('--progressed', help='Days to progress the natal chart, or "now" for the current year', action=ProgressedAction, required=False)
     parser.add_argument('--saved_names', action='store_true', help="List names previously saved using --name. If set, all other arguments are ignored. (Default: false)")
     parser.add_argument('--remove_saved_names', type=str, nargs='+', metavar='EVENT', help='Remove saved events (e.g. "John, \'Jane Smith\'"). If set, all other arguments are ignored. (except --saved_names)', required=False)
     parser.add_argument('--save_settings', type=str, nargs='?', const='default', help='Store settings as defaults <name>. If no name passed will be stored as "default"', required=False)
@@ -3124,14 +3138,13 @@ def main(gui_arguments=None):
                 print("Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC).", file=sys.stderr)
                 return "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC)."
             transits_utc_datetime = convert_to_utc(transits_local_datetime, local_transits_timezone)
-            
-            show_transits = True 
+
+            show_transits = True
         # only show transits, not the rest
         hide_asteroid_aspects = True
         hide_fixed_star_aspects = True
         hide_planetary_aspects = True
         hide_planetary_positions = True
-            
 
     if args["Synastry"]:
         try:
