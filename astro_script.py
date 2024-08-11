@@ -342,6 +342,23 @@ def get_davison_data(names, guid=None):
 
     return avg_datetime_naive, avg_longitude, avg_latitude
 
+def get_progressed_datetime(input_date: datetime, input_value):
+    if input_value == "now":
+        # Calculate the number of full years since input_date
+        now = datetime.now()
+        years_passed = now.year - input_date.year
+        
+        # Adjust if the current date is before the input_date in the current year
+        if (now.month, now.day) < (input_date.month, input_date.day):
+            years_passed -= 1
+        
+        new_date = input_date + timedelta(days=years_passed)
+    
+    elif isinstance(input_value, int):
+        # Add the input_value as number of days to input_date
+        new_date = input_date + timedelta(days=input_value)
+    return new_date
+
 def aspect_diff(angle1, angle2):
         diff = abs(angle1 - angle2) % 360
         return min(diff, 360 - diff)
@@ -2724,8 +2741,8 @@ def main(gui_arguments=None):
         return "Invalid date format. Please use YYYY-MM-DD HH:MM."
 
     try:
-        if args["Progressed"]: # Use new method instead of this
-            local_datetime = parse_date(args["Progressed"])
+        if args["Progressed"]:
+            local_datetime = get_progressed_datetime(local_datetime, args["Progressed"])
     except ValueError:
         pass
 
@@ -3214,6 +3231,8 @@ def main(gui_arguments=None):
     string_latitude = f"{br}{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
     string_davison_noname = "Davison chart"
+    string_progressed = f"{br}{bold}Progressed chart:{nobold} {args['Progressed']}" if args["Progressed"] else ""
+
     if args["Name"] and args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
@@ -3263,6 +3282,8 @@ def main(gui_arguments=None):
         print(f"{string_heading}", end='')
         if args["Return"]:
             print(f"{string_return}", end='')
+        if args["Progressed"]:
+            print(f"{string_progressed}", end='')
         if exists or name:
             print(f"{string_name}", end='')
         if place:
@@ -3302,6 +3323,8 @@ def main(gui_arguments=None):
     elif output_type in ('return_text', "return_html"):
         if args["Return"]:
             to_return += f"{string_return}"
+        if args["Progressed"]:
+            to_return += f"{string_progressed}"
         if exists or name:
             to_return += f"{string_name}"
         if place:
