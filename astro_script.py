@@ -1823,7 +1823,9 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
             row.insert(3, off_by)
-        # else: off_by = ""
+        elif notime: 
+            off_by = ""
+            row.insert(3, off_by)
         if house_positions and not notime:
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
