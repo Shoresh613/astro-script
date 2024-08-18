@@ -17,51 +17,57 @@ def get_altitude(lat, lon):
         print(f"Error getting altitude: {e}")
         return None
 
-# Function to add the altitude column to a table and populate it with values
-def add_and_populate_altitude(table_name):
+# Function to add the altitude column after the location column and populate it with values
+def add_and_populate_altitude(table_name, location_column='location'):
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Step 1: Add the altitude column by creating a new table and copying data
+    # Step 1: Get existing columns
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = cursor.fetchall()
+    column_names = [column[1] for column in columns]
+
+    # Step 2: Determine the position of the location column
+    location_index = column_names.index(location_column) + 1
+
+    # Step 3: Reorder columns with altitude after the location column
+    column_names.insert(location_index, 'altitude')
+    column_definitions = [f"{col} {columns[column_names.index(col)][2]}" if col != 'altitude' else 'altitude REAL' for col in column_names]
+
+    # Step 4: Create a new table with the altitude column in the desired position
     cursor.execute(f'''
-    CREATE TABLE {table_name}_new AS
-    SELECT
-        *,
-        NULL AS altitude  -- Add the new column here
-    FROM
-        {table_name}
-    WHERE
-        1 = 0  -- Creates an empty table with the same structure
+    CREATE TABLE {table_name}_new (
+        {", ".join(column_definitions)}
+    )
     ''')
 
-    # Copy existing data into the new table
-    columns = cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
-    column_names = [column[1] for column in columns]
+    # Step 5: Copy existing data to the new table
+    existing_columns = [col for col in column_names if col != 'altitude']
     cursor.execute(f'''
-    INSERT INTO {table_name}_new ({", ".join(column_names)}, altitude)
-    SELECT {", ".join(column_names)}, NULL
+    INSERT INTO {table_name}_new ({", ".join(existing_columns)}, altitude)
+    SELECT {", ".join(existing_columns)}, NULL
     FROM {table_name};
     ''')
 
-    # Drop the old table and rename the new one
+    # Step 6: Drop the old table and rename the new table to the original name
     cursor.execute(f"DROP TABLE {table_name}")
     cursor.execute(f"ALTER TABLE {table_name}_new RENAME TO {table_name}")
 
     # Commit the transaction
     conn.commit()
 
-    # Step 2: Populate the altitude column with valid values
-    cursor.execute(f"SELECT id, latitude, longitude FROM {table_name} WHERE altitude IS NULL")
+    # Step 7: Populate the altitude column with valid values
+    cursor.execute(f"SELECT ROWID, latitude, longitude FROM {table_name} WHERE altitude IS NULL")
     rows = cursor.fetchall()
 
     for row in rows:
-        id, latitude, longitude = row
+        rowid, latitude, longitude = row
         altitude = get_altitude(latitude, longitude)
 
         if altitude is not None:
-            cursor.execute(f"UPDATE {table_name} SET altitude = ? WHERE id = ?", (altitude, id))
-            print(f"Updated {table_name} id {id} with altitude {altitude} meters")
+            cursor.execute(f"UPDATE {table_name} SET altitude = ? WHERE ROWID = ?", (altitude, rowid))
+            print(f"Updated {table_name} ROWID {rowid} with altitude {altitude} meters")
 
     # Commit the changes and close the connection
     conn.commit()
