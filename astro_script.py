@@ -726,6 +726,11 @@ def calculate_house_positions(date, latitude, longitude, altitude, planets_posit
     Raises:
     - ValueError: If the time component of the date is exactly midnight, which may result in less accurate calculations.
     """
+    try:
+        swe.set_topo(altitude, latitude, longitude)
+    except Exception as e:
+        print(f"Error setting topocentric coordinates: {e}")
+
     # Validate input date has a time component (convention to use 00:00:00 for unknown time )
     if notime:
         print("Warning: Time is not set. Houses cannot be reliably calculated.")
@@ -1097,8 +1102,9 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
 
     try:
         swe.set_topo(longitude, latitude, altitude)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error setting topocentric coordinates: {e}")
+
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
     if mode == "planets":
