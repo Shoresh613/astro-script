@@ -652,7 +652,7 @@ def get_coordinates(location_name:str):
     - location_name (str): The name of the location for which to obtain geographic coordinates.
 
     Returns:
-    - tuple: A tuple containing the latitude and longitude of the specified location.
+    - tuple: A tuple containing the latitude, longitude and altitude of the specified location.
 
     Note:
     - The accuracy of the coordinates returned depends on the specificity of the location name provided.
@@ -679,11 +679,10 @@ def get_coordinates(location_name:str):
         if location is None:
             db_manager.save_location(location_name, None, None, None)
             return None, None, None
-        altitude = get_altitude(location.latitude, location.longitude)
+        altitude = get_altitude(location.latitude, location.longitude, location_name)
         db_manager.save_location(location_name, location.latitude, location.longitude, altitude)
 
         return location.latitude, location.longitude
-
 
 def calculate_individual_house_position(date, latitude, longitude, planet_longitude, h_sys='P'):
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
@@ -868,7 +867,12 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
     angle_off = (angular_difference - aspect_angle)
     return ((angle_off <= orb) and angle_off >= -orb), angle_off
 
-def get_altitude(lat, lon):
+def get_altitude(lat, lon, location_name):
+
+    location_details = db_manager.load_location(location_name)
+    if location_details:
+        return location_details[2] # Altitude
+
     try:
         url = f'https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}'
         response = requests.get(url)
@@ -1091,6 +1095,10 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
         else:
             swe.set_ephe_path('./ephe')
 
+    try:
+        swe.set_topo(longitude, latitude, altitude)
+    except:
+        pass
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
     if mode == "planets":
@@ -2905,7 +2913,7 @@ def main(gui_arguments=None):
                     </head>
                     <body><div><p>{location_error_string}</div>"
                 </html>''' if args["Output"] in ("html", "return_html") else location_error_string
-        altitude = get_altitude(latitude, longitude)
+        altitude = get_altitude(latitude, longitude, place)
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
@@ -3175,7 +3183,7 @@ def main(gui_arguments=None):
             print(location_error_string)
             return location_error_string
 
-        transits_altitude = get_altitude(transits_latitude, transits_longitude)
+        transits_altitude = get_altitude(transits_latitude, transits_longitude, transits_location)
 
         if args["Transits"] == "now":
             transits_local_datetime = datetime.now()
@@ -3330,9 +3338,9 @@ def main(gui_arguments=None):
         if place:
             print(f"{string_place}", end='')
         if degree_in_minutes:
-            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}, {string_altitude}", end='')
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes} {string_altitude}", end='')
         else:
-            print(f"{string_latitude}, {string_longitude}, {string_altitude}", end='')
+            print(f"{string_latitude}, {string_longitude} {string_altitude}", end='')
 
         if args["Davison"]:
             print(f"{string_davison}", end='')
