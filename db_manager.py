@@ -1,6 +1,5 @@
 import sqlite3
 import json
-from datetime import datetime
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
@@ -16,6 +15,7 @@ def initialize_db():
         timezone TEXT,
         latitude REAL,
         longitude REAL,
+        altitude REAL,
         notime INTEGER DEFAULT FALSE,
         random_column TEXT NULL,
         name TEXT NOT NULL
@@ -27,7 +27,8 @@ def initialize_db():
     CREATE TABLE IF NOT EXISTS myapp_location (
         location_name TEXT PRIMARY KEY,
         latitude REAL,
-        longitude REAL
+        longitude REAL,
+        altitude REAL
     )
     ''')
 
@@ -45,7 +46,7 @@ def initialize_db():
     conn.close()
 
 # Function to add or update an event in the database
-def update_event(name, location, datetime_str, timezone, latitude, longitude, notime, guid):
+def update_event(name, location, datetime_str, timezone, latitude, longitude, altitude, notime, guid):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
@@ -61,15 +62,16 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
             timezone = ?,
             latitude = ?,
             longitude = ?,
+            altitude = ?,
             notime = ?,
             random_column = ?
         WHERE name = ? AND random_column = ?
-        ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name, str(guid)))
+        ''', (location, datetime_str, timezone, latitude, longitude, altitude, notime, str(guid), name, str(guid)))
     else:
         if guid:
             cursor.execute('''
             
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, random_column, name)
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, random_column, name)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             location=excluded.location,
@@ -77,14 +79,15 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
             timezone=excluded.timezone,
             latitude=excluded.latitude,
             longitude=excluded.longitude,
+            altitude=excluded.altitude,
             notime=excluded.notime,
             random_column=excluded.guid,
             name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name))
+            ''', (location, datetime_str, timezone, latitude, longitude, altitude, notime, str(guid), name))
         else:
             cursor.execute('''
             
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, name)
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, name)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             location=excluded.location,
@@ -92,6 +95,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
             timezone=excluded.timezone,
             latitude=excluded.latitude,
             longitude=excluded.longitude,
+            altitude=excluded.altitude,
             notime=excluded.notime,
             name=excluded.name
             ''', (location, datetime_str, timezone, latitude, longitude, notime, name))
@@ -115,6 +119,8 @@ def get_event(name, guid=None):
         latitude = cursor.fetchone()
         cursor.execute('SELECT longitude FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
         longitude = cursor.fetchone()
+        cursor.execute('SELECT altitude FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
+        altitude = cursor.fetchone()
         cursor.execute('SELECT notime FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
         notime = cursor.fetchone()
     else:
@@ -128,6 +134,8 @@ def get_event(name, guid=None):
         latitude = cursor.fetchone()
         cursor.execute('SELECT longitude FROM myapp_event WHERE name = ?', (name,))
         longitude = cursor.fetchone()
+        cursor.execute('SELECT altitude FROM myapp_event WHERE name = ?', (name,))
+        altitude = cursor.fetchone()
         cursor.execute('SELECT notime FROM myapp_event WHERE name = ?', (name,))
         notime = cursor.fetchone()
 
@@ -141,6 +149,7 @@ def get_event(name, guid=None):
             'timezone': timezone[0],
             'latitude': latitude[0],
             'longitude': longitude[0],
+            'altitude': altitude[0],
             'notime': notime[0]
         }
         return event
@@ -254,17 +263,18 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
     return to_return
 
 # Function to save a location in the database
-def save_location(location_name, latitude, longitude):
+def save_location(location_name, latitude, longitude, altitude):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
     cursor.execute('''
-    INSERT INTO myapp_location (location_name, latitude, longitude)
-    VALUES (?, ?, ?)
+    INSERT INTO myapp_location (location_name, latitude, longitude, altitude)
+    VALUES (?, ?, ?, ?)
     ON CONFLICT(location_name) DO UPDATE SET
     latitude=excluded.latitude,
-    longitude=excluded.longitude
-    ''', (location_name, latitude, longitude))
+    longitude=excluded.longitude,
+    altitude=excluded.altitude
+    ''', (location_name, latitude, longitude, altitude))
     
     conn.commit()
     conn.close()
@@ -274,7 +284,7 @@ def load_location(location_name):
     conn = sqlite3.connect('db.sqlite3')
     cursor = conn.cursor()
     
-    cursor.execute('SELECT latitude, longitude FROM myapp_location WHERE location_name = ?', (location_name,))
+    cursor.execute('SELECT latitude, longitude, altitude FROM myapp_location WHERE location_name = ?', (location_name,))
     location = cursor.fetchone()
     
     conn.close()

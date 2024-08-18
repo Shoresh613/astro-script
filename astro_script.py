@@ -6,6 +6,7 @@ import sys
 import argparse
 from math import sin, cos, radians, exp, pi
 from geopy.geocoders import Nominatim
+import requests
 from tabulate import tabulate, SEPARATING_LINE
 try:
     from . import version
@@ -676,9 +677,10 @@ def get_coordinates(location_name:str):
             print(f"Error getting location {location_name}, check internet connection: {e}")
             return None, None
         if location is None:
-            db_manager.save_location(location_name, None, None)
-            return None, None
-        db_manager.save_location(location_name, location.latitude, location.longitude)
+            db_manager.save_location(location_name, None, None, None)
+            return None, None, None
+        altitude = get_altitude(location.latitude, location.longitude)
+        db_manager.save_location(location_name, location.latitude, location.longitude, altitude)
 
         return location.latitude, location.longitude
 
@@ -706,7 +708,7 @@ def calculate_individual_house_position(date, latitude, longitude, planet_longit
     return house_num
 
 
-def calculate_house_positions(date, latitude, longitude, planets_positions, notime=False, h_sys='P'):
+def calculate_house_positions(date, latitude, longitude, altitude, planets_positions, notime=False, h_sys='P'):
     """
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
 
@@ -865,6 +867,17 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
     
     angle_off = (angular_difference - aspect_angle)
     return ((angle_off <= orb) and angle_off >= -orb), angle_off
+
+def get_altitude(lat, lon):
+    try:
+        url = f'https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}'
+        response = requests.get(url)
+        results = response.json()['results']
+        if results:
+            return results[0]['elevation']
+    except Exception as e:
+        print(f"Error getting altitude: {e}")
+        return None
 
 def calculate_aspects_to_fixed_stars(date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False):
     """
@@ -1054,7 +1067,7 @@ def get_decan_ruler(longitude, zodiac_sign, classic_rulers):
     decan_index = (int(longitude) // 10) % 3
     return decan_rulers[zodiac_sign][decan_index]
 
-def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False, classic_rulers=False):
+def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False, classic_rulers=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -1158,7 +1171,7 @@ def calculate_planet_positions(date, latitude, longitude, output, h_sys='P', mod
             positions = add_arabic_parts(date, latitude, longitude, positions, output)
 
     # Calculate house positions
-    house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, positions, notime=False, h_sys=h_sys)
+    house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, altitude, positions, notime=False, h_sys=h_sys)
 
     # Include house positions in the positions dictionary
     for planet in positions:
@@ -2423,6 +2436,7 @@ def load_event(name, guid=None):
             'timezone': event["timezone"],
             'latitude': event["latitude"],
             'longitude': event["longitude"],
+            'altitude': event["altitude"],
             'notime': True if event["notime"] else False,
         }
     else:
@@ -2731,6 +2745,7 @@ def main(gui_arguments=None):
         local_datetime = datetime.fromisoformat(exists['datetime'])
         latitude = exists['latitude']
         longitude = exists['longitude']
+        altitude = exists['altitude']
         local_timezone = pytz.timezone(exists['timezone'])
         notime = exists['notime']
         place = exists['location']
@@ -2742,7 +2757,10 @@ def main(gui_arguments=None):
 
     try:
         if args["Date"]:
-            local_datetime = parse_date(args["Date"])
+            if args["Date"] == "now":
+                local_datetime = datetime.now()
+            else:
+                local_datetime = parse_date(args["Date"])
     except ValueError:
         print("Invalid date format. Please use YYYY-MM-DD HH:MM.")
         local_datetime = None
@@ -2777,6 +2795,7 @@ def main(gui_arguments=None):
     def_transits_location = "Göteborg"  # Default transit location
     def_lat = 57.6828  # Default latitude
     def_long = 11.9624  # Default longitude
+    def_alt = 0  # Default altitude
     def_imprecise_aspects = "warn"  # Default imprecise aspects ["off", "warn"]
     def_minor_aspects = False  # Default minor aspects
     def_show_brief_aspects = False  # Default brief aspects
@@ -2878,15 +2897,15 @@ def main(gui_arguments=None):
             location_error_string = f"Location not found, please check the spelling" + " and internet connection." if not EPHE else ""
             print(location_error_string)
             return f'''
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body><div><p>{location_error_string}</div>"
-    </html>''' if args["Output"] in ("html", "return_html") else location_error_string
-
+                <!DOCTYPE html>
+                <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    </head>
+                    <body><div><p>{location_error_string}</div>"
+                </html>''' if args["Output"] in ("html", "return_html") else location_error_string
+        altitude = get_altitude(latitude, longitude)
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
@@ -2895,6 +2914,8 @@ def main(gui_arguments=None):
     if not args["Location"] and not exists:
         latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
+        # longitude = args["Altitude"] if args["Altitude"] is not None else def_alt
+        altitude = def_alt # Change after adding argument
 
     if not exists: 
         if args["Timezone"]:
@@ -3148,10 +3169,13 @@ def main(gui_arguments=None):
         else:
             transits_location = def_transits_location
         transits_latitude, transits_longitude = get_coordinates(transits_location)
+
         if transits_latitude is None or transits_longitude is None:
             location_error_string = f"Transit location '{transits_location}' not found, please check the spelling and internet connection."
             print(location_error_string)
             return location_error_string
+
+        transits_altitude = get_altitude(transits_latitude, transits_longitude)
 
         if args["Transits"] == "now":
             transits_local_datetime = datetime.now()
@@ -3182,6 +3206,8 @@ def main(gui_arguments=None):
                 synastry_local_datetime = datetime.fromisoformat(exists['datetime'])
                 synastry_latitude = exists['latitude']
                 synastry_longitude = exists['longitude']
+                synastry_altitude = exists['altitude']
+
                 if exists['timezone'] == "LMT":
                     synastry_local_timezone == "LMT"
                 else:
@@ -3200,16 +3226,16 @@ def main(gui_arguments=None):
 
     # Save event if name given and not already stored
     if name and not exists:
-        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
+        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, altitude, notime, guid=args["Guid"] if args["Guid"] else None)
     if args["Save As"]:
-        db_manager.update_event(args["Save As"], place, (utc_datetime + utc_datetime.astimezone(local_timezone).utcoffset()).isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
+        db_manager.update_event(args["Save As"], place, (utc_datetime + utc_datetime.astimezone(local_timezone).utcoffset()).isoformat(), str(local_timezone), latitude, longitude, altitude, notime, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "planets", show_arabic_parts, classic_rulers=args["Classical Rulership"])
-    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "planets", show_arabic_parts, classic_rulers=args["Classical Rulership"])
+    house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
     if show_arabic_parts and not args["Aspects To Arabic Parts"]:
         ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
         for part in ar_parts:
@@ -3243,6 +3269,7 @@ def main(gui_arguments=None):
     string_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(longitude, output_type)}"
     string_latitude = f"{br}{bold}Latitude:{nobold} {latitude}"
     string_longitude = f"{bold}Longitude:{nobold} {longitude}"
+    string_altitude = f"{br}{bold}Altitude:{nobold} {altitude} m"
     string_davison_noname = "Davison chart"
     string_progressed = f"{br}{bold}Progressed chart:{nobold} {args['Progressed']}" if args["Progressed"] else ""
 
@@ -3269,6 +3296,7 @@ def main(gui_arguments=None):
         string_synastry_longitude_in_minutes = f"{bold}Longitude:{nobold} {coord_in_minutes(synastry_longitude if show_synastry else 22.33, output_type)}"
         string_synastry_latitude = f"{br}{bold}Latitude:{nobold} {synastry_latitude}"
         string_synastry_longitude = f"{bold}Longitude:{nobold} {synastry_longitude}"
+        string_synastry_altitude = f"{br}{bold}Altitude:{nobold} {synastry_altitude} m"
         string_synastry_local_time = f"{br}{bold}Local Time:{nobold} {synastry_local_datetime} {synastry_local_timezone}"
         string_synastry_UTC_Time_imprecise = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC (imprecise due to time of day missing)"
         string_synastry_UTC_Time = f"{br}{bold}UTC Time:{nobold} {synastry_utc_datetime} UTC"
@@ -3302,9 +3330,9 @@ def main(gui_arguments=None):
         if place:
             print(f"{string_place}", end='')
         if degree_in_minutes:
-            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}, {string_altitude}", end='')
         else:
-            print(f"{string_latitude}, {string_longitude}", end='')
+            print(f"{string_latitude}, {string_longitude}, {string_altitude}", end='')
 
         if args["Davison"]:
             print(f"{string_davison}", end='')
@@ -3326,9 +3354,9 @@ def main(gui_arguments=None):
             print(f"{string_synastry_name}", end='')
             print(f"{string_synastry_place}", end='')
             if degree_in_minutes:
-                print(f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}", end='')
+                print(f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}, {string_synastry_altitude}", end='')
             else:
-                print(f"{string_synastry_latitude}, {string_synastry_longitude}", end='')
+                print(f"{string_synastry_latitude}, {string_synastry_longitude}, {string_synastry_altitude}", end='')
             print(f"{string_synastry_local_time} ", end='')
             print(f"{string_synastry_UTC_Time_imprecise}", end='') if (notime or synastry_notime) else print(f"{string_synastry_UTC_Time}", end='')
             print(f"{string_synastry_ruled_by}", end='')
@@ -3343,9 +3371,9 @@ def main(gui_arguments=None):
         if place:
             to_return += f"{string_place}"
         if degree_in_minutes:
-            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
+            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}, {string_altitude}"
         else:
-            to_return += f"{string_latitude}, {string_longitude}"
+            to_return += f"{string_latitude}, {string_longitude}, {string_altitude}"
         if args["Davison"]:
             to_return += f"{string_davison}"
 
@@ -3367,9 +3395,9 @@ def main(gui_arguments=None):
             to_return += f"{string_synastry_name}"
             to_return += f"{string_synastry_place}"
             if degree_in_minutes:
-                to_return += f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}"
+                to_return += f"{string_synastry_latitude_in_minutes}, {string_synastry_longitude_in_minutes}, {string_synastry_altitude}"
             else:
-                to_return += f"{string_synastry_latitude}, {string_synastry_longitude}"
+                to_return += f"{string_synastry_latitude}, {string_synastry_longitude}, {string_synastry_altitude}"
             to_return += f"{string_synastry_local_time} "
             to_return += f"{string_synastry_UTC_Time_imprecise}" if (notime or synastry_notime) else f"{string_synastry_UTC_Time}"
 
@@ -3399,10 +3427,10 @@ def main(gui_arguments=None):
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, complex_aspects=complex_aspects)
     if not hide_fixed_star_aspects and fixstar_aspects:
-        house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
+        house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
     if not hide_asteroid_aspects:
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
@@ -3430,8 +3458,8 @@ def main(gui_arguments=None):
     name = f"{args['Name']} " if args["Name"] else ""
 
     if show_transits:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, transits_altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
 
         transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
@@ -3449,14 +3477,14 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
 
-        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, mode="stars", classic_rulers=args["Classical Rulership"])
+        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, mode="stars", classic_rulers=args["Classical Rulership"])
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
 
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
         asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_transit_aspects:
@@ -3464,8 +3492,8 @@ def main(gui_arguments=None):
                                                 degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions))
 
     if show_synastry:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
-        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, synastry_altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
 
         synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orbs, aspect_types=MAJOR_ASPECTS,
                                                        output_type=output_type, type='synastry')

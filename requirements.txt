@@ -4,3 +4,4 @@ geopy
 tabulate
 colorama
 timezonefinder
+requests
