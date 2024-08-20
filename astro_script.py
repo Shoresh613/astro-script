@@ -1770,7 +1770,7 @@ def print_complex_aspects(complex_aspects, output, degree_in_minutes, degree_sym
             to_return += table + f"{p}"
     return to_return
 
-def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False):
+def print_planet_positions(planet_positions, degree_in_minutes=False, notime=False, house_positions=None, orb=1, output_type="text", hide_decans=False, classic_rulers=False, center="geocentric"):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign, 
     degree (optionally in minutes), whether the planet is retrograde, and its house position 
@@ -1818,8 +1818,12 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     degree_symbol = "" if (os.name == 'nt' and output_type=='html') else "°" # If running on Windows, don't use degree symbol for html output
 
     # Define headers based on whether house positions should be included
-    headers = ["Planet", "Zodiac", "Degree", "Retrograde" if output_type in('html', 'return_html') else "R"]
-    if house_positions and not notime:
+    if center == "heliocentric":
+        headers = ["Planet", "Zodiac", "Degree"]
+    else: 
+        headers = ["Planet", "Zodiac", "Degree", "Retrograde" if output_type in('html', 'return_html') else "R"]
+    
+    if house_positions and (not notime and not center == "heliocentric"):
         headers.append("House")
     headers.append("Dignity")
     if notime:
@@ -1845,13 +1849,16 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         elevation_check = is_planet_elevated(planet_positions)
         degree_check = check_degree(planet_signs, degrees_within_sign)
 
-        if not notime:  # assuming that we have the house positions if not notime
+        if not notime and not center == "heliocentric":  # assuming that we have the house positions if not notime
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             planet_positions[planet] = house_num
             if house_num:
                 planet_house_counts[house_num] += 1
 
-        row = [planet, zodiac, position, retrograde_status]
+        if center == "heliocentric":
+            row = [planet, zodiac, position]
+        else:
+            row = [planet, zodiac, position, retrograde_status]
 
         if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
             off_by = f"±{OFF_BY[planet]}{degree_symbol}"
@@ -1859,7 +1866,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
         elif notime: 
             off_by = ""
             row.insert(3, off_by)
-        if house_positions and not notime:
+        if house_positions and not notime and not center == "heliocentric": 
             house_num = house_positions.get(planet, {}).get('house', 'Unknown')
             row.insert(4, house_num)
         row.append(elevation_check[planet] + strength_check[planet] + degree_check[planet])
@@ -1892,7 +1899,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
     modality_count_table_data = list()
 
     ## House counts
-    if not notime:
+    if not notime and not center == "heliocentric":
         if output_type in ('return_text', 'return_html'):
             to_return += f"{p}" + house_count(planet_house_counts, output_type, bold, nobold, br)
         else:
@@ -2928,7 +2935,10 @@ def main(gui_arguments=None):
                     </head>
                     <body><div><p>{location_error_string}</div>"
                 </html>''' if args["Output"] in ("html", "return_html") else location_error_string
-        altitude = get_altitude(latitude, longitude, place)
+        if args["Center"] == "heliocentric":
+            altitude = None
+        else:
+            altitude = get_altitude(latitude, longitude, place)
     elif args["Place"]:
         place = args["Place"]
     elif not exists:
@@ -2990,6 +3000,7 @@ def main(gui_arguments=None):
         PLANETS.pop("South Node", None)
         PLANETS.pop("Lilith", None)
         PLANETS.pop("Sun", None)
+        PLANETS.update({"Earth": swe.EARTH})
 
     # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] else def_all_stars
@@ -3362,13 +3373,16 @@ def main(gui_arguments=None):
             print(f"{string_progressed}", end='')
         if exists or name:
             print(f"{string_name}", end='')
-        if place:
-            print(f"{string_place}", end='')
-        if degree_in_minutes:
-            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes} {string_altitude}", end='')
+        if center_of_calculations == "heliocentric":
+            print(f"{bold}Center:{nobold} Heliocentric", end='')
         else:
-            print(f"{string_latitude}, {string_longitude} {string_altitude}", end='')
-
+            if place:
+                print(f"{string_place}", end='')
+            if degree_in_minutes:
+                print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
+            else:
+                print(f"{string_latitude}, {string_longitude}", end='')
+            print(f"{string_altitude}", end='')
         if args["Davison"]:
             print(f"{string_davison}", end='')
 
@@ -3379,7 +3393,7 @@ def main(gui_arguments=None):
 
         print(f"{string_ruled_by}", end='')
 
-        if not show_synastry or not center_of_calculations == "heliocentric":
+        if not show_synastry and not center_of_calculations == "heliocentric":
             try:
                 print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
             except:
@@ -3403,12 +3417,16 @@ def main(gui_arguments=None):
             to_return += f"{string_progressed}"
         if exists or name:
             to_return += f"{string_name}"
-        if place:
-            to_return += f"{string_place}"
-        if degree_in_minutes:
-            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}, {string_altitude}"
+        if center_of_calculations == "heliocentric":
+            to_return += f"{bold}Center:{nobold} Heliocentric"
         else:
-            to_return += f"{string_latitude}, {string_longitude}, {string_altitude}"
+            if place:
+                to_return += f"{string_place}"
+            if degree_in_minutes:
+                to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
+            else:
+                to_return += f"{string_latitude}, {string_longitude}"
+            to_return += f"{string_altitude}"
         if args["Davison"]:
             to_return += f"{string_davison}"
 
@@ -3420,7 +3438,7 @@ def main(gui_arguments=None):
 
         to_return += f"{string_ruled_by}"
 
-        if not show_synastry or not center_of_calculations == "heliocentric":
+        if not show_synastry and not center_of_calculations == "heliocentric":
             try:
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
             except:
@@ -3455,7 +3473,7 @@ def main(gui_arguments=None):
             print(f"{string_planets_heading}{nobold}{h3_}{br}", end="")
         else:
             to_return += f"{string_planets_heading}"
-        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"])
+        to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"], center_of_calculations)
 
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
@@ -3476,19 +3494,20 @@ def main(gui_arguments=None):
     elif output_type == "return_html":
         to_return += "</div>"
 
-    if notime:
-            if (output_type in ("text", "html")):
-                print(f"{string_moon_phase_imprecise}")
-            else:
-                if output_type == "return_text":
-                    to_return += f"{br}{string_moon_phase_imprecise}"
+    if center_of_calculations != "heliocentric":
+        if notime:
+                if (output_type in ("text", "html")):
+                    print(f"{string_moon_phase_imprecise}")
                 else:
-                    to_return += f"{string_moon_phase_imprecise}"
-    else:
-        if output_type in ("text", "html"):
-            print(f"{string_moon_phase}")
+                    if output_type == "return_text":
+                        to_return += f"{br}{string_moon_phase_imprecise}"
+                    else:
+                        to_return += f"{string_moon_phase_imprecise}"
         else:
-            to_return += f"{string_moon_phase}"
+            if output_type in ("text", "html"):
+                print(f"{string_moon_phase}")
+            else:
+                to_return += f"{string_moon_phase}"
 
     name = f"{args['Name']} " if args["Name"] else ""
 
