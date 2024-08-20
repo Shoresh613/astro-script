@@ -1097,6 +1097,55 @@ def get_decan_ruler(longitude, zodiac_sign, classic_rulers):
     decan_index = (int(longitude) // 10) % 3
     return decan_rulers[zodiac_sign][decan_index]
 
+def find_exact_aspects_in_timeframe(begin_date, end_date, latitude, longitude, altitude, orbs, center, step_days=1, output_type='html'):
+    """
+    Finds exact aspects between planets within a given time frame.
+    
+    Parameters:
+    - begin_date: The start date (datetime object) in UTC.
+    - end_date: The end date (datetime object) in UTC.
+    - latitude: Latitude of the location in degrees.
+    - longitude: Longitude of the location in degrees.
+    - altitude: Altitude of the location in meters.
+    - step_days: The number of days to step through each iteration. Default is 1.
+    - output_type: The type of output for the aspect angle (e.g., 'minutes').
+
+    Returns:
+    - A list of dictionaries, each representing an exact aspect found within the timeframe.
+    """
+
+    aspects_list = []
+
+    # Loop through each date within the given range
+    current_date = begin_date
+    while current_date <= end_date:
+        # Calculate the positions of all planets for the current date using the existing function
+        planet_positions = calculate_planet_positions(current_date, latitude, longitude, altitude, output_type)
+
+        # Calculate aspects for the current date
+        aspects_found = calculate_planetary_aspects(planet_positions, orbs, output_type, aspect_types=MAJOR_ASPECTS)
+
+        # If aspects are found, append them to the results list
+        if aspects_found:
+            for aspect, details in aspects_found.items():
+                aspect_detail = {
+                    'date': current_date.isoformat(),
+                    'planet1': aspect[0],
+                    'planet2': aspect[1],
+                    'aspect': details['aspect_name'],
+                    'angle_diff': details['angle_diff'],
+                    'angle_diff_in_minutes': details['angle_diff_in_minutes'],
+                    'is_imprecise': details['is_imprecise'],
+                    'aspect_score': details['aspect_score'],
+                    'aspect_comment': details['aspect_comment']
+                }
+                aspects_list.append(aspect_detail)
+
+        # Move to the next day
+        current_date += timedelta(days=step_days)
+    print(aspects_list)
+    return aspects_list
+
 def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sys='P', mode="planets", center="topocentric", arabic_parts=False, all_stars=False, classic_rulers=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
@@ -3586,6 +3635,11 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(synastry_planet_positions), imprecise_aspects, 
                                             minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], (notime or synastry_notime), output_type, 
                                             show_score, center=center_of_calculations)
+
+    begin_date = utc_datetime - timedelta(days=10)
+    end_date = utc_datetime + timedelta(days=10)
+    # find_exact_aspects_in_timeframe(begin_date, end_date, latitude, longitude, altitude, orbs, center_of_calculations, step_days=1, output_type='text')
+
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
