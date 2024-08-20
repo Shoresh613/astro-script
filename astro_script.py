@@ -1959,7 +1959,7 @@ def print_planet_positions(planet_positions, degree_in_minutes=False, notime=Fal
 
     return to_return
 
-def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None, complex_aspects=None):
+def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None, imprecise_aspects="off", minor_aspects=True, degree_in_minutes=False, house_positions=None, orb=1, type="Natal", p1_name="", p2_name="", notime=False, output="text", show_aspect_score=False, star_positions=None, complex_aspects=None, center="geocentric"):
     """
     Prints astrological aspects between celestial bodies, offering options for display and filtering.
     """
@@ -1997,7 +1997,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     orb_string_synastry_fast_slow = f"(fast {orbs['Synastry Fast']}{degree_symbol} slow {orbs['Synastry Slow']}{degree_symbol} orb)"
 
     planetary_aspects_table_data = []
-    if notime:
+    if notime or center == "heliocentric":
         if type == "Transit":
             headers = ["Natal Planet", "Aspect", "Transit Planet","Degree", "Exact", "Rem. Duration"]
         if type == "Star Transit":
@@ -2090,7 +2090,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         if imprecise_aspects == "off" and (aspect_details['is_imprecise'] or planets[0] in ALWAYS_EXCLUDE_IF_NO_TIME or planets[1] in ALWAYS_EXCLUDE_IF_NO_TIME):
             continue
         else:
-            if notime:
+            if notime or center == "heliocentric":
                 if type == "Transit":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
@@ -2164,7 +2164,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
         return ""
 
     # Sorting
-    if notime:
+    if notime or center == "heliocentric":
         planetary_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
     else:
         planetary_aspects_table_data.sort(key=lambda x: x[5]) # 2 more columns
@@ -2217,8 +2217,8 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
     if output in ('text','html'):
         print(f'{br}'+table + f'{p}' + aspect_count_text)
 
-    # House counts only if time specified and more aspects than one, in which case counting is unnecessary
-    if not notime and len(aspects)>1:
+    # House counts only if time specified and more aspects than one, and not heliocentric
+    if not notime and len(aspects)>1 and not center == "heliocentric":
         if output in ('return_text', 'return_html'):
             to_return += f"{p}" + house_count(house_counts, output, bold, nobold, br)
         else:
@@ -3377,7 +3377,7 @@ def main(gui_arguments=None):
         if exists or name:
             print(f"{string_name}", end='')
         if center_of_calculations == "heliocentric":
-            print(f"{bold}Center:{nobold} Heliocentric", end='')
+            print(f"{br}{bold}Center:{nobold} Heliocentric", end='')
         else:
             if place:
                 print(f"{string_place}", end='')
@@ -3421,7 +3421,7 @@ def main(gui_arguments=None):
         if exists or name:
             to_return += f"{string_name}"
         if center_of_calculations == "heliocentric":
-            to_return += f"{bold}Center:{nobold} Heliocentric"
+            to_return += f"{br}{bold}Center:{nobold} Heliocentric"
         else:
             if place:
                 to_return += f"{string_place}"
@@ -3457,9 +3457,14 @@ def main(gui_arguments=None):
             to_return += f"{string_synastry_local_time} "
             to_return += f"{string_synastry_UTC_Time_imprecise}" if (notime or synastry_notime) else f"{string_synastry_UTC_Time}"
 
-    if output_type in ("text", "html"):
-        print(f"{string_house_system_moon_nodes}", end="")
-    else: to_return += f"{string_house_system_moon_nodes}"
+    if center_of_calculations != "heliocentric":
+        if output_type in ("text", "html"):
+            print(f"{string_house_system_moon_nodes}", end="")
+        else: to_return += f"{string_house_system_moon_nodes}"
+    else:
+        if output_type in ("text", "html"):
+            print()
+        else: to_return += f"{br}"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
@@ -3481,7 +3486,7 @@ def main(gui_arguments=None):
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
     if not hide_planetary_aspects:
-        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, complex_aspects=complex_aspects)
+        to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, complex_aspects=complex_aspects, center=center_of_calculations)
     if not hide_fixed_star_aspects and fixstar_aspects:
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
@@ -3491,7 +3496,7 @@ def main(gui_arguments=None):
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
             to_return += f"{p}" + print_aspects(asteroid_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(asteroid_positions), imprecise_aspects, minor_aspects, 
-                                                degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type, show_score)
+                                                degree_in_minutes, house_positions, orb, "Asteroids", "","",notime, output_type, show_score, center=center_of_calculations)
     if output_type == "html": 
         print("</div>")
     elif output_type == "return_html":
@@ -3532,21 +3537,21 @@ def main(gui_arguments=None):
                 to_return += f"{string_no_transits_tz}"
 
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
-                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
+                                            degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score, center=center_of_calculations)
 
         star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, mode="stars", classic_rulers=args["Classical Rulership"])
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
-                                            degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
+                                            degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions), center=center_of_calculations)
 
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", center=center_of_calculations, classic_rulers=args["Classical Rulership"])
         asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_transit_aspects:
             to_return += f"{p}" + print_aspects(asteroid_transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
-                                                degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions))
+                                                degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions), center=center_of_calculations)
 
     if show_synastry:
         planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
@@ -3560,7 +3565,7 @@ def main(gui_arguments=None):
             to_return += f"{string_synastry} {name}and {args['Synastry']}{h2_}{nobold}{br}" 
         to_return += f"{p}" + print_aspects(synastry_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(synastry_planet_positions), imprecise_aspects, 
                                             minor_aspects, degree_in_minutes, house_positions, orb, "Synastry", name, args["Synastry"], (notime or synastry_notime), output_type, 
-                                            show_score)
+                                            show_score, center=center_of_calculations)
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
