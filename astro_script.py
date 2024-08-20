@@ -104,19 +104,23 @@ PLANETS = {
 PLANET_RETURN_DICT = {
     'Sun': {
         'constant': swe.SUN,
-        'orbital_period_days': 365.25  # 1 year
+        'orbital_period_days': 365.25
     },
     'Moon': {
         'constant': swe.MOON,
-        'orbital_period_days': 27.32  # 27.32 days
+        'orbital_period_days': 27.32 
     },
     'Mercury': {
         'constant': swe.MERCURY,
-        'orbital_period_days': 87.97  # 88 days
+        'orbital_period_days': 87.97 
     },
     'Venus': {
         'constant': swe.VENUS,
-        'orbital_period_days': 224.70  # 225 days
+        'orbital_period_days': 224.70 
+    },
+    'Earth': {
+        'constant': swe.EARTH,
+        'orbital_period_days': 365
     },
     'Mars': {
         'constant': swe.MARS,
@@ -124,23 +128,23 @@ PLANET_RETURN_DICT = {
     },
     'Jupiter': {
         'constant': swe.JUPITER,
-        'orbital_period_days': 4332.59  # 4333 days (11.86 years)
+        'orbital_period_days': 4332.59  # (11.86 years)
     },
     'Saturn': {
         'constant': swe.SATURN,
-        'orbital_period_days': 10759.22  # 10759 days (29.46 years)
+        'orbital_period_days': 10759.22  # (29.46 years)
     },
     'Uranus': {
         'constant': swe.URANUS,
-        'orbital_period_days': 30685.49  # 30685 days (84.01 years)
+        'orbital_period_days': 30685.49  # (84.01 years)
     },
     'Neptune': {
         'constant': swe.NEPTUNE,
-        'orbital_period_days': 60190.03  # 60190 days (164.8 years)
+        'orbital_period_days': 60190.03  # (164.8 years)
     },
     'Pluto': {
         'constant': swe.PLUTO,
-        'orbital_period_days': 90560.00  # 90560 days (248 years)
+        'orbital_period_days': 90560.00  # (248 years)
     }
 }
 
@@ -570,7 +574,7 @@ def get_delta_t(date):
     else:
         return 0
 
-def find_next_same_degree(dt, planet_name, nextprev='next'):
+def find_next_same_degree(dt, planet_name, longitude, latitude, altitude, nextprev='next', center="topocentric"):
     if planet_name.title() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
 
@@ -580,7 +584,15 @@ def find_next_same_degree(dt, planet_name, nextprev='next'):
 
     julian_day = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
 
-    current_pos, _ = swe.calc(julian_day, planet)
+    if center == "topocentric":
+        swe.set_topo(float(longitude), float(latitude), float(altitude))
+        current_pos, _ = swe.calc(julian_day, planet, swe.FLG_TOPOCTR)
+    elif center == "heliocentric":
+        current_pos, _ = swe.calc_ut(julian_day, planet, swe.FLG_HELCTR)
+    else:
+        current_pos, _ = swe.calc_ut(julian_day, planet)
+
+
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
     if nextprev == 'next':
@@ -591,15 +603,23 @@ def find_next_same_degree(dt, planet_name, nextprev='next'):
     # Define the search interval (orbital period)
     end_dt = start_dt + timedelta(days=orbital_period)
 
-    def get_next_degree(next_dt):
+    def get_next_degree(next_dt, longitude, latitude, altitude, center):
         julian_day_next = swe.julday(next_dt.year, next_dt.month, next_dt.day, next_dt.hour + next_dt.minute / 60.0)
-        next_pos, _ = swe.calc(julian_day_next, planet)
+
+        if center == "topocentric":
+            swe.set_topo(float(longitude), float(latitude), float(altitude))
+            next_pos, _ = swe.calc(julian_day_next, planet, swe.FLG_TOPOCTR)
+        elif center == "heliocentric":
+            next_pos, _ = swe.calc_ut(julian_day_next, planet, swe.FLG_HELCTR)
+        else:
+            next_pos, _ = swe.calc_ut(julian_day_next, planet)
+
         return next_pos[0] % 360
 
     # Binary search-like approach to find the date with the same degree
     while (end_dt - start_dt).total_seconds() > 30:  # While the interval is larger than 1/2 minute
         mid_dt = start_dt + (end_dt - start_dt) / 2
-        next_degree = get_next_degree(mid_dt)
+        next_degree = get_next_degree(mid_dt, longitude, latitude, altitude, center)
 
         if abs(next_degree - current_degree) < 0.005:  # Allow small tolerance due to precision
             return mid_dt
@@ -1101,7 +1121,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
         else:
             swe.set_ephe_path('./ephe')
 
-    if center == "Topocentric":
+    if center == "topocentric":
         try:
             swe.set_topo(longitude, latitude, altitude)
         except Exception as e:
@@ -1143,7 +1163,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
     if mode in ('planets','asteroids'):
         for planet, id in bodies.items():
             if center == "topocentric":
-                swe.set_topo(longitude, latitude, altitude)
+                swe.set_topo(float(longitude), float(latitude), float(altitude))
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_TOPOCTR)
             elif center == "heliocentric":
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_HELCTR)
@@ -2619,7 +2639,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
 
 class ReturnAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        if len(values) != 2 or values[0] not in ['prev', 'next'] or values[1] not in ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']:
+        if len(values) != 2 or values[0] not in ['prev', 'next'] or values[1] not in ['Sun', 'Moon', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']:
             parser.error(f"The {self.dest} argument must be followed by 'prev' or 'next' and then a valid planet name.")
         setattr(namespace, self.dest, values)
 
@@ -2803,6 +2823,20 @@ def main(gui_arguments=None):
     except ValueError:
         pass
 
+    if args["Center"]:
+        center_of_calculations = args["Center"]
+    else:
+        center_of_calculations = "topocentric"
+
+    if center_of_calculations == "heliocentric":
+        PLANETS.pop("North Node", None)
+        PLANETS.pop("South Node", None)
+        PLANETS.pop("Lilith", None)
+        PLANETS.pop("Sun", None)
+        PLANETS.pop("Moon", None)
+        PLANETS.update({"Earth": swe.EARTH})
+        hide_fixed_star_aspects = True
+
     try:
         if args["Return"]:
             if not args["Name"]:
@@ -2812,7 +2846,7 @@ def main(gui_arguments=None):
             utc_datetime = convert_localtime_in_lmt_to_utc(local_datetime, longitude)
             nextprev = args["Return"][0]
             returning_planet = args["Return"][1]
-            return_utc_datetime = find_next_same_degree(utc_datetime, returning_planet, nextprev)
+            return_utc_datetime = find_next_same_degree(utc_datetime, returning_planet, longitude, latitude, altitude, nextprev, center_of_calculations)
             if not return_utc_datetime:
                 return "No return found for specified planet."
     except ValueError:
@@ -2991,20 +3025,6 @@ def main(gui_arguments=None):
     if node == "true":
         PLANETS["North Node"] = swe.TRUE_NODE
     
-    if args["Center"]:
-        center_of_calculations = args["Center"]
-    else:
-        center_of_calculations = "topocentric"
-
-    if center_of_calculations == "heliocentric":
-        PLANETS.pop("North Node", None)
-        PLANETS.pop("South Node", None)
-        PLANETS.pop("Lilith", None)
-        PLANETS.pop("Sun", None)
-        PLANETS.pop("Moon", None)
-        PLANETS.update({"Earth": swe.EARTH})
-        hide_fixed_star_aspects = True
-
     # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] else def_all_stars
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
