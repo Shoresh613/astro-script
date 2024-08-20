@@ -18,6 +18,7 @@ import csv
 from colorama import init, Fore, Style
 import copy
 import json
+from collections import OrderedDict
 
 try:
     from timezonefinder import TimezoneFinder
@@ -3000,7 +3001,9 @@ def main(gui_arguments=None):
         PLANETS.pop("South Node", None)
         PLANETS.pop("Lilith", None)
         PLANETS.pop("Sun", None)
+        PLANETS.pop("Moon", None)
         PLANETS.update({"Earth": swe.EARTH})
+        hide_fixed_star_aspects = True
 
     # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] else def_all_stars
