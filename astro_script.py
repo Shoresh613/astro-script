@@ -1076,7 +1076,7 @@ def get_decan_ruler(longitude, zodiac_sign, classic_rulers):
     decan_index = (int(longitude) // 10) % 3
     return decan_rulers[zodiac_sign][decan_index]
 
-def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sys='P', mode="planets", arabic_parts=False, all_stars=False, classic_rulers=False):
+def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sys='P', mode="planets", center="topocentric", arabic_parts=False, all_stars=False, classic_rulers=False):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
     at a given datetime, for a specified location. This includes the Sun, Moon, planets,
@@ -1100,10 +1100,11 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
         else:
             swe.set_ephe_path('./ephe')
 
-    try:
-        swe.set_topo(longitude, latitude, altitude)
-    except Exception as e:
-        print(f"Error setting topocentric coordinates: {e}")
+    if center == "Topocentric":
+        try:
+            swe.set_topo(longitude, latitude, altitude)
+        except Exception as e:
+            print(f"Error setting topocentric coordinates: {e}")
 
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0 + date.second / 3600.0)
     positions = {}
@@ -1125,13 +1126,13 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
 
         for star_name in fixed_stars.keys():
             try:
-                star_long = get_fixed_star_position(star_name, jd) % 360
+                star_long = get_fixed_star_position(star_name, jd, center) % 360
                 positions[star_name] = {
                     'longitude': star_long,
                     'zodiac_sign': longitude_to_zodiac(star_long, output).split()[0],
                     'retrograde': '',
                     'speed': 0,  # Speed of the fix star in degrees per day
-                    'house': calculate_individual_house_position(date, latitude, longitude, star_long, h_sys)
+                    'house': "" if center == "Heliocentric" else calculate_individual_house_position(date, latitude, longitude, star_long, h_sys)
                 }
 
                 positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
@@ -1140,13 +1141,20 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
                 pass
     if mode in ('planets','asteroids'):
         for planet, id in bodies.items():
-            pos, ret = swe.calc_ut(jd, id)
+            if center == "topocentric":
+                swe.set_topo(longitude, latitude, altitude)
+                pos, ret = swe.calc_ut(jd, id, swe.FLG_TOPOCTR)
+            elif center == "heliocentric":
+                pos, ret = swe.calc_ut(jd, id, swe.FLG_HELCTR)
+            else:
+                pos, ret = swe.calc_ut(jd, id)
+
             positions[planet] = {
                 'longitude': pos[0],
                 'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
                 'retrograde': 'R' if pos[3] < 0 else '',
                 'speed': pos[3],  # Speed of the planet in degrees per day
-                'house': calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
+                'house': "" if center == "Heliocentric" else calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
             }
 
             positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
@@ -1165,7 +1173,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
             positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
-    if mode == "planets":
+    if mode == "planets" and center != "heliocentric":
         cusps, asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode('utf-8'))
         positions['Ascendant'] = {'longitude': asc_mc[0], 'zodiac_sign': longitude_to_zodiac(asc_mc[0], output).split()[0], 'retrograde': '', 'speed': 360}
         positions['Midheaven'] = {'longitude': asc_mc[1], 'zodiac_sign': longitude_to_zodiac(asc_mc[1], output).split()[0], 'retrograde': '', 'speed': 360}
@@ -1184,10 +1192,8 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
         if arabic_parts:
             positions = add_arabic_parts(date, latitude, longitude, positions, output)
 
-    # Calculate house positions
     house_positions, house_cusps = calculate_house_positions(date, latitude, longitude, altitude, positions, notime=False, h_sys=h_sys)
 
-    # Include house positions in the positions dictionary
     for planet in positions:
         positions[planet]['house'] = house_positions.get(planet, {}).get('house', None)
 
@@ -2538,7 +2544,7 @@ def set_orbs(args, def_orbs):
 
 def called_by_gui(name, date, location, latitude, longitude, timezone, time_unknown, lmt, list_timezones, returns, save_as, davison, place, imprecise_aspects,
                   minor_aspects, show_brief_aspects, show_score, show_arabic_parts, aspects_to_arabic_parts, classical, orb, orb_major, orb_minor, orb_fixed_star, orb_asteroid, orb_transit_fast, orb_transit_slow,
-                  orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, all_stars, house_system, house_cusps, hide_planetary_positions,
+                  orb_synastry_fast, orb_synastry_slow, degree_in_minutes, node, center, all_stars, house_system, house_cusps, hide_planetary_positions,
                   hide_planetary_aspects, hide_fixed_star_aspects, hide_asteroid_aspects, hide_decans, transits, transits_timezone, 
                   transits_location, synastry, progressed, remove_saved_names, store_defaults, use_saved_settings, output_type, guid):
 
@@ -2577,6 +2583,7 @@ def called_by_gui(name, date, location, latitude, longitude, timezone, time_unkn
         "Orb Synastry Slow": orb_synastry_slow,
         "Degree in Minutes": degree_in_minutes,
         "Node": node,
+        "Center": center,
         "All Stars": all_stars,
         "House System": house_system,
         "House Cusps": house_cusps,
@@ -2659,6 +2666,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
     parser.add_argument('--orb_synastry_slow', type=float, help='Orb size in degrees for slow-moving planet synastry. (Default: 1.0)', required=False)
     parser.add_argument('--degree_in_minutes', action='store_true', help='Show degrees in arch minutes and seconds. (Default: false)')
     parser.add_argument('--node', choices=['mean', 'true'], help='Whether to use the moon mean node or true node. (Default: "true")', required=False)
+    parser.add_argument('--center', choices=['heliocentric', 'geocentric', 'topocentric'], help='Choose center of calculations (default: topocentric).')
     parser.add_argument('--all_stars', action='store_true', help='Show aspects for all fixed stars. (Default: false)')
     parser.add_argument('--house_system', choices=list(HOUSE_SYSTEMS.keys()), help='House system to use (Placidus, Koch etc). (Default: "Placidus")', required=False)
     parser.add_argument('--house_cusps', action='store_true', help='Whether to show house cusps or not. (Default: false)')
@@ -2715,6 +2723,7 @@ If no record is found, default values will be used.''', formatter_class=argparse
         "Orb Synastry Slow": args.orb_synastry_slow,
         "Degree in Minutes": args.degree_in_minutes,
         "Node": args.node,
+        "Center": args.center,
         "All Stars": args.all_stars,
         "House System": args.house_system,
         "House Cusps": args.house_cusps,
@@ -2903,7 +2912,7 @@ def main(gui_arguments=None):
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
-
+    
     if args["Location"]: 
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
@@ -2970,6 +2979,18 @@ def main(gui_arguments=None):
         PLANETS["North Node"] = swe.MEAN_NODE
     if node == "true":
         PLANETS["North Node"] = swe.TRUE_NODE
+    
+    if args["Center"]:
+        center_of_calculations = args["Center"]
+    else:
+        center_of_calculations = "topocentric"
+
+    if center_of_calculations == "heliocentric":
+        PLANETS.pop("North Node", None)
+        PLANETS.pop("South Node", None)
+        PLANETS.pop("Lilith", None)
+        PLANETS.pop("Sun", None)
+
     # If True, the script will include all roughly 600 fixed stars
     all_stars = True if args["All Stars"] else def_all_stars
     h_sys = HOUSE_SYSTEMS[args["House System"]] if args["House System"] else def_house_system
@@ -3248,7 +3269,7 @@ def main(gui_arguments=None):
     # Initialize Colorama, calculations for strings
     init()
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
-    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "planets", show_arabic_parts, classic_rulers=args["Classical Rulership"])
+    planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "planets", center_of_calculations, show_arabic_parts, classic_rulers=args["Classical Rulership"])
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
     if show_arabic_parts and not args["Aspects To Arabic Parts"]:
         ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
@@ -3358,7 +3379,7 @@ def main(gui_arguments=None):
 
         print(f"{string_ruled_by}", end='')
 
-        if not show_synastry:
+        if not show_synastry or not center_of_calculations == "heliocentric":
             try:
                 print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
             except:
@@ -3399,7 +3420,7 @@ def main(gui_arguments=None):
 
         to_return += f"{string_ruled_by}"
 
-        if not show_synastry:
+        if not show_synastry or not center_of_calculations == "heliocentric":
             try:
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
             except:
@@ -3444,7 +3465,7 @@ def main(gui_arguments=None):
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
         to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
     if not hide_asteroid_aspects:
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", center_of_calculations, classic_rulers=args["Classical Rulership"])
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_aspects:
@@ -3472,8 +3493,8 @@ def main(gui_arguments=None):
     name = f"{args['Name']} " if args["Name"] else ""
 
     if show_transits:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, transits_altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, transits_altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
 
         transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
@@ -3491,14 +3512,14 @@ def main(gui_arguments=None):
         to_return += f"{p}" + print_aspects(transit_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Transit", "","",notime, output_type, show_score)
 
-        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, mode="stars", classic_rulers=args["Classical Rulership"])
+        star_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, mode="stars", classic_rulers=args["Classical Rulership"])
         transit_star_aspects = calculate_aspects_takes_two(copy.deepcopy(star_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)
 
         to_return += f"{p}" + print_aspects(transit_star_aspects, copy.deepcopy(planet_positions), orbs, copy.deepcopy(transits_planet_positions), imprecise_aspects, minor_aspects, 
                                             degree_in_minutes, house_positions, orb, "Star Transit", "","",notime, output_type, show_score, copy.deepcopy(star_positions))
 
-        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", classic_rulers=args["Classical Rulership"])
+        asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", center=center_of_calculations, classic_rulers=args["Classical Rulership"])
         asteroid_transit_aspects = calculate_aspects_takes_two(copy.deepcopy(asteroid_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                                 aspect_types=MAJOR_ASPECTS, output_type=output_type, type='asteroids', show_brief_aspects=show_brief_aspects)
         if asteroid_transit_aspects:
@@ -3506,8 +3527,8 @@ def main(gui_arguments=None):
                                                 degree_in_minutes, house_positions, orb, "Asteroids Transit", "","",notime, output_type, show_score, copy.deepcopy(asteroid_positions))
 
     if show_synastry:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
-        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, synastry_altitude, output_type, h_sys, classic_rulers=args["Classical Rulership"])
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
+        synastry_planet_positions = calculate_planet_positions(synastry_utc_datetime, synastry_latitude, synastry_longitude, synastry_altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
 
         synastry_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(synastry_planet_positions), orbs, aspect_types=MAJOR_ASPECTS,
                                                        output_type=output_type, type='synastry')
