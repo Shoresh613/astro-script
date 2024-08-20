@@ -72,8 +72,8 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, al
             cursor.execute('''
             
             INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, random_column, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(random_column) DO UPDATE SET
             location=excluded.location,
             datetime=excluded.datetime,
             timezone=excluded.timezone,
@@ -88,7 +88,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, al
             cursor.execute('''
             
             INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             location=excluded.location,
             datetime=excluded.datetime,
@@ -98,7 +98,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, al
             altitude=excluded.altitude,
             notime=excluded.notime,
             name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, notime, name))
+            ''', (location, datetime_str, timezone, latitude, longitude, altitude, notime, name))
 
     conn.commit()
     conn.close()
