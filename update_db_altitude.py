@@ -17,8 +17,57 @@ def get_altitude(lat, lon):
         print(f"Error getting altitude: {e}")
         return None
 
+# Function to ensure the 'id' column is the primary key
+def ensure_primary_key(table_name):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Check if the id column is the primary key
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = cursor.fetchall()
+
+    id_is_primary_key = any(col[1] == 'id' and col[5] == 1 for col in columns)
+    
+    if not id_is_primary_key:
+        # Rename the existing table
+        cursor.execute(f"ALTER TABLE {table_name} RENAME TO {table_name}_old;")
+        
+        # Recreate the table with 'id' as the primary key
+        column_definitions = []
+        for col in columns:
+            if col[1] == 'id':
+                column_definitions.append(f"{col[1]} {col[2]} PRIMARY KEY")
+            else:
+                column_definitions.append(f"{col[1]} {col[2]}")
+        
+        cursor.execute(f'''
+            CREATE TABLE {table_name} (
+                {", ".join(column_definitions)}
+            );
+        ''')
+
+        # Copy data from the old table to the new table
+        column_names = [col[1] for col in columns]
+        cursor.execute(f'''
+            INSERT INTO {table_name} ({", ".join(column_names)})
+            SELECT {", ".join(column_names)}
+            FROM {table_name}_old;
+        ''')
+
+        # Drop the old table
+        cursor.execute(f"DROP TABLE {table_name}_old;")
+        print(f"'id' column is now the primary key in '{table_name}' table.")
+    else:
+        print(f"'id' column is already the primary key in '{table_name}' table.")
+
+    conn.commit()
+    conn.close()
+
 # Function to add the altitude column after the location column and populate it with values
 def add_and_populate_altitude(table_name, location_column='location'):
+    # Ensure 'id' is the primary key before proceeding
+    ensure_primary_key(table_name)
+
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
