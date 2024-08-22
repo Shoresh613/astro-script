@@ -1017,6 +1017,8 @@ def calculate_aspect_duration(planet_positions, planet2, degrees_to_travel):
     Returns:
     - str: Duration of the aspect in days, hours, and minutes.
     """
+    if abs(planet_positions[planet2]['speed']) == 0:
+        planet_positions[planet2]['speed'] = 0.0001 # This affects most transits that not okly last a few mimutes nowcindivating that something ia wrong. is the speed not set ok in the positions dict?
     days = degrees_to_travel / abs(planet_positions[planet2]['speed'])
     hours = int((days % 1) * 24)
     minutes = int(((days % 1) * 24 % 1) * 60)
