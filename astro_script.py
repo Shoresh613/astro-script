@@ -1198,7 +1198,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
 
         for star_name in fixed_stars.keys():
             try:
-                star_long = get_fixed_star_position(star_name, jd, center) % 360
+                star_long = get_fixed_star_position(star_name, jd) % 360
                 positions[star_name] = {
                     'longitude': star_long,
                     'zodiac_sign': longitude_to_zodiac(star_long, output).split()[0],
@@ -1209,7 +1209,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
 
                 positions[star_name].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
-            except:
+            except Exception as e:
                 pass
     if mode in ('planets','asteroids'):
         for planet, id in bodies.items():
