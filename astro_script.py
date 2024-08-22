@@ -71,7 +71,7 @@ HARD_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'
 SOFT_ASPECTS = {name: info for name, info in ALL_ASPECTS.items() if info['Score'] >= 50}
 
 # Movement per day for each planet in degrees
-OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
+OFF_BY = { "Sun": 1, "Moon": 13.2, "Mercury": 1.2, "Venus": 1.2, "Earth": 1, "Mars": 0.5, "Jupiter": 0.2, "Saturn": 0.1,
           "Uranus": 0.04, "Neptune": 0.03, "Pluto": 0.01, "Chiron": 0.02, "North Node": 0.05,  "South Node": 0.05, "True Node": 0.05,
           "Lilith": 0.05, "Ascendant": 360, "Midheaven": 360, "IC": 360, "DC": 360, "Juno": 0.1, "Vesta": 0.12, "Pallas": 0.09, "Pholus": 0.06, "Ceres": 0.08}
 
@@ -2094,6 +2094,11 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
         elif type == 'Natal':
             headers = ["Planet", house_called, "Aspect", "Planet", house_called, "Degree", "Off by"]
+    
+    if type in ("Transit", "Star Transit", "Asteroid Transit") and center != "geocentric":
+        headers.pop()
+        headers.pop()
+    
     if show_aspect_score:
         headers.append("Score")
     to_return = ""
@@ -2166,16 +2171,25 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                    if center != "geocentric":
+                        row.pop(4)
+                        row.pop(4)
                 elif type == "Synastry" or type == "Asteroids":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
                 elif type == "Star Transit":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                    if center != "geocentric":
+                        row.pop(4)
+                        row.pop(4)
                 elif type == "Asteroids Transit":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                    if center != "geocentric":
+                        row.pop(4)
+                        row.pop(4)
                 else:
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
             else:
@@ -2247,7 +2261,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             pass
 
     table = tabulate(planetary_aspects_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f", 
-                     colalign=("left", "left", "left", "right", "left", "left") if type == "Transit" else "")    
+                     colalign=("left", "left", "left", "right", "left", "left") if (type == "Transit" and center == "geocentric") else "")    
 
     if output in ('text', 'html'):
         if output == 'html':
