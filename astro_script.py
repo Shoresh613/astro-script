@@ -3333,6 +3333,11 @@ def main(gui_arguments=None):
         hide_planetary_aspects = True
         hide_planetary_positions = True
 
+        if args["Center"]:
+            center_of_calculations = args["Center"]
+        else:
+            center_of_calculations = "geocentric" # defaulting to geocentric calculations as swisseph does not report speed of planets in other modes
+
     if args["Synastry"]:
         try:
             exists = load_event(args["Synastry"], args["Guid"] if args["Guid"] else None)
