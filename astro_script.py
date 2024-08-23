@@ -1216,8 +1216,16 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
             if center == "topocentric":
                 swe.set_topo(float(longitude), float(latitude), float(altitude))
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_TOPOCTR)
+                pos_geo, ret_geo = swe.calc_ut(jd, id) # To get information about speed, retrograde etc.
+                pos = list(pos)
+                pos[3] = pos_geo[3]
+                pos = tuple(pos)
             elif center == "heliocentric":
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_HELCTR)
+                pos_geo, ret_geo = swe.calc_ut(jd, id)
+                pos = list(pos)
+                pos[3] = pos_geo[3]
+                pos = tuple(pos)
             else:
                 pos, ret = swe.calc_ut(jd, id)
 
@@ -1225,9 +1233,9 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
                 'longitude': pos[0],
                 'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
                 'retrograde': 'R' if pos[3] < 0 else '',
-                'speed': pos[3],  # Speed of the planet in degrees per day
+                'speed': pos[3] if planet != "Earth" else 0.9863,  # Speed of the planet in degrees per day
                 'house': "" if center == "Heliocentric" else calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
-            }
+            }                
 
             positions[planet].update({'decan_ruled_by': get_decan_ruler(pos[0], positions[planet]['zodiac_sign'], classic_rulers)})
 
@@ -2094,11 +2102,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             headers = ["Natal Planet", house_called, "Aspect", "Natal Asteroid", house_called, "Degree"]
         elif type == 'Natal':
             headers = ["Planet", house_called, "Aspect", "Planet", house_called, "Degree", "Off by"]
-    
-    if type in ("Transit", "Star Transit", "Asteroid Transit") and center != "geocentric":
-        headers.pop()
-        headers.pop()
-    
+        
     if show_aspect_score:
         headers.append("Score")
     to_return = ""
@@ -2167,29 +2171,20 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
             continue
         else:
             if notime or center == "heliocentric":
-                if type == "Transit":
+                if type in ("Transit", "Star Transit", "Asteroids Transit"):
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
                         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
                         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
-                    if center != "geocentric":
-                        row.pop(4)
-                        row.pop(4)
                 elif type == "Synastry" or type == "Asteroids":
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
-                elif type == "Star Transit":
-                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
-                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
-                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
-                    if center != "geocentric":
-                        row.pop(4)
-                        row.pop(4)
-                elif type == "Asteroids Transit":
-                    row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
-                        ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
-                        calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
-                    if center != "geocentric":
-                        row.pop(4)
-                        row.pop(4)
+                # elif type == "Star Transit":
+                #     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                #         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                #         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
+                # elif type == "Asteroids Transit":
+                #     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree, 
+                #         ("In " if aspect_details['angle_diff'] < 0 else "") + calculate_aspect_duration(planet_positions, planets[1], 0-aspect_details['angle_diff']) + (" ago" if aspect_details['angle_diff'] > 0 else ""),
+                #         calculate_aspect_duration(planet_positions, planets[1], orb-aspect_details['angle_diff'])]
                 else:
                     row = [planets[0], aspect_details['aspect_name'], planets[1], angle_with_degree]
             else:
@@ -2334,7 +2329,7 @@ def print_aspects(aspects, planet_positions, orbs, transit_planet_positions=None
 
     return to_return
 
-def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text", show_aspect_score=False, all_stars=False) -> str:
+def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspects="off", notime=True, degree_in_minutes=False, house_positions=None, stars=None, output="text", show_aspect_score=False, all_stars=False, center="topocentric") -> str:
     """
     Prints aspects between planets and fixed stars with options for minor aspects, precision warnings, and house positions.
 
@@ -2411,7 +2406,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
         else:
             angle = f"{angle:.2f}{degree_symbol}".strip("-")
         row = [planet, aspect_name, star_name, angle]
-        if house_positions and not notime:
+        if house_positions and not notime and center in ("geocentric", "topocentric"):
             row.insert(1, house_positions[planet].get('house', 'Unknown')) #Planet house
             row.insert(4, house) #Star house
             house_counts[house] += 1
@@ -2437,7 +2432,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 
     headers = ["Planet", "Aspect", "Star", "Margin"]
 
-    if house_positions and not notime:
+    if house_positions and (not notime) and (center in ("geocentric", "topocentric")):
         if output in ('html', 'return_html'):
             headers.insert(1,"House")
             headers.insert(4,"House")
@@ -2450,7 +2445,7 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
     if show_aspect_score:
         headers.append("Score")
 
-    if notime:
+    if notime or center not in ("geocentric", "topocentric"):
         star_aspects_table_data.sort(key=lambda x: x[3]) # Sort by degree of aspect
     else:
         star_aspects_table_data.sort(key=lambda x: x[5]) # Sort by degree of aspect
@@ -2523,13 +2518,12 @@ def print_fixed_star_aspects(aspects, orb=1, minor_aspects=False, imprecise_aspe
 # def load_event(filename, name):
 def load_event(name, guid=None):
     """
-    Load event details from a JSON file based on the given event name.
+    Load event details from a SQL database file based on the given event name.
 
     Attempts to read from a specified file and retrieve event information for a named event. 
     If successful, returns the event details; otherwise, provides an appropriate message.
 
     Parameters:
-    - filename (str): Path to the JSON file containing event data.
     - name (str): The name of the event to retrieve information for.
 
     Returns:
@@ -2537,7 +2531,6 @@ def load_event(name, guid=None):
 
     Raises:
     - FileNotFoundError: If the specified file does not exist.
-    - json.JSONDecodeError: If there's an error parsing the JSON file.
     """
 
     event = db_manager.get_event(name, guid=guid)
@@ -2550,7 +2543,7 @@ def load_event(name, guid=None):
             'latitude': event["latitude"],
             'longitude': event["longitude"],
             'altitude': event["altitude"],
-            'notime': True if event["notime"] else False,
+            'notime': event["notime"],
         }
     else:
         print(f"No entry found for {name}.")
@@ -2574,13 +2567,14 @@ def parse_date(date_str):
     elif len(year) == 3:
         year = "0" + year
     
-    normalized_date_str = f"{year}-{date_components[1]}-{date_components[2]} {time_part}"
-    
     try:
+        normalized_date_str = f"{year}-{date_components[1]}-{date_components[2]} {time_part}"
         local_datetime = datetime.strptime(normalized_date_str, "%Y-%m-%d %H:%M")
     except ValueError:
         raise ValueError(f"Invalid date format: {date_str}")
-    
+    except IndexError:
+        raise ValueError(f"Invalid date format: {date_str}")
+
     return local_datetime
 
 def calculate_lmt_offset(longitude):
@@ -2863,7 +2857,7 @@ def main(gui_arguments=None):
         longitude = exists['longitude']
         altitude = exists['altitude']
         local_timezone = pytz.timezone(exists['timezone'])
-        notime = exists['notime']
+        notime = True if exists['notime'] in ('1', 1, 'true') else False 
         place = exists['location']
     else:
         if args["Return"]:
@@ -3048,7 +3042,7 @@ def main(gui_arguments=None):
         latitude = args["Latitude"] if args["Latitude"] is not None else def_lat
         longitude = args["Longitude"] if args["Longitude"] is not None else def_long
         # longitude = args["Altitude"] if args["Altitude"] is not None else def_alt
-        altitude = def_alt # Change after adding argument
+        altitude = get_altitude(def_lat, def_long, def_place_name)
 
     if not exists: 
         if args["Timezone"]:
@@ -3444,7 +3438,9 @@ def main(gui_arguments=None):
         else:
             string_synastry_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday_synastry} {bold}Day ruled by:{nobold} {ruling_day_synastry} {bold}Hour ruled by:{nobold} {ruling_hour_synastry}"
 
-    string_house_system_moon_nodes = f"{br}{bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}" + (h_sys_changed + f"{br}" if h_sys_changed else "")
+    string_house_system_moon_nodes = f"{br}{bold}Center:{nobold} {center_of_calculations.title()}{br}"
+    if center_of_calculations in ("geocentric", "topocentric"):
+        string_house_system_moon_nodes += f", {bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"  + (h_sys_changed + f"{br}" if h_sys_changed else "")
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
         if moon_phase_name1 != moon_phase_name2:
@@ -3456,7 +3452,7 @@ def main(gui_arguments=None):
     string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
     string_transits = f"{p}{bold}{h2}Transits for"
     string_synastry = f"{p}{bold}{h2}Synastry chart for"
-    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transit_timezone, --transit_location).\nUsing default timezone and location ({def_transits_tz}, {def_transits_location}) for transits."
+    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transit_timezone, --transit_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
 
     if output_type in ("text","html"):
         print(f"{string_heading}", end='')
@@ -3466,8 +3462,6 @@ def main(gui_arguments=None):
             print(f"{string_progressed}", end='')
         if exists or name:
             print(f"{string_name}", end='')
-        if center_of_calculations == "heliocentric":
-            print(f"{br}{bold}Center:{nobold} Heliocentric", end='')
         else:
             if place:
                 print(f"{string_place}", end='')
@@ -3510,8 +3504,6 @@ def main(gui_arguments=None):
             to_return += f"{string_progressed}"
         if exists or name:
             to_return += f"{string_name}"
-        if center_of_calculations == "heliocentric":
-            to_return += f"{br}{bold}Center:{nobold} Heliocentric"
         else:
             if place:
                 to_return += f"{string_place}"
@@ -3525,6 +3517,8 @@ def main(gui_arguments=None):
 
         if not args['Davison'] and place != "Davison chart":
             to_return += f"{string_local_time}"
+
+        to_return += f"{br}{bold}Center:{nobold} {center_of_calculations.title()}"
 
         if notime: to_return += f"{string_UTC_Time_imprecise}"
         else: to_return += f"{string_UTC_Time}"
@@ -3547,14 +3541,9 @@ def main(gui_arguments=None):
             to_return += f"{string_synastry_local_time} "
             to_return += f"{string_synastry_UTC_Time_imprecise}" if (notime or synastry_notime) else f"{string_synastry_UTC_Time}"
 
-    if center_of_calculations != "heliocentric":
-        if output_type in ("text", "html"):
-            print(f"{string_house_system_moon_nodes}", end="")
-        else: to_return += f"{string_house_system_moon_nodes}"
-    else:
-        if output_type in ("text", "html"):
-            print()
-        else: to_return += f"{br}"
+    if output_type in ("text", "html"):
+        print(f"{string_house_system_moon_nodes}", end="")
+    else: to_return += f"{string_house_system_moon_nodes}"
 
     if minor_aspects:
         ASPECT_TYPES.update(MINOR_ASPECT_TYPES)
@@ -3575,11 +3564,12 @@ def main(gui_arguments=None):
 
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
+
     if not hide_planetary_aspects:
         to_return += f"{p}" + print_aspects(aspects=aspects, planet_positions=copy.deepcopy(planet_positions), orbs=orbs, imprecise_aspects=imprecise_aspects, minor_aspects=minor_aspects, degree_in_minutes=degree_in_minutes, house_positions=house_positions, orb=orb, type="Natal", p1_name="", p2_name="", notime=notime, output=output_type, show_aspect_score=show_score, complex_aspects=complex_aspects, center=center_of_calculations)
     if not hide_fixed_star_aspects and fixstar_aspects:
         house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
-        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars)
+        to_return += f"{p}" + print_fixed_star_aspects(fixstar_aspects, orb, minor_aspects, imprecise_aspects, notime, degree_in_minutes, copy.deepcopy(house_positions), read_fixed_stars(all_stars), output_type, all_stars, center=center_of_calculations)
     if not hide_asteroid_aspects:
         asteroid_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "asteroids", center_of_calculations, classic_rulers=args["Classical Rulership"])
         asteroid_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(asteroid_positions), orbs, 
@@ -3610,8 +3600,8 @@ def main(gui_arguments=None):
     name = f"{args['Name']} " if args["Name"] else ""
 
     if show_transits:
-        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
-        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, transits_altitude, output_type, h_sys, center=center_of_calculations, classic_rulers=args["Classical Rulership"])
+        planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "planets", center=center_of_calculations, classic_rulers=args["Classical Rulership"])
+        transits_planet_positions = calculate_planet_positions(transits_utc_datetime, transits_latitude, transits_longitude, transits_altitude, output_type, h_sys, "planets", center=center_of_calculations, classic_rulers=args["Classical Rulership"])
 
         transit_aspects = calculate_aspects_takes_two(copy.deepcopy(planet_positions), copy.deepcopy(transits_planet_positions), orbs, 
                                              aspect_types=MAJOR_ASPECTS, output_type=output_type, type='transits', show_brief_aspects=show_brief_aspects)

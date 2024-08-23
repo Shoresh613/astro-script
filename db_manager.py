@@ -51,7 +51,7 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, al
     cursor = conn.cursor()
     
     #only for debug
-    # print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude= {longitude} guid={guid}")    
+    # print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude={longitude} altitude={altitude} notime={notime} guid={guid}")    
     result = get_event(name, guid)
     if result:
         # print(f"DEBUG: get_event() result{result}")
