@@ -1224,7 +1224,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_HELCTR)
                 pos_geo, ret_geo = swe.calc_ut(jd, id)
                 pos = list(pos)
-                pos[3] = pos_geo[3]
+                pos[3] = pos_geo[3] if planet != "Earth" else 0.9863
                 pos = tuple(pos)
             else:
                 pos, ret = swe.calc_ut(jd, id)
@@ -1233,7 +1233,7 @@ def calculate_planet_positions(date, latitude, longitude, altitude, output, h_sy
                 'longitude': pos[0],
                 'zodiac_sign': longitude_to_zodiac(pos[0], output).split()[0],
                 'retrograde': 'R' if pos[3] < 0 else '',
-                'speed': pos[3] if planet != "Earth" else 0.9863,  # Speed of the planet in degrees per day
+                'speed': pos[3],  # Speed of the planet in degrees per day
                 'house': "" if center == "Heliocentric" else calculate_individual_house_position(date, latitude, longitude, pos[0], h_sys)
             }                
 
@@ -3369,10 +3369,6 @@ def main(gui_arguments=None):
     house_system_name = next((name for name, code in HOUSE_SYSTEMS.items() if code == h_sys), None)
     planet_positions = calculate_planet_positions(utc_datetime, latitude, longitude, altitude, output_type, h_sys, "planets", center_of_calculations, show_arabic_parts, classic_rulers=args["Classical Rulership"])
     house_positions, house_cusps = calculate_house_positions(utc_datetime, latitude, longitude, altitude, copy.deepcopy(planet_positions), notime, HOUSE_SYSTEMS[house_system_name])
-    if show_arabic_parts and not args["Aspects To Arabic Parts"]:
-        ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
-        for part in ar_parts:
-            del planet_positions[part]
 
     complex_aspects = {}
     complex_aspects["T Squares"] = find_t_squares(copy.deepcopy(planet_positions), orb_opposition=8, orb_square=6) 
@@ -3438,9 +3434,9 @@ def main(gui_arguments=None):
         else:
             string_synastry_ruled_by = f"{br}{bold}Weekday:{nobold} {weekday_synastry} {bold}Day ruled by:{nobold} {ruling_day_synastry} {bold}Hour ruled by:{nobold} {ruling_hour_synastry}"
 
-    string_house_system_moon_nodes = f"{br}{bold}Center:{nobold} {center_of_calculations.title()}{br}"
+    string_house_system_moon_nodes = f"{br}{bold}Center:{nobold} {center_of_calculations.title()}"
     if center_of_calculations in ("geocentric", "topocentric"):
-        string_house_system_moon_nodes += f", {bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}"  + (h_sys_changed + f"{br}" if h_sys_changed else "")
+        string_house_system_moon_nodes += f", {bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}"  + (h_sys_changed + f"{br}" if h_sys_changed else "")
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
         if moon_phase_name1 != moon_phase_name2:
@@ -3561,6 +3557,11 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_planets_heading}"
         to_return += print_planet_positions(copy.deepcopy(planet_positions), degree_in_minutes, notime, house_positions, orb, output_type, args["Hide Decans"], args["Classical Rulership"], center_of_calculations)
+
+    if show_arabic_parts and not args["Aspects To Arabic Parts"]:
+        ar_parts = ["Fortune", "Spirit", "Love", "Marriage", "Death", "Commerce", "Passion", "Friendship"]
+        for part in ar_parts:
+            del planet_positions[part]
 
     aspects = calculate_planetary_aspects(copy.deepcopy(planet_positions), orbs, output_type, aspect_types=MAJOR_ASPECTS) # Major aspects has been updated to include minor if 
     fixstar_aspects = calculate_aspects_to_fixed_stars(utc_datetime, copy.deepcopy(planet_positions), house_cusps, orbs["Fixed Star"], MAJOR_ASPECTS, all_stars)
