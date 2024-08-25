@@ -3453,7 +3453,7 @@ def main(gui_arguments=None):
     string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
     string_transits = f"{p}{bold}{h2}Transits for"
     string_synastry = f"{p}{bold}{h2}Synastry chart for"
-    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transit_timezone, --transit_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
+    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transits_timezone, --transits_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
 
     if output_type in ("text","html"):
         print(f"{string_heading}", end='')
