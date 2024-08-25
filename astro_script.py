@@ -695,7 +695,7 @@ def get_coordinates(location_name:str):
         try:
             location = geolocator.geocode(location_name)
         except Exception as e:
-            print(f"Error getting location {location_name}, check internet connection: {e}")
+            print(f"Error getting location {location_name}, check internet connection, spelling, choose nearby location, or specify place using --place and enter coordinates using --latitude, --longitude: {e}")
             return None, None
         if location is None:
             db_manager.save_location(location_name, None, None, None)
@@ -3013,22 +3013,27 @@ def main(gui_arguments=None):
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
-    
-    if args["Location"]: 
+
+    if args["Location"]:
         place = args["Location"]
         latitude, longitude = get_coordinates(args["Location"])
         if latitude is None or longitude is None:
             location_error_string = f"Location not found, please check the spelling" + " and internet connection." if not EPHE else ""
-            print(location_error_string)
-            return f'''
-                <!DOCTYPE html>
-                <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    </head>
-                    <body><div><p>{location_error_string}</div>"
-                </html>''' if args["Output"] in ("html", "return_html") else location_error_string
+            les_html = f''' <!DOCTYPE html> <html> <head> <meta 
+	charset="UTF-8"> <meta name="viewport" 
+	content="width=device-width, initial-scale=1.0"> 
+	</head> <body> 
+	<div><p>{location_error_string}</p></div> </body> 
+	</html>'''
+            if args["Output"] == "html":
+                print(les-html)
+            elif args["Output"] == "return_html":
+                return les-html
+            elif args["Output"] =="return_text":
+                return location_error_string
+            else:
+                print(location_error_string)
+            return
         if args["Center"] == "heliocentric":
             altitude = None
         else:
