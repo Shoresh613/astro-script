@@ -3461,14 +3461,13 @@ def main(gui_arguments=None):
             print(f"{string_progressed}", end='')
         if exists or name:
             print(f"{string_name}", end='')
+        if place:
+            print(f"{string_place}", end='')
+        if degree_in_minutes:
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
         else:
-            if place:
-                print(f"{string_place}", end='')
-            if degree_in_minutes:
-                print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
-            else:
-                print(f"{string_latitude}, {string_longitude}", end='')
-            print(f"{string_altitude}", end='')
+            print(f"{string_latitude}, {string_longitude}", end='')
+        print(f"{string_altitude}", end='')
         if args["Davison"]:
             print(f"{string_davison}", end='')
 
@@ -3503,14 +3502,13 @@ def main(gui_arguments=None):
             to_return += f"{string_progressed}"
         if exists or name:
             to_return += f"{string_name}"
+        if place:
+            to_return += f"{string_place}"
+        if degree_in_minutes:
+            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
-            if place:
-                to_return += f"{string_place}"
-            if degree_in_minutes:
-                to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
-            else:
-                to_return += f"{string_latitude}, {string_longitude}"
-            to_return += f"{string_altitude}"
+            to_return += f"{string_latitude}, {string_longitude}"
+        to_return += f"{string_altitude}"
         if args["Davison"]:
             to_return += f"{string_davison}"
 

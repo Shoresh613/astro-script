@@ -104,57 +104,50 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
 
 # Function to retrieve an event by name
 def get_event(name, guid=None):
-    conn = sqlite3.connect('db.sqlite3')
-    cursor = conn.cursor()
-    # print(f"DEBUG: get_event() name={name} guid={guid}")
-    if guid:
-        cursor.execute('SELECT location FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        location = cursor.fetchone()
-        logging.debug("location in get_event: ", location)
-        print(f"\n\nDEBUG: location = {str(location)}\n")
-        cursor.execute('SELECT datetime FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        datetime = cursor.fetchone()
-        cursor.execute('SELECT timezone FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        timezone = cursor.fetchone()
-        cursor.execute('SELECT latitude FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        latitude = cursor.fetchone()
-        cursor.execute('SELECT longitude FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        longitude = cursor.fetchone()
-        cursor.execute('SELECT altitude FROM myapp_location WHERE location_name = ?', (str(location),))
-        altitude = cursor.fetchone()
-        cursor.execute('SELECT notime FROM myapp_event WHERE name = ? AND random_column = ?', (name, guid,))
-        notime = cursor.fetchone()
-    else:
-        cursor.execute('SELECT location FROM myapp_event WHERE name = ?', (name,))
-        location = cursor.fetchone()
-        cursor.execute('SELECT datetime FROM myapp_event WHERE name = ?', (name,))
-        datetime = cursor.fetchone()
-        cursor.execute('SELECT timezone FROM myapp_event WHERE name = ?', (name,))
-        timezone = cursor.fetchone()
-        cursor.execute('SELECT latitude FROM myapp_event WHERE name = ?', (name,))
-        latitude = cursor.fetchone()
-        cursor.execute('SELECT longitude FROM myapp_event WHERE name = ?', (name,))
-        longitude = cursor.fetchone()
-        cursor.execute('SELECT altitude FROM myapp_location WHERE location_name = ?', (str(location),))
-        altitude = cursor.fetchone()
-        cursor.execute('SELECT notime FROM myapp_event WHERE name = ?', (name,))
-        notime = cursor.fetchone()
+    try:
+        with sqlite3.connect('db.sqlite3') as conn:
+            cursor = conn.cursor()
+            
+            if guid:
+                cursor.execute(
+                    'SELECT location, datetime, timezone, latitude, longitude, notime FROM myapp_event WHERE name = ? AND random_column = ?',
+                    (name, guid,)
+                )
+            else:
+                cursor.execute(
+                    'SELECT location, datetime, timezone, latitude, longitude, notime FROM myapp_event WHERE name = ?',
+                    (name,)
+                )
 
-    conn.close()
+            event_data = cursor.fetchone()
+            if not event_data:
+                return None
 
-    if datetime:
-        event = {
-            'name': name,
-            'location': location[0],
-            'datetime': datetime[0],
-            'timezone': timezone[0],
-            'latitude': latitude[0],
-            'longitude': longitude[0],
-            'altitude': altitude[0],
-            'notime': notime[0]
-        }
-        return event
-    return None
+            location, datetime, timezone, latitude, longitude, notime = event_data
+
+            cursor.execute(
+                'SELECT altitude FROM myapp_location WHERE location_name = ?',
+                (str(location),)
+            )
+            altitude_data = cursor.fetchone()
+            altitude = altitude_data[0] if altitude_data else None
+
+            event = {
+                'name': name,
+                'location': location,
+                'datetime': datetime,
+                'timezone': timezone,
+                'latitude': latitude,
+                'longitude': longitude,
+                'altitude': altitude,
+                'notime': notime
+            }
+
+            return event
+
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return None
 
 def read_saved_names(guid=None, db_filename='db.sqlite3'):
     """
