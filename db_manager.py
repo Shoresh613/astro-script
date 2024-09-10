@@ -94,7 +94,6 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
             timezone=excluded.timezone,
             latitude=excluded.latitude,
             longitude=excluded.longitude,
-            altitude=excluded.altitude,
             notime=excluded.notime,
             name=excluded.name
             ''', (location, datetime_str, timezone, latitude, longitude, notime, name))
@@ -102,8 +101,17 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
     conn.commit()
     conn.close()
 
-# Function to retrieve an event by name
 def get_event(name, guid=None):
+    """
+    Retrieve event data from the database based on the given name and optional GUID.
+    Args:
+        name (str): The name of the event.
+        guid (str, optional): The GUID of the event. Defaults to None.
+    Returns:
+        dict or None: A dictionary containing the event data if found, or None if not found.
+    Raises:
+        sqlite3.Error: If an error occurs while accessing the database.
+    """
     try:
         with sqlite3.connect('db.sqlite3') as conn:
             cursor = conn.cursor()
