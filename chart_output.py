@@ -4,7 +4,7 @@ from pathlib import Path
 def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, second_datetime, second_name=None, second_longitude=None, second_latitude=None, second_local_timezone=None, second_place=None, guid=None):
 
     if os.getenv("PRODUCTION_EPHE"):
-        folder = "myapp/media"
+        folder = "media"
         folder_slash = "/"
     else:
         folder = "static"
@@ -55,7 +55,10 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
             return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/{name.strip()} {chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
     else:
         if os.getenv("PRODUCTION_EPHE"):
-            return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/{chart_type.strip()} Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+            if guid == None:
+                return f'</div></table><p><img src="{folder_slash}{folder}/None/ - {chart_type.strip()} Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
+            else:
+                return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/ - {chart_type.strip()} Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
         else:
             return f'</div></table><p><img src="{folder_slash}{folder}/{guid}/{chart_type.strip()}Chart.svg" alt="Astrological Chart" width="100%" height="100%" style="z-index: 1000; position: relative;>'
 
