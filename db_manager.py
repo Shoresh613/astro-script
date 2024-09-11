@@ -133,10 +133,16 @@ def get_event(name, guid=None):
 
             location, datetime, timezone, latitude, longitude, notime = event_data
 
-            cursor.execute(
-                'SELECT altitude FROM myapp_location WHERE location_name = ?',
-                (str(location),)
-            )
+            if location == "Davison chart":
+                cursor.execute(
+                    'SELECT altitude FROM myapp_location WHERE location_name = ?',
+                    (str(latitude) + "," + str(longitude),)
+                )            
+            else:
+                cursor.execute(
+                    'SELECT altitude FROM myapp_location WHERE location_name = ?',
+                    (str(location),)
+                )
             altitude_data = cursor.fetchone()
             altitude = altitude_data[0] if altitude_data else None
 

@@ -304,6 +304,7 @@ def get_davison_data(names, guid=None):
     datetimes = []
     longitudes = []
     latitudes = []
+    altitudes = []
     
     ### NEED TO CHECK NOTIME FOR EVENTS HERE
     for name in names:
@@ -331,6 +332,7 @@ def get_davison_data(names, guid=None):
             # datetimes.append(dt_with_tz)
             longitudes.append(event["longitude"])
             latitudes.append(event["latitude"])
+            altitudes.append(event["altitude"])
         else:
             print(f"\nNo data found for {name}. First create the event by specifying the event details including the name.\n")
 
@@ -345,8 +347,12 @@ def get_davison_data(names, guid=None):
     # Calculate the average longitude and latitude
     avg_longitude = sum(longitudes) / len(longitudes) if longitudes else 'No longitudes to average'
     avg_latitude = sum(latitudes) / len(latitudes) if latitudes else 'No latitudes to average'
+    avg_altitude = sum(altitudes) / len(altitudes) if altitudes else 'No altitudes to average'
 
-    return avg_datetime_naive, avg_longitude, avg_latitude
+    # Store the location in the db
+    db_manager.save_location(str(avg_latitude) + "," + str(avg_longitude), avg_latitude, avg_longitude, avg_altitude)
+
+    return avg_datetime_naive, avg_longitude, avg_latitude, avg_altitude
 
 def get_progressed_datetime(input_date: datetime, input_value):
     if input_value == "now":
@@ -699,6 +705,7 @@ def get_coordinates(location_name:str):
             db_manager.save_location(location_name, None, None, None)
             return None, None, None
         altitude = get_altitude(location.latitude, location.longitude, location_name)
+        
         db_manager.save_location(location_name, location.latitude, location.longitude, altitude)
 
         return location.latitude, location.longitude, altitude
@@ -893,9 +900,10 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
 
 def get_altitude(lat, lon, location_name):
 
-    location_details = db_manager.load_location(location_name)
-    if location_details:
-        return location_details[2] # Altitude
+    if location_name != "Davison chart":
+        location_details = db_manager.load_location(location_name)
+        if location_details:
+            return location_details[2] # Altitude
 
     try:
         url = f'https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}'
@@ -3274,7 +3282,7 @@ def main(gui_arguments=None):
         show_arabic_parts = False
 
     if args["Davison"]:
-        utc_datetime, longitude, latitude = get_davison_data(args["Davison"])
+        utc_datetime, longitude, latitude, altitude = get_davison_data(args["Davison"])
         place = "Davison chart"
         local_timezone = pytz.utc
         local_datetime = utc_datetime
