@@ -19,7 +19,8 @@ def initialize_db():
         altitude REAL,
         notime INTEGER DEFAULT FALSE,
         random_column TEXT NULL,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        PRIMARY KEY (name, random_column)
     )
     ''')
     
