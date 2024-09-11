@@ -682,28 +682,26 @@ def get_coordinates(location_name:str):
     
     location_details = db_manager.load_location(location_name)
     if location_details:
-        return location_details[0], location_details[1] # Latitude, Longitude
+        return location_details[0], location_details[1], location_details[2] # Latitude, Longitude, Altitude
     else:
-        # Initialize Nominatim API
         try:
             geolocator = Nominatim(user_agent="AstroScript")
         except Exception as e:
             print(f"Error initializing geolocator: {e}")
-            return None, None
+            return None, None, None
 
-        # Get location
         try:
             location = geolocator.geocode(location_name)
         except Exception as e:
-            print(f"Error getting location {location_name}, check internet connection: {e}")
-            return None, None
+            print(f"Error getting location {location_name}, check internet connection, spelling, choose nearby location, or specify place using --place and enter coordinates using --latitude, --longitude: {e}")
+            return None, None, None
         if location is None:
             db_manager.save_location(location_name, None, None, None)
-            return None, None
+            return None, None, None
         altitude = get_altitude(location.latitude, location.longitude, location_name)
         db_manager.save_location(location_name, location.latitude, location.longitude, altitude)
 
-        return location.latitude, location.longitude
+        return location.latitude, location.longitude, altitude
 
 def calculate_individual_house_position(date, latitude, longitude, planet_longitude, h_sys='P'):
     jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
@@ -3013,22 +3011,27 @@ def main(gui_arguments=None):
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
-    
-    if args["Location"]: 
+
+    if args["Location"]:
         place = args["Location"]
-        latitude, longitude = get_coordinates(args["Location"])
+        latitude, longitude, altitude = get_coordinates(args["Location"])
         if latitude is None or longitude is None:
             location_error_string = f"Location not found, please check the spelling" + " and internet connection." if not EPHE else ""
-            print(location_error_string)
-            return f'''
-                <!DOCTYPE html>
-                <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    </head>
-                    <body><div><p>{location_error_string}</div>"
-                </html>''' if args["Output"] in ("html", "return_html") else location_error_string
+            les_html = f''' <!DOCTYPE html> <html> <head> <meta 
+	charset="UTF-8"> <meta name="viewport" 
+	content="width=device-width, initial-scale=1.0"> 
+	</head> <body> 
+	<div><p>{location_error_string}</p></div> </body> 
+	</html>'''
+            if args["Output"] == "html":
+                print(les_html)
+            elif args["Output"] == "return_html":
+                return les_html
+            elif args["Output"] =="return_text":
+                return location_error_string
+            else:
+                print(location_error_string)
+            return
         if args["Center"] == "heliocentric":
             altitude = None
         else:
@@ -3296,7 +3299,7 @@ def main(gui_arguments=None):
             transits_location = args["Transits Location"]
         else:
             transits_location = def_transits_location
-        transits_latitude, transits_longitude = get_coordinates(transits_location)
+        transits_latitude, transits_longitude, transits_altitude = get_coordinates(transits_location)
 
         if transits_latitude is None or transits_longitude is None:
             location_error_string = f"Transit location '{transits_location}' not found, please check the spelling and internet connection."
@@ -3359,9 +3362,9 @@ def main(gui_arguments=None):
 
     # Save event if name given and not already stored
     if name and not exists:
-        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, altitude, notime, guid=args["Guid"] if args["Guid"] else None)
+        db_manager.update_event(name, place, local_datetime.isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
     if args["Save As"]:
-        db_manager.update_event(args["Save As"], place, (utc_datetime + utc_datetime.astimezone(local_timezone).utcoffset()).isoformat(), str(local_timezone), latitude, longitude, altitude, notime, guid=args["Guid"] if args["Guid"] else None)
+        db_manager.update_event(args["Save As"], place, (utc_datetime + utc_datetime.astimezone(local_timezone).utcoffset()).isoformat(), str(local_timezone), latitude, longitude, notime, guid=args["Guid"] if args["Guid"] else None)
 
     #################### Main Script ####################    
     # Initialize Colorama, calculations for strings
@@ -3448,7 +3451,7 @@ def main(gui_arguments=None):
     string_moon_phase = f"{p}{bold}Moon Phase:{nobold} {moon_phase_name}{br}{bold}Moon Illumination:{nobold} {illumination}" if not notime else ""
     string_transits = f"{p}{bold}{h2}Transits for"
     string_synastry = f"{p}{bold}{h2}Synastry chart for"
-    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transit_timezone, --transit_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
+    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transits_timezone, --transits_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
 
     if output_type in ("text","html"):
         print(f"{string_heading}", end='')
@@ -3458,14 +3461,13 @@ def main(gui_arguments=None):
             print(f"{string_progressed}", end='')
         if exists or name:
             print(f"{string_name}", end='')
+        if place:
+            print(f"{string_place}", end='')
+        if degree_in_minutes:
+            print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
         else:
-            if place:
-                print(f"{string_place}", end='')
-            if degree_in_minutes:
-                print(f"{string_latitude_in_minutes}, {string_longitude_in_minutes}", end='')
-            else:
-                print(f"{string_latitude}, {string_longitude}", end='')
-            print(f"{string_altitude}", end='')
+            print(f"{string_latitude}, {string_longitude}", end='')
+        print(f"{string_altitude}", end='')
         if args["Davison"]:
             print(f"{string_davison}", end='')
 
@@ -3500,14 +3502,13 @@ def main(gui_arguments=None):
             to_return += f"{string_progressed}"
         if exists or name:
             to_return += f"{string_name}"
+        if place:
+            to_return += f"{string_place}"
+        if degree_in_minutes:
+            to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
         else:
-            if place:
-                to_return += f"{string_place}"
-            if degree_in_minutes:
-                to_return += f"{string_latitude_in_minutes}, {string_longitude_in_minutes}"
-            else:
-                to_return += f"{string_latitude}, {string_longitude}"
-            to_return += f"{string_altitude}"
+            to_return += f"{string_latitude}, {string_longitude}"
+        to_return += f"{string_altitude}"
         if args["Davison"]:
             to_return += f"{string_davison}"
 
