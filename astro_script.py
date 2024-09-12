@@ -2874,7 +2874,11 @@ def main(gui_arguments=None):
     try:
         if args["Date"]:
             if args["Date"] == "now":
-                local_datetime = datetime.now()
+                if EPHE:
+                    local_datetime = datetime.now()
+                    local_timezone = pytz.timezone('UTC')
+                else:
+                    local_datetime = datetime.now()
             else:
                 local_datetime = parse_date(args["Date"])
     except ValueError:
