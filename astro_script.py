@@ -300,6 +300,59 @@ def calculate_aspect_score(aspect, angle, magnitude=None):
 
     return score
 
+def life_path_number(birthdate):
+    """
+    Calculate the Life Path Number based on the birthdate.
+    The birthdate should be a datetime.date object.
+    """
+    total = 0
+    # Sum of the digits of the day
+    for digit in str(birthdate.day):
+        total += int(digit)
+    # Sum of the digits of the month
+    for digit in str(birthdate.month):
+        total += int(digit)
+    # Sum of the digits of the year
+    for digit in str(birthdate.year):
+        total += int(digit)
+    
+    # Reduce to a single digit or master number (11, 22, 33)
+    return reduce_number(total)
+
+def destiny_number(full_name):
+    """
+    Calculate the Destiny Number based on the full name.
+    The full_name should be a string containing the first, middle, and last names.
+    """
+    # Pythagorean numerology letter to number mapping
+    numerology_chart = {
+        'A':1, 'J':1, 'S':1,
+        'B':2, 'K':2, 'T':2,
+        'C':3, 'L':3, 'U':3,
+        'D':4, 'M':4, 'V':4,
+        'E':5, 'N':5, 'W':5,
+        'F':6, 'O':6, 'X':6,
+        'G':7, 'P':7, 'Y':7,
+        'H':8, 'Q':8, 'Z':8,
+        'I':9, 'R':9
+    }
+    
+    total = 0
+    for char in full_name.upper():
+        if char.isalpha():
+            total += numerology_chart.get(char, 0)
+    
+    # Reduce to a single digit or master number (11, 22, 33)
+    return reduce_number(total)
+
+def reduce_number(number):
+    """
+    Reduce a number to a single digit or a master number (11, 22, 33).
+    """
+    while number > 9 and number not in [11, 22, 33]:
+        number = sum(int(digit) for digit in str(number))
+    return number
+
 def get_davison_data(names, guid=None):
     datetimes = []
     longitudes = []
@@ -3417,6 +3470,15 @@ def main(gui_arguments=None):
     string_davison_noname = "Davison chart"
     string_progressed = f"{br}{bold}Progressed chart:{nobold} {args['Progressed']}" if args["Progressed"] else ""
 
+    if args["Name"] or exists:
+        if len(args["Name"].split(",")) == 1:
+            string_not_full_name = " (enter full name for correct destiny number)"
+        else: string_not_full_name = ""
+
+        string_numerology = f"{br}{bold}Life path:{nobold} {life_path_number(utc_datetime)}, {bold}Destiny number:{nobold} {destiny_number(name)}" + string_not_full_name
+    else:
+        string_numerology = f"{br}{bold}Life path:{nobold} {life_path_number(utc_datetime)}"
+
     if args["Name"] and args["Davison"]:
         string_davison = f"{br}{bold}Davison chart of:{nobold} {', '.join(args['Davison'])}. Stored as new event: {args['Name']}"
     elif args["Davison"]:
@@ -3492,9 +3554,11 @@ def main(gui_arguments=None):
 
         if not show_synastry and not center_of_calculations == "heliocentric":
             try:
-                print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}{br}", end='')
+                print(f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}", end='')
             except:
-                print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file{br}", end='')
+                print(f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file", end='')
+
+        print(f"{string_numerology}", end='')
 
         if show_synastry:
             print(f"{string_synastry_name}", end='')
@@ -3539,6 +3603,8 @@ def main(gui_arguments=None):
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
             except:
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file"
+
+        to_return += f"{string_numerology}"
 
         if show_synastry:
             to_return += f"{string_synastry_name}"
