@@ -132,7 +132,7 @@ I'm working on getting Buildozer package it as an Android package for installing
 
 ## Contributing
 
-Contributions to AstroScript are welcome! Please fork the repository and submit pull requests with your enhancements, or open issues for any bugs or new feature requests.
+Contributions to AstroScript are welcome! Please open issues for any bugs or new feature requests, and/or submit pull requests with your enhancements.
 
 ## License
 
