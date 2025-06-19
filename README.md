@@ -159,7 +159,7 @@ AstroScript interacts with various files to store and retrieve data, enhancing f
 ### Events and Locations File
 
 - **Filename**: `db.sqlite3`
-- **Purpose**: Stores details of astrological events, such as dates, times, and locations, for quick retrieval. Locations are also stored so as not to have the retrieve the same coordinates from the internet each time.
+- **Purpose**: Stores details of astrological events, such as dates, times, and locations, for quick retrieval. Locations are also stored so as to avoid retrieving the same coordinates from the internet each time.
 - **Usage**: Users can save event details for future reference, which facilitates repeated analyses without re-entering data. This is done automatically whenever a name is given as an argument.
 
 ## Font Management
