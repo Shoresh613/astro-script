@@ -1,14 +1,55 @@
 import sqlite3
 import json
 import logging
+import os
+
+
+def check_and_fix_schema():
+    """Check if the database has the correct schema and fix it if necessary"""
+    try:
+        conn = sqlite3.connect("db.sqlite3")
+        cursor = conn.cursor()
+
+        # Check if the myapp_event table has the correct schema
+        cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='myapp_event'"
+        )
+        result = cursor.fetchone()
+
+        if result and "PRIMARY KEY (name, random_column)" in result[0]:
+            # Schema is incorrect, need to recreate the table
+            logging.info("Detected incorrect schema, recreating database...")
+            conn.close()
+
+            # Backup existing database if it has data
+            if os.path.exists("db.sqlite3"):
+                import shutil
+
+                shutil.copy("db.sqlite3", "db.sqlite3.backup")
+                logging.info("Created backup: db.sqlite3.backup")
+
+            # Remove the problematic database file
+            os.remove("db.sqlite3")
+            return True
+
+        conn.close()
+        return False
+
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {e}")
+        return True  # Force recreation on any error
+
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
-    conn = sqlite3.connect('db.sqlite3')
+    # Check and fix schema if necessary
+    schema_fixed = check_and_fix_schema()
+
+    conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
-    
     # Create the myapp_event table
-    cursor.execute('''
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS myapp_event (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         location TEXT,
@@ -20,59 +61,110 @@ def initialize_db():
         notime INTEGER DEFAULT FALSE,
         random_column TEXT NULL,
         name TEXT NOT NULL,
-        PRIMARY KEY (name, random_column)
+        UNIQUE(name, random_column)
     )
-    ''')
-    
+    """
+    )
+
     # Create the myapp_location table
-    cursor.execute('''
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS myapp_location (
         location_name TEXT PRIMARY KEY,
         latitude REAL,
         longitude REAL,
         altitude REAL
     )
-    ''')
+    """
+    )
 
     # Create the myapp_defaults table
-    cursor.execute('''
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS myapp_usersettings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         setting_name TEXT NOT NULL,
         guid TEXT NULL,
         settings TEXT NOT NULL,
         UNIQUE(setting_name, guid));
-    ''')
+    """
+    )
 
     conn.commit()
     conn.close()
 
+
 # Function to add or update an event in the database
-def update_event(name, location, datetime_str, timezone, latitude, longitude, notime, guid):
-    conn = sqlite3.connect('db.sqlite3')
+def update_event(
+    name, location, datetime_str, timezone, latitude, longitude, altitude, notime, guid
+):
+    conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
-    
-    #only for debug
-    # print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude={longitude} altitude={altitude} notime={notime} guid={guid}")    
+
+    # only for debug
+    # print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude={longitude} altitude={altitude} notime={notime} guid={guid}")
     result = get_event(name, guid)
     if result:
-        # print(f"DEBUG: get_event() result{result}")
-        cursor.execute('''
+        # print(f"DEBUG: get_event() result{result}")        cursor.execute(
+        """
         UPDATE myapp_event
         SET location = ?,
             datetime = ?,
             timezone = ?,
             latitude = ?,
             longitude = ?,
+            altitude = ?,
             notime = ?,
             random_column = ?
         WHERE name = ? AND random_column = ?
-        ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name, str(guid)))
+        """,
+        (
+            location,
+            datetime_str,
+            timezone,
+            latitude,
+            longitude,
+            altitude,
+            notime,
+            str(guid),
+            name,
+            str(guid),
+        ),
     else:
         if guid:
-            cursor.execute('''
+            cursor.execute(
+                """
             
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, random_column, name)
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, random_column, name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(random_column, name) DO UPDATE SET
+            location=excluded.location,
+            datetime=excluded.datetime,
+            timezone=excluded.timezone,
+            latitude=excluded.latitude,
+            longitude=excluded.longitude,
+            altitude=excluded.altitude,
+            notime=excluded.notime,
+            random_column=excluded.random_column,
+            name=excluded.name
+            """,
+                (
+                    location,
+                    datetime_str,
+                    timezone,
+                    latitude,
+                    longitude,
+                    altitude,
+                    notime,
+                    str(guid),
+                    name,
+                ),
+            )
+        else:
+            cursor.execute(
+                """
+            
+            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, name)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(random_column, name) DO UPDATE SET
             location=excluded.location,
@@ -80,27 +172,25 @@ def update_event(name, location, datetime_str, timezone, latitude, longitude, no
             timezone=excluded.timezone,
             latitude=excluded.latitude,
             longitude=excluded.longitude,
-            notime=excluded.notime,
-            random_column=excluded.random_column,
-            name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, notime, str(guid), name))
-        else:
-            cursor.execute('''
-            
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, notime, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(random_column, name) DO UPDATE SET
-            location=excluded.location,
-            datetime=excluded.datetime,
-            timezone=excluded.timezone,
-            latitude=excluded.latitude,
-            longitude=excluded.longitude,
+            altitude=excluded.altitude,
             notime=excluded.notime,
             name=excluded.name
-            ''', (location, datetime_str, timezone, latitude, longitude, notime, name))
+            """,
+                (
+                    location,
+                    datetime_str,
+                    timezone,
+                    latitude,
+                    longitude,
+                    altitude,
+                    notime,
+                    name,
+                ),
+            )
 
     conn.commit()
     conn.close()
+
 
 def get_event(name, guid=None):
     """
@@ -114,48 +204,41 @@ def get_event(name, guid=None):
         sqlite3.Error: If an error occurs while accessing the database.
     """
     try:
-        with sqlite3.connect('db.sqlite3') as conn:
+        with sqlite3.connect("db.sqlite3") as conn:
             cursor = conn.cursor()
-            
+
             if guid:
                 cursor.execute(
-                    'SELECT location, datetime, timezone, latitude, longitude, notime FROM myapp_event WHERE name = ? AND random_column = ?',
-                    (name, guid,)
+                    "SELECT location, datetime, timezone, latitude, longitude, altitude, notime FROM myapp_event WHERE name = ? AND random_column = ?",
+                    (
+                        name,
+                        guid,
+                    ),
                 )
             else:
                 cursor.execute(
-                    'SELECT location, datetime, timezone, latitude, longitude, notime FROM myapp_event WHERE name = ?',
-                    (name,)
+                    "SELECT location, datetime, timezone, latitude, longitude, altitude, notime FROM myapp_event WHERE name = ?",
+                    (name,),
                 )
 
             event_data = cursor.fetchone()
+
             if not event_data:
                 return None
 
-            location, datetime, timezone, latitude, longitude, notime = event_data
-
-            if location == "Davison chart":
-                cursor.execute(
-                    'SELECT altitude FROM myapp_location WHERE location_name = ?',
-                    (str(latitude) + "," + str(longitude),)
-                )            
-            else:
-                cursor.execute(
-                    'SELECT altitude FROM myapp_location WHERE location_name = ?',
-                    (str(location),)
-                )
-            altitude_data = cursor.fetchone()
-            altitude = altitude_data[0] if altitude_data else None
+            location, datetime, timezone, latitude, longitude, altitude, notime = (
+                event_data
+            )
 
             event = {
-                'name': name,
-                'location': location,
-                'datetime': datetime,
-                'timezone': timezone,
-                'latitude': latitude,
-                'longitude': longitude,
-                'altitude': altitude,
-                'notime': notime
+                "name": name,
+                "location": location,
+                "datetime": datetime,
+                "timezone": timezone,
+                "latitude": latitude,
+                "longitude": longitude,
+                "altitude": altitude,
+                "notime": notime,
             }
 
             return event
@@ -164,7 +247,8 @@ def get_event(name, guid=None):
         print(f"An error occurred: {e}")
         return None
 
-def read_saved_names(guid=None, db_filename='db.sqlite3'):
+
+def read_saved_names(guid=None, db_filename="db.sqlite3"):
     """
     Reads the names of saved events from a SQLite database and returns a list of event names.
     Checks if the user is authenticated before proceeding.
@@ -178,25 +262,27 @@ def read_saved_names(guid=None, db_filename='db.sqlite3'):
     """
     # print(f"DEBUG - guid: {str(guid)}")
     try:
-        
+
         # Connect to the SQLite database
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
-        
+
         # Execute a query to retrieve the names of the events
         if guid:
             # print(f"DEBUG - read_saved_names() guid: {guid}")
-            cursor.execute(f"SELECT name FROM myapp_event WHERE random_column=?", (guid, ))
+            cursor.execute(
+                f"SELECT name FROM myapp_event WHERE random_column=?", (guid,)
+            )
         else:
             cursor.execute("SELECT name FROM myapp_event")
         rows = cursor.fetchall()
-        
+
         # Extract the names from the query result
         names = [row[0] for row in rows]
-        
+
         # Close the database connection
         conn.close()
-        
+
         return names
     except sqlite3.OperationalError as e:
         # Handle operational errors such as missing tables or database files
@@ -207,9 +293,13 @@ def read_saved_names(guid=None, db_filename='db.sqlite3'):
         print(f"An unexpected error occurred: {e}")
         return []
 
+
 import sqlite3
 
-def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.sqlite3'):
+
+def remove_saved_names(
+    names_to_remove, output_type, guid=None, db_filename="db.sqlite3"
+):
     """
     Removes the specified names of saved events from a SQLite database.
     Checks if the user is authenticated before proceeding.
@@ -239,14 +329,22 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
             cursor = conn.cursor()
 
             if guid:
-                cursor.execute("DELETE FROM myapp_event WHERE name IN ({}) AND random_column=?".format(
-                    ','.join('?' * len(valid_names))), (*valid_names, guid))
+                cursor.execute(
+                    "DELETE FROM myapp_event WHERE name IN ({}) AND random_column=?".format(
+                        ",".join("?" * len(valid_names))
+                    ),
+                    (*valid_names, guid),
+                )
             else:
-                cursor.execute("DELETE FROM myapp_event WHERE name IN ({})".format(
-                    ','.join('?' * len(valid_names))), valid_names)
+                cursor.execute(
+                    "DELETE FROM myapp_event WHERE name IN ({})".format(
+                        ",".join("?" * len(valid_names))
+                    ),
+                    valid_names,
+                )
 
             conn.commit()
-            
+
             conn.close()
 
         except sqlite3.OperationalError as e:
@@ -258,46 +356,61 @@ def remove_saved_names(names_to_remove, output_type, guid=None, db_filename='db.
             return f"An unexpected error occurred: {e}"
 
     to_return = ""
-    if output_type in ('text', 'html'):
+    if output_type in ("text", "html"):
         if invalid_names:
-            print(f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n")
+            print(
+                f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n"
+            )
         if valid_names:
-            print(f"\nThe following names have been removed: {', '.join(valid_names)}.\n")
+            print(
+                f"\nThe following names have been removed: {', '.join(valid_names)}.\n"
+            )
     else:
         if invalid_names:
             to_return += f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n"
         if valid_names:
-            to_return += f"\nThe following names have been removed: {', '.join(valid_names)}.\n"
+            to_return += (
+                f"\nThe following names have been removed: {', '.join(valid_names)}.\n"
+            )
 
     return to_return
 
+
 # Function to save a location in the database
 def save_location(location_name, latitude, longitude, altitude):
-    conn = sqlite3.connect('db.sqlite3')
+    conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
-    
-    cursor.execute('''
+
+    cursor.execute(
+        """
     INSERT INTO myapp_location (location_name, latitude, longitude, altitude)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(location_name) DO UPDATE SET
     latitude=excluded.latitude,
     longitude=excluded.longitude,
     altitude=excluded.altitude
-    ''', (location_name, latitude, longitude, altitude))
-    
+    """,
+        (location_name, latitude, longitude, altitude),
+    )
+
     conn.commit()
     conn.close()
 
+
 # Function to load a location from the database
 def load_location(location_name):
-    conn = sqlite3.connect('db.sqlite3')
+    conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
-    
-    cursor.execute('SELECT latitude, longitude, altitude FROM myapp_location WHERE location_name = ?', (location_name,))
+
+    cursor.execute(
+        "SELECT latitude, longitude, altitude FROM myapp_location WHERE location_name = ?",
+        (location_name,),
+    )
     location = cursor.fetchone()
-    
+
     conn.close()
     return location
+
 
 # Function to save default settings in the database
 def store_defaults(defaults):
@@ -309,20 +422,22 @@ def store_defaults(defaults):
     conn = sqlite3.connect("db.sqlite3")
     cursor = conn.cursor()
 
-    cursor.execute('''
+    cursor.execute(
+        """
         INSERT INTO myapp_usersettings (setting_name, guid, settings) 
         VALUES (?, ?, ?)
         ON CONFLICT(setting_name, guid) 
         DO UPDATE SET 
             settings = excluded.settings
-    ''', (
-    defaults["Name"], guid, json.dumps(defaults)
-    ))
+    """,
+        (defaults["Name"], guid, json.dumps(defaults)),
+    )
 
     conn.commit()
     conn.close()
 
-def read_defaults(settings_name, guid="", db_filename='db.sqlite3'):
+
+def read_defaults(settings_name, guid="", db_filename="db.sqlite3"):
     """
     Reads the default settings from the myapp_defaults table and returns a dictionary with the values.
 
@@ -338,20 +453,23 @@ def read_defaults(settings_name, guid="", db_filename='db.sqlite3'):
     cursor = conn.cursor()
 
     try:
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT 
                 settings
             FROM myapp_usersettings
             WHERE setting_name = ? AND (guid IS NULL OR guid = ?)
-        ''', (settings_name, guid))
-        
+        """,
+            (settings_name, guid),
+        )
+
         row = cursor.fetchone()
 
         if row:
             defaults = json.loads(row[0])
         else:
             defaults = {}
-        
+
     except sqlite3.OperationalError as e:
         print(f"Database error: {e}")
         defaults = {}

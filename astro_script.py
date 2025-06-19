@@ -1004,7 +1004,9 @@ def get_delta_t(date):
         return 0
 
 
-def get_pluto_ecliptic(date: datetime, ):
+def get_pluto_ecliptic(
+    date: datetime,
+):
     """
     Calculate and print Pluto's ecliptic latitude for a given date.
     This function calculates the heliocentric position of Pluto for the given date
@@ -1052,6 +1054,10 @@ def find_next_same_degree(
     orbital_period = planet_info["orbital_period_days"]
 
     julian_day = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0)
+
+    # Handle None altitude by defaulting to sea level (0.0)
+    if altitude is None:
+        altitude = 0.0
 
     if center == "topocentric":
         swe.set_topo(float(longitude), float(latitude), float(altitude))
@@ -1750,6 +1756,9 @@ def calculate_planet_positions(
             swe.set_ephe_path("./ephe")
 
     if center == "topocentric":
+        # Handle None altitude by defaulting to sea level (0.0)
+        if altitude is None:
+            altitude = 0.0
         try:
             swe.set_topo(longitude, latitude, altitude)
         except Exception as e:
@@ -1810,6 +1819,9 @@ def calculate_planet_positions(
     if mode in ("planets", "asteroids"):
         for planet, id in bodies.items():
             if center == "topocentric":
+                # Handle None altitude by defaulting to sea level (0.0)
+                if altitude is None:
+                    altitude = 0.0
                 swe.set_topo(float(longitude), float(latitude), float(altitude))
                 pos, ret = swe.calc_ut(jd, id, swe.FLG_TOPOCTR)
                 pos_geo, ret_geo = swe.calc_ut(
@@ -1826,7 +1838,7 @@ def calculate_planet_positions(
                 pos = tuple(pos)
             else:
                 pos, ret = swe.calc_ut(jd, id)
-            
+
             if pos[3] < 0.001:
                 retrograde_stationary = "R"
             elif pos[3] > 0.001:
@@ -2750,7 +2762,7 @@ def print_planet_positions(
     hide_decans=False,
     classic_rulers=False,
     center="geocentric",
-    pluto_ecliptic=None
+    pluto_ecliptic=None,
 ):
     """
     Print the positions of planets in a human-readable format. This includes the zodiac sign,
@@ -2837,7 +2849,7 @@ def print_planet_positions(
         )
         retrograde = info["retrograde"]
         zodiac = info["zodiac_sign"]
-        retrograde_status = retrograde #"R" if retrograde else ""
+        retrograde_status = retrograde  # "R" if retrograde else ""
         decan_ruler = info.get("decan_ruled_by", "")
 
         planet_signs[planet] = zodiac
@@ -2868,7 +2880,10 @@ def print_planet_positions(
             house_num = house_positions.get(planet, {}).get("house", "Unknown")
             row.insert(4, house_num)
         row.append(
-            elevation_check[planet] + strength_check[planet] + degree_check[planet] + (f" {pluto_ecliptic}" if planet == "Pluto" else "")
+            elevation_check[planet]
+            + strength_check[planet]
+            + degree_check[planet]
+            + (f" {pluto_ecliptic}" if planet == "Pluto" else "")
         )
         if not hide_decans:
             row.append(decan_ruler)
@@ -5140,6 +5155,7 @@ def main(gui_arguments=None):
             str(local_timezone),
             latitude,
             longitude,
+            altitude,
             notime,
             guid=args["Guid"] if args["Guid"] else None,
         )
@@ -5153,6 +5169,7 @@ def main(gui_arguments=None):
             str(local_timezone),
             latitude,
             longitude,
+            altitude,
             notime,
             guid=args["Guid"] if args["Guid"] else None,
         )
