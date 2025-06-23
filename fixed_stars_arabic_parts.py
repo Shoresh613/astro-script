@@ -395,47 +395,56 @@ def moon_phase(date: datetime) -> dict:
     }
 
 
-def datetime_ruled_by(date: datetime) -> dict:
+def datetime_ruled_by(date):
     """
-    Calculate planetary hours and rulers for a datetime.
+    Calculate planetary hours and rulers for a datetime - matches original exactly.
 
     Args:
         date: datetime to check
 
     Returns:
-        dict: planetary ruler information
+        tuple: (weekday_name, day_planet, hour_planet)
     """
-    # Planetary day rulers (starting with Sunday = Sun)
-    day_rulers = [
-        "Sun",  # Sunday
-        "Moon",  # Monday
-        "Mars",  # Tuesday
-        "Mercury",  # Wednesday
-        "Jupiter",  # Thursday
-        "Venus",  # Friday
-        "Saturn",  # Saturday
+    # Chaldean order of the planets
+    planets = ["Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon"]
+
+    # Starting with Saturn on the first hour of the first day (Saturday)
+    current_planet_index = 0
+
+    first_hour_planets = []
+    for day in range(7):
+        first_hour_planets.append(planets[current_planet_index % 7])
+        # Move to the planet of the 25th hour, which will be the first hour of the next day
+        current_planet_index += 24
+
+    # Mapping the first hour planets to their corresponding weekdays
+    weekdays = [
+        "Saturday",
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
     ]
+    weekday_planet_mapping = dict(zip(weekdays, first_hour_planets))
 
-    # Get day of week (0 = Monday, 6 = Sunday)
-    day_of_week = date.weekday()
+    day_of_week = (date.weekday() - 5) % 7  # Adjust the weekday to start from Saturday
 
-    # Convert to Sunday = 0 system
-    if day_of_week == 6:  # Sunday
-        day_index = 0
-    else:
-        day_index = day_of_week + 1
+    # Get the weekday name and the planet ruling that day
+    weekday_name = weekdays[day_of_week]
+    day_planet = weekday_planet_mapping[weekday_name]
 
-    day_ruler = day_rulers[day_index]
+    # Calculate the planetary hour
+    # Assuming the day starts at 6:00 AM with the first hour ruled by the day's planet
+    hour_offset = (
+        date.hour - 6
+    ) % 24  # Adjust hour for planetary hours starting at 6 AM
+    if hour_offset < 0:
+        hour_offset += 24  # Adjust for hours before 6 AM
 
-    # Planetary hour calculation (simplified)
-    # This is a basic implementation - full calculation requires sunrise/sunset times
-    hour = date.hour
-    planetary_hours = ["Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon"]
-    hour_ruler = planetary_hours[hour % 7]
+    # Find the planet for the given hour
+    hour_planet_index = (planets.index(day_planet) + hour_offset) % 7
+    hour_planet = planets[hour_planet_index]
 
-    return {
-        "day_ruler": day_ruler,
-        "hour_ruler": hour_ruler,
-        "day_of_week": date.strftime("%A"),
-        "hour": hour,
-    }
+    return weekday_name, day_planet, hour_planet

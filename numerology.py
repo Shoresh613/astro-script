@@ -4,6 +4,7 @@ Contains functions for calculating life path numbers, destiny numbers, and relat
 """
 
 from datetime import datetime
+from constants import NUMEROLOGY_CHART
 
 
 def life_path_number(birthdate: datetime) -> dict:
@@ -425,3 +426,37 @@ def numerology_compatibility(life_path1: int, life_path2: int) -> dict:
         "level": level,
         "description": f"{life_path1} and {life_path2} compatibility",
     }
+
+
+def life_path_number_simple(birthdate: datetime) -> int:
+    """
+    Calculate the Life Path Number based on the birthdate (original style).
+    Returns just the number as an integer to match original behavior.
+    """
+    total = 0
+    # Sum of the digits of the day
+    for digit in str(birthdate.day):
+        total += int(digit)
+    # Sum of the digits of the month
+    for digit in str(birthdate.month):
+        total += int(digit)
+    # Sum of the digits of the year
+    for digit in str(birthdate.year):
+        total += int(digit)
+
+    # Reduce to a single digit or master number (11, 22, 33)
+    return reduce_number(total)
+
+
+def destiny_number_simple(full_name: str) -> int:
+    """
+    Calculate the Destiny Number based on the full name (original style).
+    Returns just the number as an integer to match original behavior.
+    """
+    total = 0
+    for char in full_name.upper():
+        if char.isalpha():
+            total += NUMEROLOGY_CHART.get(char, 0)
+
+    # Reduce to a single digit or master number (11, 22, 33)
+    return reduce_number(total)

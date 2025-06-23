@@ -345,9 +345,7 @@ def calculate_planet_positions(
         if center == "topocentric":
             swe.set_topo(longitude, latitude, altitude)
 
-    positions = {}
-
-    # Calculate main planets
+    positions = {}  # Calculate main planets
     planet_list = [
         (swe.SUN, "Sun"),
         (swe.MOON, "Moon"),
@@ -359,6 +357,9 @@ def calculate_planet_positions(
         (swe.URANUS, "Uranus"),
         (swe.NEPTUNE, "Neptune"),
         (swe.PLUTO, "Pluto"),
+        (swe.CHIRON, "Chiron"),
+        (swe.MEAN_APOG, "Lilith"),
+        (swe.TRUE_NODE, "North Node"),
     ]
 
     for planet_id, planet_name in planet_list:
@@ -375,6 +376,16 @@ def calculate_planet_positions(
             }
         except Exception as e:
             print(f"Error calculating {planet_name}: {e}")
+
+    # Add South Node (opposite of North Node)
+    if "North Node" in positions:
+        positions["South Node"] = {
+            "longitude": (positions["North Node"]["longitude"] + 180) % 360,
+            "latitude": 0,
+            "distance": 0,
+            "speed": 0,
+            "retrograde": False,
+        }
 
     # Calculate house cusps and angles
     try:
@@ -408,8 +419,7 @@ def calculate_planet_positions(
             "retrograde": False,
         }
 
-        # Store house cusps
-        positions["house_cusps"] = houses
+        # House cusps are handled separately in calculate_house_positions()
 
     except Exception as e:
         print(f"Error calculating houses: {e}")

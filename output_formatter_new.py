@@ -106,9 +106,9 @@ def print_planet_positions(
     from astro_calculations import longitude_to_zodiac
 
     fmt = setup_output_formatting(output_type)
-    table_format = (
-        "unsafehtml" if output_type in ("html", "return_html") else "simple"
-    )  # Build table data exactly like original
+    table_format = "unsafehtml" if output_type in ("html", "return_html") else "simple"
+
+    # Build table data exactly like original
     table_data = []
     headers = ["Planet", "Zodiac", "Degree"]
     if not center == "heliocentric":
@@ -121,9 +121,7 @@ def print_planet_positions(
             continue
 
         longitude = info["longitude"]
-        zodiac = longitude_to_zodiac(longitude, output_type).split()[
-            -1
-        ]  # Get sign name only
+        zodiac = longitude_to_zodiac(longitude).split()[0]  # Get sign name only
         degrees_within_sign = longitude % 30
 
         position = (
@@ -131,15 +129,15 @@ def print_planet_positions(
             if degree_in_minutes
             else f"{degrees_within_sign:.2f}{'' if (os.name == 'nt' and output_type == 'html') else '°'}"
         )
+
         if center == "heliocentric":
             row = [planet, zodiac, position]
         else:
             retrograde = info.get("retrograde", False)
-            retrograde_status = "R" if retrograde else ""
-            row = [planet, zodiac, position, retrograde_status]
+            row = [planet, zodiac, position, retrograde]
 
         if house_positions and not notime and not center == "heliocentric":
-            house_num = house_positions.get(planet, "")
+            house_num = house_positions.get(planet, {}).get("house", "")
             row.append(house_num)
 
         table_data.append(row)
@@ -147,7 +145,7 @@ def print_planet_positions(
     # Generate table
     table = tabulate(table_data, headers=headers, tablefmt=table_format)
 
-    if output_type == "text":
+    if output_type in ("text", "html"):
         print(table)
         return ""
     else:
@@ -210,105 +208,6 @@ def format_aspect_table(
     else:
         table_text = tabulate(table_data, headers=headers, tablefmt="grid")
         return table_text
-
-
-def print_aspects(
-    aspects,
-    planet_positions,
-    orbs,
-    transit_planet_positions=None,
-    imprecise_aspects="off",
-    minor_aspects=True,
-    degree_in_minutes=False,
-    house_positions=None,
-    orb=1,
-    type="Natal",
-    p1_name="",
-    p2_name="",
-    notime=False,
-    output="text",
-    show_aspect_score=False,
-    star_positions=None,
-    complex_aspects=None,
-    center="geocentric",
-):
-    """
-    Print astrological aspects between celestial bodies - matches original exactly.
-    """
-    # Set up formatting variables exactly like original
-    if output in ("html", "return_html"):
-        table_format = "unsafehtml"
-        house_called = "House"
-        bold = "<b>"
-        nobold = "</b>"
-        br = "\n<br>"
-        p = "\n<p>"
-        h3 = "<h3>"
-        h3_ = "</h3>"
-    elif output == "text":
-        table_format = "simple"
-        house_called = "H"
-        bold = "\033[1m"
-        nobold = "\033[0m"
-        br = "\n"
-        p = "\n"
-        h3 = ""
-        h3_ = ""
-    else:
-        table_format = "simple"
-        house_called = "H"
-        bold = ""
-        nobold = ""
-        br = "\n"
-        p = "\n"
-        h3 = ""
-        h3_ = ""
-
-    degree_symbol = "" if (os.name == "nt" and output == "html") else "°"
-
-    # Build aspects table
-    planetary_aspects_table_data = []
-    headers = ["Planet", "H", "Aspect", "Planet", "H", "Degree"]
-    if show_aspect_score:
-        headers.append("Score")
-
-    to_return = ""
-
-    # Simple aspects table - basic implementation
-    for (planet1, planet2), aspect_info in aspects.items():
-        aspect_name = aspect_info.get("aspect_name", "")
-        orb_diff = aspect_info.get("orb_difference", 0)
-
-        # Get house positions if available
-        house1 = house_positions.get(planet1, "") if house_positions else ""
-        house2 = house_positions.get(planet2, "") if house_positions else ""
-
-        # Format orb difference
-        orb_str = f"{orb_diff:.2f}{degree_symbol}"
-
-        row = [planet1, house1, aspect_name, planet2, house2, orb_str]
-        if show_aspect_score:
-            score = aspect_info.get("score", 0)
-            row.append(f"{score:.1f}")
-
-        planetary_aspects_table_data.append(row)
-
-    if planetary_aspects_table_data:  # Create table
-        table = tabulate(
-            planetary_aspects_table_data, headers=headers, tablefmt=table_format
-        )
-
-        if output in ("text"):
-            print(f"{h3}Planetary Aspects{h3_}")
-            print(table)
-
-        to_return = f"{h3}Planetary Aspects{h3_}{br}{table}"
-    else:
-        if output in ("text"):
-            print("No aspects found")
-        to_return = "No aspects found"
-
-    return to_return
 
 
 def format_house_positions(house_positions: dict, output_type: str = "text") -> str:
@@ -509,106 +408,26 @@ def house_count(
     return result
 
 
-def get_sabian_symbol(planet_positions, planet: str):
+def format_event_info(event_data: dict, output_type: str = "text") -> str:
     """
-    Retrieve the Sabian symbol for a specific degree within a zodiac sign.
+    Format event information header.
+
+    Args:
+        event_data: event data dictionary
+        output_type: output format
+
+    Returns:
+        str: formatted event information
     """
-    import json
-
-    try:
-        ephe = os.getenv("PRODUCTION_EPHE")
-        if ephe:
-            sabian_symbols = json.load(open(f"{ephe}/sabian.json"))
-        else:
-            if os.name == "nt":
-                sabian_symbols = json.load(open(".\\ephe\\sabian.json"))
-            else:
-                sabian_symbols = json.load(open("./ephe/sabian.json"))
-
-        # Get zodiac sign from longitude
-        from astro_calculations import longitude_to_zodiac
-
-        sun_longitude = planet_positions["Sun"]["longitude"]
-        zodiac_sign = longitude_to_zodiac(sun_longitude, "text").split()[
-            -1
-        ]  # Get sign name
-        degree = int(sun_longitude % 30) + 1  # Sabian symbols start from 1
-
-        return sabian_symbols[zodiac_sign][str(degree)]
-    except Exception as e:
-        return f"Cannot access sabian.json file: {e}"
-
-
-def format_event_info(
-    event_data: dict, output_type: str = "text", planet_positions=None, args=None
-) -> str:
-    """
-    Format event information header exactly like original.
-    """
-    import version
-    from numerology import life_path_number_simple, destiny_number_simple
-    from fixed_stars_arabic_parts import datetime_ruled_by
-
     fmt = setup_output_formatting(output_type)
-    bold = fmt["bold"]
-    nobold = fmt["nobold"]
-    br = fmt["br"]
-    p = fmt["p"]
-    h1 = fmt["h1"]
-    h1_ = fmt["h1_"]
 
     name = event_data.get("name", "Unknown")
-    place = event_data.get("location", "Unknown")
-    latitude = event_data.get("latitude", 0)
-    longitude = event_data.get("longitude", 0)
-    altitude = event_data.get("altitude", 0)
-    local_datetime = event_data.get("datetime")
-    if isinstance(local_datetime, str):
-        from datetime import datetime
+    date_str = event_data.get("datetime", "")
+    location = event_data.get("location", "Unknown")
 
-        local_datetime = datetime.fromisoformat(local_datetime.replace("T", " "))
-    utc_datetime = local_datetime  # Simplified for now
-    timezone = event_data.get("timezone", "UTC")
-    notime = event_data.get("notime", False)
-
-    # Build header exactly like original
-    result = f"{p}{h1}{bold}AstroScript v.{version.__version__} Chart{nobold}{h1_}"
-    result += f"{p}{bold}Name:{nobold} {name}"
-    result += f"{br}{bold}Place:{nobold} {place}"
-    result += (
-        f"{br}{bold}Latitude:{nobold} {latitude}, {bold}Longitude:{nobold} {longitude}"
-    )
-    result += f"{br}{bold}Altitude:{nobold} {altitude} m"
-    result += f"{br}{bold}Local Time:{nobold} {str(local_datetime)} {timezone}"
-    result += f"{br}{bold}UTC Time:{nobold} {str(utc_datetime)} UTC"
-
-    # Add weekday and ruling planets
-    if local_datetime:
-        weekday, ruling_day, ruling_hour = datetime_ruled_by(local_datetime)
-        if notime:
-            result += f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day}"
-        else:
-            result += f"{br}{bold}Weekday:{nobold} {weekday} {bold}Day ruled by:{nobold} {ruling_day} {bold}Hour ruled by:{nobold} {ruling_hour}"
-
-    # Add Sabian symbol
-    if planet_positions:
-        try:
-            sabian = get_sabian_symbol(planet_positions, "Sun")
-            result += f"{br}{bold}Sabian Symbol:{nobold} {sabian}"
-        except:
-            result += f"{br}{bold}Sabian Symbol:{nobold} Cannot access sabian.json file"
-
-    # Add numerology
-    if name and local_datetime:
-        life_path = life_path_number_simple(local_datetime)
-        destiny = destiny_number_simple(name)
-        name_parts = name.split(",") if name else []
-        string_not_full_name = (
-            " (enter full name for correct destiny number)"
-            if len(name_parts) == 1
-            else ""
-        )
-        result += f"{br}{bold}Life path:{nobold} {life_path}, {bold}Destiny number:{nobold} {destiny}{string_not_full_name}"
+    result = f"{fmt['h1']}{name}{fmt['h1_']}{fmt['br']}"
+    result += f"Date: {date_str}{fmt['br']}"
+    result += f"Location: {location}{fmt['br']}{fmt['br']}"
 
     return result
 

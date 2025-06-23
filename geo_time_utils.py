@@ -414,3 +414,32 @@ def distance_between_coordinates(
 
     distance = R * c
     return distance
+
+
+def coord_in_minutes(longitude, output_type):
+    """
+    Convert a celestial longitude into degrees, minutes, and seconds format.
+
+    This function is used to translate a decimal longitude (such as the position of a planet in the ecliptic coordinate system) into a format that is more commonly used in astrological and astronomical contexts, expressing the longitude in terms of degrees, minutes, and seconds.
+
+    Parameters:
+    - longitude (float): The ecliptic longitude to be converted, in decimal degrees.
+    - output_type (str): The output type ("html", "text", etc.)
+
+    Returns:
+    - str: The formatted string representing the longitude in degrees, minutes, and seconds (D°M'S'').
+    """
+    import os
+
+    degrees = int(longitude)  # Extract whole degrees
+    minutes = int((longitude - degrees) * 60)  # Extract whole minutes
+    seconds = int(((longitude - degrees) * 60 - minutes) * 60)  # Extract whole seconds
+
+    degree_symbol = " " if (os.name == "nt" and output_type == "html") else "°"
+
+    neg = ""
+    if minutes < 0:
+        minutes = abs(minutes)
+        seconds = abs(seconds)
+        neg = "-"
+    return f"{neg}{degrees}{degree_symbol}{minutes}'{seconds}\""
