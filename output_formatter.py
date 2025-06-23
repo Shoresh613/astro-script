@@ -4,6 +4,7 @@ Contains functions for formatting text, HTML, and table output.
 """
 
 import os
+import pytz
 from tabulate import tabulate, SEPARATING_LINE
 from datetime import datetime
 from constants import *
@@ -100,58 +101,261 @@ def print_planet_positions(
     pluto_ecliptic=None,
 ):
     """
-    Print the positions of planets in a human-readable format.
-    Simplified version that focuses on HTML output compatibility with original.
+    Print the positions of planets in a human-readable format - matches original exactly.
     """
-    from astro_calculations import longitude_to_zodiac
+    from astro_calculations import (
+        assess_planet_strength,
+        check_degree,
+        is_planet_elevated,
+        longitude_to_zodiac,
+        coord_in_minutes,
+    )
 
+    # Set up formatting variables exactly like original
     fmt = setup_output_formatting(output_type)
-    table_format = (
-        "unsafehtml" if output_type in ("html", "return_html") else "simple"
-    )  # Build table data exactly like original
-    table_data = []
-    headers = ["Planet", "Zodiac", "Degree"]
-    if not center == "heliocentric":
-        headers.append("Retrograde" if output_type in ("html", "return_html") else "R")
-    if house_positions and not notime and not center == "heliocentric":
+    table_format = "unsafehtml" if output_type in ("html", "return_html") else "simple"
+    # Initialize counters for analysis tables
+    zodiac_signs = list(ZODIAC_ELEMENTS.keys())
+    sign_counts = {sign: {"count": 0, "planets": []} for sign in zodiac_signs}
+    element_counts = {element: 0 for element in ["Fire", "Earth", "Air", "Water"]}
+    modality_counts = {
+        mod: {"count": 0, "planets": []} for mod in ["Cardinal", "Fixed", "Mutable"]
+    }
+    planet_house_counts = {house: 0 for house in range(1, 13)}
+
+    # Define headers exactly like original
+    if center == "heliocentric":
+        headers = ["Planet", "Zodiac", "Degree"]
+    else:
+        headers = [
+            "Planet",
+            "Zodiac",
+            "Degree",
+            "Retrograde" if output_type in ("html", "return_html") else "R",
+        ]
+
+    if house_positions and (not notime and not center == "heliocentric"):
         headers.append("House")
+    headers.append("Dignity")
+    if notime:
+        headers.insert(3, "Off by")
+    if not hide_decans:
+        headers.append(
+            "Decan ruler" if output_type in ("html", "return_html") else "Decan"
+        )
+
+    # Build planet signs dict for dignity calculations
+    planet_signs = {}
+    for planet, info in planet_positions.items():
+        zodiac = info.get(
+            "zodiac_sign", longitude_to_zodiac(info["longitude"], "text").split()[-1]
+        )
+        planet_signs[planet] = zodiac  # Calculate dignity assessments
+    strength_check = assess_planet_strength(planet_signs, classic_rulers)
+    # For elevation check we need house positions, so let's prepare a proper dict
+    planet_house_dict = {}
+    if house_positions:
+        for planet in planet_positions.keys():
+            house_info = house_positions.get(planet, {})
+            if isinstance(house_info, dict):
+                planet_house_dict[planet] = house_info.get("house", "")
+            else:
+                planet_house_dict[planet] = house_info
+    elevation_check = is_planet_elevated(planet_house_dict)
+
+    # Build table data
+    zodiac_table_data = []
 
     for planet, info in planet_positions.items():
-        if notime and planet in ["Ascendant", "Midheaven", "Descendant", "IC"]:
+        if notime and planet in ALWAYS_EXCLUDE_IF_NO_TIME:
             continue
 
         longitude = info["longitude"]
-        zodiac = longitude_to_zodiac(longitude, output_type).split()[
-            -1
-        ]  # Get sign name only
         degrees_within_sign = longitude % 30
+        zodiac = info.get(
+            "zodiac_sign", longitude_to_zodiac(longitude, "text").split()[-1]
+        )
+        retrograde = info.get("retrograde", False)
+        decan_ruler = info.get("decan_ruled_by", "")
+
+        # Calculate degree checks
+        degree_check = check_degree({planet: zodiac}, degrees_within_sign)
 
         position = (
             coord_in_minutes(degrees_within_sign, output_type)
             if degree_in_minutes
-            else f"{degrees_within_sign:.2f}{'' if (os.name == 'nt' and output_type == 'html') else '°'}"
+            else f"{degrees_within_sign:.2f}{fmt['degree_symbol']}"
         )
+
+        retrograde_status = "R" if retrograde else ""
+
+        # Build row based on center type
         if center == "heliocentric":
             row = [planet, zodiac, position]
         else:
-            retrograde = info.get("retrograde", False)
-            retrograde_status = "R" if retrograde else ""
             row = [planet, zodiac, position, retrograde_status]
 
+        # Add "Off by" column if notime
+        if notime and planet in OFF_BY.keys() and OFF_BY[planet] > orb:
+            off_by = f"±{OFF_BY[planet]}{fmt['degree_symbol']}"
+            row.insert(3, off_by)
+        elif notime:
+            off_by = ""
+            row.insert(3, off_by)  # Add house if available
         if house_positions and not notime and not center == "heliocentric":
-            house_num = house_positions.get(planet, "")
-            row.append(house_num)
+            house_info = house_positions.get(planet, {})
+            if isinstance(house_info, dict):
+                house_num = house_info.get("house", "Unknown")
+            else:
+                house_num = house_info  # In case it's just an integer
+            row.insert(4 if notime else -1, house_num)
+            if house_num and isinstance(house_num, int):
+                planet_house_counts[house_num] += 1
 
-        table_data.append(row)
+        # Add dignity column
+        dignity = (
+            elevation_check.get(planet, "")
+            + strength_check.get(planet, "")
+            + degree_check.get(planet, "")
+            + (f" {pluto_ecliptic}" if planet == "Pluto" and pluto_ecliptic else "")
+        )
+        row.append(dignity)
 
-    # Generate table
-    table = tabulate(table_data, headers=headers, tablefmt=table_format)
+        # Add decan ruler if not hidden
+        if not hide_decans:
+            row.append(
+                decan_ruler
+            )  # Add separating line for special planets in text output
+        if (planet == "Fortune" or planet == "Ascendant") and output_type in (
+            "text",
+            "return_text",
+        ):
+            zodiac_table_data.append(SEPARATING_LINE)
+        zodiac_table_data.append(row)
+
+        # Count zodiac signs, elements and modalities for analysis tables
+        sign_counts[zodiac]["count"] += 1
+        sign_counts[zodiac]["planets"].append(planet)
+        modality = ZODIAC_SIGN_TO_MODALITY[zodiac]
+        modality_counts[modality]["count"] += 1
+        modality_counts[modality]["planets"].append(planet)
+        element_counts[ZODIAC_ELEMENTS[zodiac]] += 1
+
+    # Generate main planetary positions table
+    table = tabulate(
+        zodiac_table_data, headers=headers, tablefmt=table_format, floatfmt=".2f"
+    )
+    to_return = table
+
+    if output_type in ("text", "html"):
+        print(table)
+
+    # Add house counts if available
+    if not notime and not center == "heliocentric":
+        house_count_output = house_count(
+            planet_house_counts, output_type, fmt["bold"], fmt["nobold"], fmt["br"]
+        )
+        if output_type in ("return_text", "return_html"):
+            to_return += fmt["p"] + house_count_output
+        else:
+            print(fmt["p"] + house_count_output)
+
+    # Add zodiac sign distribution table
+    if output_type in ("html", "return_html"):
+        to_return += fmt["p"] + "<div class='table-container'>"
+    elif output_type == "html":
+        print(fmt["p"] + "<div class='table-container'>")
+
+    sign_count_table_data = []
+    for sign, data in sign_counts.items():
+        if data["count"] > 0:
+            row = [
+                sign,
+                data["count"],
+                ", ".join(data["planets"])
+                + (" (stellium)" if data["count"] >= 4 else ""),
+            ]
+            sign_count_table_data.append(row)
+
+    sign_table = tabulate(
+        sign_count_table_data,
+        headers=["Sign", "Nr", "Planets in Sign".title()],
+        tablefmt=table_format,
+        floatfmt=".2f",
+    )
+    to_return += fmt["br"] + fmt["br"] + sign_table
+    if output_type in ("text", "html"):
+        print(fmt["p"] + sign_table + fmt["br"])
+
+    # Add element distribution table
+    element_count_table_data = []
+    for element, count in element_counts.items():
+        if count > 0:
+            row = [element, count]
+            element_count_table_data.append(row)
+
+    # Calculate day/night sign totals
+    fire_count = next(
+        (item[1] for item in element_count_table_data if item[0] == "Fire"), 0
+    )
+    air_count = next(
+        (item[1] for item in element_count_table_data if item[0] == "Air"), 0
+    )
+    earth_count = next(
+        (item[1] for item in element_count_table_data if item[0] == "Earth"), 0
+    )
+    water_count = next(
+        (item[1] for item in element_count_table_data if item[0] == "Water"), 0
+    )
+
+    day_signs = fire_count + air_count
+    night_signs = earth_count + water_count
+
+    element_count_table_data.append(["Day", day_signs])
+    element_count_table_data.append(["Night", night_signs])
+
+    element_table = tabulate(
+        element_count_table_data,
+        headers=["Element", "Nr"],
+        tablefmt=table_format,
+        floatfmt=".2f",
+    )
+    to_return += fmt["br"] + element_table
+    if output_type in ("text", "html"):
+        print(element_table + fmt["br"])
+
+    # Add modality distribution table
+    modality_count_table_data = []
+    for modality, data in modality_counts.items():
+        if data["count"] > 0:
+            row = [
+                modality,
+                data["count"],
+                ", ".join(data["planets"]),
+            ]
+            modality_count_table_data.append(row)
+
+    modality_table = tabulate(
+        modality_count_table_data,
+        headers=["Modality", "Nr", "Planets in Modality".title()],
+        tablefmt=table_format,
+        floatfmt=".2f",
+    )
+    to_return += fmt["br"] + modality_table
+
+    if output_type in ("text", "html"):
+        print(modality_table)
+
+    # Close div for HTML
+    if output_type in ("html", "return_html"):
+        to_return += "</div>"
+    elif output_type == "html":
+        print("</div>")
 
     if output_type == "text":
-        print(table)
         return ""
     else:
-        return table
+        return to_return
 
 
 def format_planet_position(
@@ -567,7 +771,11 @@ def format_event_info(
         from datetime import datetime
 
         local_datetime = datetime.fromisoformat(local_datetime.replace("T", " "))
-    utc_datetime = local_datetime  # Simplified for now
+    # Convert local time to UTC
+    if isinstance(local_datetime, datetime) and local_datetime.tzinfo:
+        utc_datetime = local_datetime.astimezone(pytz.UTC)
+    else:
+        utc_datetime = local_datetime  # Fallback
     timezone = event_data.get("timezone", "UTC")
     notime = event_data.get("notime", False)
 
@@ -580,7 +788,7 @@ def format_event_info(
     )
     result += f"{br}{bold}Altitude:{nobold} {altitude} m"
     result += f"{br}{bold}Local Time:{nobold} {str(local_datetime)} {timezone}"
-    result += f"{br}{bold}UTC Time:{nobold} {str(utc_datetime)} UTC"
+    result += f"{br}{bold}UTC Time:{nobold} {utc_datetime.strftime('%Y-%m-%d %H:%M:%S')}+00:00 UTC"
 
     # Add weekday and ruling planets
     if local_datetime:

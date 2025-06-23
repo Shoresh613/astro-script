@@ -352,15 +352,19 @@ def format_output(event_data: dict, chart_data: dict, args: dict) -> str:
     result = ""  # Event information header (exactly like original)
     result += format_event_info(
         event_data, output_type, chart_data["planet_positions"], args
-    )
-
-    # Center, House system, Moon nodes line
-    center = args.get("Center", "geocentric")
-    house_system = args.get("House System", "Placidus")
+    )  # Center, House system, Moon nodes line
+    center = args.get("Center", "topocentric")  # Match original default
+    house_system_code = args.get("House System", "P")
+    # Convert house system code to name
+    house_system_name = "Placidus"  # Default
+    for name, code in HOUSE_SYSTEMS.items():
+        if code == house_system_code:
+            house_system_name = name
+            break
     node_type = args.get("Node", "true")
 
     if center in ("geocentric", "topocentric"):
-        result += f"{fmt['br']}{fmt['bold']}Center:{fmt['nobold']} {center.title()}, {fmt['bold']}House system:{fmt['nobold']} {house_system}, {fmt['bold']}Moon nodes:{fmt['nobold']} {node_type}{fmt['br']}"
+        result += f"{fmt['br']}{fmt['bold']}Center:{fmt['nobold']} {center.title()}, {fmt['bold']}House system:{fmt['nobold']} {house_system_name}, {fmt['bold']}Moon nodes:{fmt['nobold']} {node_type}{fmt['br']}"
     else:
         result += f"{fmt['br']}{fmt['bold']}Center:{fmt['nobold']} {center.title()}{fmt['br']}"
 

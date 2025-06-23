@@ -74,5 +74,13 @@
     "altitude": 51.0,
     "address": "City of New York, New York, United States",
     "timezone": "America/New_York"
+  },
+  "Uddevalla, Sweden": {
+    "name": "Uddevalla, Sweden",
+    "latitude": 58.3490555,
+    "longitude": 11.9382855,
+    "altitude": 10.0,
+    "address": "Uddevalla, Uddevalla kommun, Västra Götalands län, 451 30, Sverige",
+    "timezone": "Europe/Stockholm"
   }
 }

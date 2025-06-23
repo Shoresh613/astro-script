@@ -124,9 +124,9 @@ If no record is found, default values will be used.""",
 
     parser.add_argument(
         "--center",
-        choices=["geocentric", "heliocentric"],
-        default="geocentric",
-        help="Center of calculations (default: geocentric).",
+        choices=["geocentric", "heliocentric", "topocentric"],
+        default="topocentric",
+        help="Center of calculations (default: topocentric).",
     )
 
     parser.add_argument(
