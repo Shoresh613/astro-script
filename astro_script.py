@@ -7,7 +7,11 @@ import argparse
 from math import sin, cos, radians, exp, pi
 from geopy.geocoders import Nominatim
 import requests
+import urllib3
 from tabulate import tabulate, SEPARATING_LINE
+
+# Disable SSL warnings for unverified HTTPS requests
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
     from . import version
@@ -1091,7 +1095,8 @@ def get_altitude(lat, lon, location_name):
 
     try:
         url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}"
-        response = requests.get(url)
+        # Disable SSL verification to handle expired certificates
+        response = requests.get(url, verify=False)
         results = response.json()["results"]
         if results:
             return results[0]["elevation"]
