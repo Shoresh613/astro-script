@@ -1,62 +1,78 @@
 {
-    "Barbados": {
-        "latitude": 13.1500331,
-        "longitude": -59.5250305
-    },
-    "Sahlgrenska, G\u00f6teborg, Sverige": {
-        "latitude": 57.6816661,
-        "longitude": 11.961011433976063
-    },
-    "Sahlgrenska": {
-        "latitude": 57.681668650000006,
-        "longitude": 11.960968482033895
-    },
-    "J\u00f6nk\u00f6ping": {
-        "latitude": 57.7825634,
-        "longitude": 14.165719
-    },
-    "sahlgrenska": {
-        "latitude": 57.681668650000006,
-        "longitude": 11.960968482033895
-    },
-    "M\u00f6lndals sjukhus": {
-        "latitude": 57.6614645,
-        "longitude": 12.0139076
-    },
-    "M\u00f6lndals Sjukhus": {
-        "latitude": 57.6614548,
-        "longitude": 12.0136632
-    },
-    "Halmstad": {
-        "latitude": 56.6739826,
-        "longitude": 12.8574827
-    },
-    "K\u00f6ping": {
-        "latitude": 59.5137434,
-        "longitude": 15.9970475
-    },
-    "Kungsbacka": {
-        "latitude": 57.466667,
-        "longitude": 12.166667
-    },
-    "Karlstad": {
-        "latitude": 59.3809146,
-        "longitude": 13.5027631
-    },
-    "S\u00f6dra \u00c4lvsborgs Sjukhus, Bor\u00e5s": {
-        "latitude": 57.72606815,
-        "longitude": 12.962750285104228
-    },
-    "null": {
-        "latitude": 44.933143,
-        "longitude": 7.540121
-    },
-    "G\u00f6teborg": {
-        "latitude": 57.7072326,
-        "longitude": 11.9670171
-    },
-    "Jamaica Hospital Queens (Queens County), New York": {
-        "latitude": 40.70036655,
-        "longitude": -73.81649669993593
-    }
+  "Barbados": {
+    "latitude": 13.1500331,
+    "longitude": -59.5250305
+  },
+  "Sahlgrenska, Göteborg, Sverige": {
+    "latitude": 57.6816661,
+    "longitude": 11.961011433976063
+  },
+  "Sahlgrenska": {
+    "latitude": 57.681668650000006,
+    "longitude": 11.960968482033895
+  },
+  "Jönköping": {
+    "latitude": 57.7825634,
+    "longitude": 14.165719
+  },
+  "sahlgrenska": {
+    "latitude": 57.681668650000006,
+    "longitude": 11.960968482033895
+  },
+  "Mölndals sjukhus": {
+    "latitude": 57.6614645,
+    "longitude": 12.0139076
+  },
+  "Mölndals Sjukhus": {
+    "latitude": 57.6614548,
+    "longitude": 12.0136632
+  },
+  "Halmstad": {
+    "latitude": 56.6739826,
+    "longitude": 12.8574827
+  },
+  "Köping": {
+    "latitude": 59.5137434,
+    "longitude": 15.9970475
+  },
+  "Kungsbacka": {
+    "latitude": 57.466667,
+    "longitude": 12.166667
+  },
+  "Karlstad": {
+    "latitude": 59.3809146,
+    "longitude": 13.5027631
+  },
+  "Södra Älvsborgs Sjukhus, Borås": {
+    "latitude": 57.72606815,
+    "longitude": 12.962750285104228
+  },
+  "null": {
+    "latitude": 44.933143,
+    "longitude": 7.540121
+  },
+  "Göteborg": {
+    "latitude": 57.7072326,
+    "longitude": 11.9670171
+  },
+  "Jamaica Hospital Queens (Queens County), New York": {
+    "latitude": 40.70036655,
+    "longitude": -73.81649669993593
+  },
+  "Stockholm, Sweden": {
+    "name": "Stockholm, Sweden",
+    "latitude": 59.3251172,
+    "longitude": 18.0710935,
+    "altitude": 28.0,
+    "address": "Stockholm, Stockholms kommun, Stockholms län, 111 29, Sverige",
+    "timezone": "Europe/Stockholm"
+  },
+  "New York": {
+    "name": "New York",
+    "latitude": 40.7127281,
+    "longitude": -74.0060152,
+    "altitude": 51.0,
+    "address": "City of New York, New York, United States",
+    "timezone": "America/New_York"
+  }
 }
