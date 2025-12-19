@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astro-script"
+version = "0.8.9"
+description = "AstroScript astrology calculation engine"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  "pyswisseph",
+  "pytz",
+  "geopy",
+  "tabulate",
+  "colorama",
+  "timezonefinder",
+  "requests",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["version"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

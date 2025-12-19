@@ -24,22 +24,16 @@ The project is organized as follows:
 
 ### Main Application Files
 - **`astro_script.py`** - CLI entrypoint and compatibility facade
-- **`astroscript/`** - Modularized astrology engine (constants, calculations, output, CLI)
-- **`main.py`** - Entry point for the GUI application using Kivy framework
-- **`astro_script.kv`** - Kivy layout file defining the GUI structure and styling
-- **`mainmd.py`** - Alternative main file with Material Design components
-- **`chart_output.py`** - Handles chart generation and output formatting
-- **`db_manager.py`** - Database operations for storing events and locations
-- **`version.py`** - Version information for the application
+- **`src/astroscript/`** - Modularized astrology engine (constants, calculations, output, CLI)
+- **`src/gui/`** - GUI assets and entrypoints (Kivy, KivyMD)
+- **`src/charts/chart_output.py`** - Handles chart generation and output formatting
+- **`src/db/db_manager.py`** - Database operations for storing events and locations
+- **`src/version.py`** - Version information for the application
 
 ### Database and Location Management
 - **`saved_locations.json`** - JSON file storing frequently used locations
-- **`add_altitude_column.py`** - Database migration script for adding altitude data
-- **`add-id-column-location.py`** - Script to add ID columns to location tables
-- **`create_altitude_column_my_event.py`** - Creates altitude column in event tables
-- **`make_id_pk.py`** - Sets up primary key constraints in database
-- **`move_altitude_column.py`** - Database migration for reorganizing altitude data
-- **`populate_location_altitude.py`** - Populates altitude data for existing locations
+- **`src/add_altitude_column.py`** - Database migration script for adding altitude data
+- **`src/add-id-column-location.py`** - Script to add ID columns to location tables
 - **`update_altitude.py`** - Updates altitude information in the database
 
 ### Testing and Utilities
@@ -127,7 +121,7 @@ AstroScript includes a graphical user interface developed with the Kivy framewor
 To launch the GUI, run the following command:
 
 ```bash
-python main.py
+python src/gui/main.py
 ```
 
 This starts the application, where you can navigate through the input screen to enter event details and view calculated results in real-time.

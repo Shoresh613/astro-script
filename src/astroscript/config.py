@@ -2,7 +2,7 @@ import os
 
 import swisseph as swe
 
-import db_manager
+from db import db_manager
 
 try:
     from timezonefinder import TimezoneFinder

@@ -1,7 +1,7 @@
 from geopy.geocoders import Nominatim
 import requests
 
-import db_manager
+from db import db_manager
 
 def get_coordinates(location_name: str):
     """

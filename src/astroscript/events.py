@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pytz
 
-import db_manager
+from db import db_manager
 
 from .time_utils import convert_to_utc
 

@@ -10,7 +10,7 @@ def chart_output(name, utc_datetime, longitude, latitude, local_timezone, place,
         folder = "static"
         folder_slash = ""
 
-    THIS_FOLDER = Path(__file__).parent.resolve()
+    THIS_FOLDER = Path(__file__).resolve().parents[2]
 
     try:
         from kerykeion import AstrologicalSubject, KerykeionChartSVG

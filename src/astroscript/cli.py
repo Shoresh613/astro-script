@@ -11,7 +11,7 @@ from colorama import Fore, Style, init
 from geopy.geocoders import Nominatim
 from tabulate import SEPARATING_LINE, tabulate
 
-import db_manager
+from db import db_manager
 import version
 
 from .config import EPHE, TimezoneFinder, tz_finder_installed
@@ -1945,10 +1945,7 @@ def main(gui_arguments=None):
 
     # Make SVG chart if output is html
     if output_type in ("html", "return_html"):
-        try:
-            from . import chart_output
-        except:
-            import chart_output
+        from charts import chart_output
         if show_transits:
             chart_type = "Transit"
         elif show_synastry:

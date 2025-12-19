@@ -1,3 +1,6 @@
+import os
+import sys
+
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
@@ -13,6 +16,12 @@ from kivy.metrics import dp
 from kivy.utils import platform
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.graphics import * # Not needed unless the darker transparent rectangle around the gridlayout starts working
+
+ROOT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 import astro_script
 import pytz
@@ -59,7 +68,8 @@ class InputScreen(Screen):
         self.layout = FloatLayout()
 
         # Background Image
-        bg_image = Image(source='AstroScript_background.webp', allow_stretch=True, keep_ratio=False, size_hint=(1, 1))
+        bg_path = os.path.join(os.path.dirname(__file__), 'AstroScript_background.webp')
+        bg_image = Image(source=bg_path, allow_stretch=True, keep_ratio=False, size_hint=(1, 1))
         self.layout.add_widget(bg_image)
 
         # Create a background box for the form with a semi-transparent overlay *STILL NOT WORKING*

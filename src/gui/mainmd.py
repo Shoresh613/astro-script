@@ -1,7 +1,16 @@
+import os
+import sys
+
 from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
 
+
+ROOT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 # Import your custom module if it's being used for house system values or any other function
 import astro_script
@@ -42,4 +51,3 @@ class MyApp(MDApp):
 
 if __name__=="__main__":
     MyApp().run()
-
