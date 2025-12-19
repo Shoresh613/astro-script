@@ -23,7 +23,8 @@ AstroScript is a powerful astrology software tool designed to calculate and outp
 The project is organized as follows:
 
 ### Main Application Files
-- **`astro_script.py`** - Core astrology calculation engine and main command-line interface
+- **`astro_script.py`** - CLI entrypoint and compatibility facade
+- **`astroscript/`** - Modularized astrology engine (constants, calculations, output, CLI)
 - **`main.py`** - Entry point for the GUI application using Kivy framework
 - **`astro_script.kv`** - Kivy layout file defining the GUI structure and styling
 - **`mainmd.py`** - Alternative main file with Material Design components
@@ -90,7 +91,7 @@ The project is organized as follows:
 You can run AstroScript with the following command (so far it only accepts date and time in the following format):
 
 ```bash
-python astroscript.py --name "John Doe" --date "2021-12-25 15:30" --location "New York, USA" --timezone "America/New_York"
+python astro_script.py --name "John Doe" --date "2021-12-25 15:30" --location "New York, USA" --timezone "America/New_York"
 ```
 
 
@@ -109,7 +110,7 @@ python astroscript.py --name "John Doe" --date "2021-12-25 15:30" --location "Ne
 For a complete list of options, call:
 
 ```bash
-python astroscript.py -h
+python astro_script.py -h
 ```
 
 ### GUI Integration
