@@ -46,7 +46,7 @@ def get_coordinates(location_name: str):
             )
             return None, None, None
         if location is None:
-            db_manager.save_location(location_name, None, None, None)
+            # db_manager.save_location(location_name, None, None, None)
             return None, None, None
         altitude = get_altitude(location.latitude, location.longitude, location_name)
 
