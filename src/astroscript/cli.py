@@ -1967,21 +1967,7 @@ def main(gui_arguments=None):
                 guid=args["Guid"] if args["Guid"] else None,
             )
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(
-                name,
-                utc_datetime,
-                longitude,
-                latitude,
-                local_timezone,
-                place,
-                chart_type,
-                output_type,
-                transits_utc_datetime,
-                output_type,
-                second_local_timezone=local_transits_timezone,
-                second_place=transits_location,
-                guid=args["Guid"] if args["Guid"] else None,
-            )
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, second_longitude=transits_longitude, second_latitude=transits_latitude, second_local_timezone=local_transits_timezone, second_place=transits_location, guid=args["Guid"] if args["Guid"] else None)
         elif chart_type == "Synastry":
             to_return += chart_output.chart_output(
                 name,
