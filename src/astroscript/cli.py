@@ -146,6 +146,7 @@ def called_by_gui(
     use_saved_settings,
     output_type,
     guid,
+    chart_theme=None,
 ):
 
     if isinstance(date, datetime):
@@ -202,6 +203,7 @@ def called_by_gui(
         "Use Saved Settings": use_saved_settings,
         "Output": output_type,
         "Remove Saved Names": remove_saved_names,
+        "Chart Theme": chart_theme,
         "Guid": guid if guid else None,
     }
 
@@ -540,6 +542,12 @@ If no record is found, default values will be used.""",
         help='Output: Print text or html to stdout, or return text or html. (Default: "text")',
         required=False,
     )
+    parser.add_argument(
+        "--chart_theme",
+        choices=["classic", "dark"],
+        help='SVG chart theme. (Default: "classic")',
+        required=False,
+    )
 
     args = parser.parse_args()
 
@@ -597,6 +605,7 @@ If no record is found, default values will be used.""",
         "Save Settings": args.save_settings,
         "Use Saved Settings": args.use_saved_settings,
         "Output": args.output_type,
+        "Chart Theme": args.chart_theme,
         "Guid": None,
     }
 
@@ -1965,9 +1974,10 @@ def main(gui_arguments=None):
                 output_type,
                 None,
                 guid=args["Guid"] if args["Guid"] else None,
+                chart_theme=args.get("Chart Theme"),
             )
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, second_longitude=transits_longitude, second_latitude=transits_latitude, second_local_timezone=local_transits_timezone, second_place=transits_location, guid=args["Guid"] if args["Guid"] else None)
+            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, second_longitude=transits_longitude, second_latitude=transits_latitude, second_local_timezone=local_transits_timezone, second_place=transits_location, guid=args["Guid"] if args["Guid"] else None, chart_theme=args.get("Chart Theme"))
         elif chart_type == "Synastry":
             to_return += chart_output.chart_output(
                 name,
@@ -1985,6 +1995,7 @@ def main(gui_arguments=None):
                 synastry_local_timezone,
                 synastry_place,
                 guid=args["Guid"] if args["Guid"] else None,
+                chart_theme=args.get("Chart Theme"),
             )
 
         if output_type in ("html", "return_html"):
