@@ -781,6 +781,15 @@ def main(gui_arguments=None):
             ),
             "Node": args["Node"] if args["Node"] else None,
             "Arabic Parts": args["Arabic Parts"] if args["Arabic Parts"] else None,
+            "Aspects To Arabic Parts": (
+                args["Aspects To Arabic Parts"]
+                if args["Aspects To Arabic Parts"]
+                else None
+            ),
+            "Classical Rulership": (
+                args["Classical Rulership"] if args["Classical Rulership"] else None
+            ),
+            "Center": args["Center"] if args["Center"] else None,
             "All Stars": args["All Stars"] if args["All Stars"] else None,
             "House System": args["House System"] if args["House System"] else None,
             "House Cusps": args["House Cusps"] if args["House Cusps"] else None,
@@ -846,7 +855,10 @@ def main(gui_arguments=None):
             "Orb Synastry Slow",
             "Degree in Minutes",
             "Arabic Parts",
+            "Aspects To Arabic Parts",
+            "Classical Rulership",
             "Node",
+            "Center",
             "All Stars",
             "House System",
             "House Cusps",
