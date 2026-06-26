@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import pytz
 from html import escape
 
-
 from db import db_manager
 
 from .time_utils import convert_to_utc

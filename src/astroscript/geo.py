@@ -26,6 +26,13 @@ def get_coordinates(location_name: str):
 
     location_details = db_manager.load_location(location_name)
     if location_details:
+        if location_details[2] is None:
+            altitude = get_altitude(location_details[0], location_details[1], location_name)
+            db_manager.save_location(
+                location_name, location_details[0], location_details[1], altitude
+            )
+            return location_details[0], location_details[1], altitude
+
         return (
             location_details[0],
             location_details[1],
@@ -61,7 +68,7 @@ def get_altitude(lat, lon, location_name):
 
     if location_name != "Davison chart":
         location_details = db_manager.load_location(location_name)
-        if location_details:
+        if location_details and location_details[2] is not None:
             return location_details[2]  # Altitude
 
     try:

@@ -1,236 +1,257 @@
-import sqlite3
 import json
-import logging
 import os
+import sqlite3
+from pathlib import Path
+
+
+DEFAULT_SETTINGS_NAME = "default"
+LEGACY_DEFAULT_SETTINGS_NAME = "defaults"
+
+
+def _django_db_path():
+    try:
+        from django.conf import settings
+
+        if settings.configured:
+            db_name = settings.DATABASES.get("default", {}).get("NAME")
+            if db_name:
+                return Path(db_name)
+    except Exception:
+        pass
+    return None
+
+
+def _default_db_path():
+    env_path = os.getenv("ASTROSCRIPT_DB_PATH")
+    if env_path:
+        return Path(env_path)
+    return _django_db_path() or Path("db.sqlite3")
+
+
+DB_PATH = _default_db_path()
+
+
+def connect(db_filename=None):
+    db_path = DB_PATH if db_filename in (None, "db.sqlite3") else db_filename
+    return sqlite3.connect(str(db_path))
+
+
+def normalize_settings_name(settings_name):
+    normalized = (settings_name or DEFAULT_SETTINGS_NAME).strip()
+    if not normalized or normalized == LEGACY_DEFAULT_SETTINGS_NAME:
+        return DEFAULT_SETTINGS_NAME
+    return normalized
 
 
 def check_and_fix_schema():
-    """Check if the database has the correct schema and fix it if necessary"""
+    """Compatibility hook kept non-destructive for embedded/Django use."""
+
+    return False
+
+
+def _table_columns(conn, table_name):
+    cursor = conn.cursor()
     try:
-        conn = sqlite3.connect("db.sqlite3")
-        cursor = conn.cursor()
-
-        # Check if the myapp_event table has the correct schema
-        cursor.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='myapp_event'"
-        )
-        result = cursor.fetchone()
-
-        if result and "PRIMARY KEY (name, random_column)" in result[0]:
-            # Schema is incorrect, need to recreate the table
-            logging.info("Detected incorrect schema, recreating database...")
-            conn.close()
-
-            # Backup existing database if it has data
-            if os.path.exists("db.sqlite3"):
-                import shutil
-
-                shutil.copy("db.sqlite3", "db.sqlite3.backup")
-                logging.info("Created backup: db.sqlite3.backup")
-
-            # Remove the problematic database file
-            os.remove("db.sqlite3")
-            return True
-
-        conn.close()
-        return False
-
-    except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
-        return True  # Force recreation on any error
+        cursor.execute(f"PRAGMA table_info({table_name})")
+    except sqlite3.OperationalError:
+        return set()
+    return {row[1] for row in cursor.fetchall()}
 
 
-# Initialize the database and create tables if they don't exist
+def _event_where_clause(guid):
+    if guid:
+        return "name = ? AND random_column = ?", (guid,)
+    return "name = ? AND (random_column IS NULL OR random_column = '')", ()
+
+
+def _coerce_update_event_args(altitude, notime, guid):
+    if isinstance(altitude, bool) and (guid is None):
+        if notime not in (False, None):
+            guid = notime
+        notime = altitude
+        altitude = None
+    return altitude, bool(notime), guid
+
+
 def initialize_db():
-    # Check and fix schema if necessary
-    schema_fixed = check_and_fix_schema()
-
-    conn = sqlite3.connect("db.sqlite3")
-    cursor = conn.cursor()
-    # Create the myapp_event table
-    cursor.execute(
-        """
-    CREATE TABLE IF NOT EXISTS myapp_event (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        location TEXT,
-        datetime TEXT,
-        timezone TEXT,
-        latitude REAL,
-        longitude REAL,
-        altitude REAL,
-        notime INTEGER DEFAULT FALSE,
-        random_column TEXT NULL,
-        name TEXT NOT NULL,
-        UNIQUE(name, random_column)
-    )
-    """
-    )
-
-    # Create the myapp_location table
-    cursor.execute(
-        """
-    CREATE TABLE IF NOT EXISTS myapp_location (
-        location_name TEXT PRIMARY KEY,
-        latitude REAL,
-        longitude REAL,
-        altitude REAL
-    )
-    """
-    )
-
-    # Create the myapp_defaults table
-    cursor.execute(
-        """
-    CREATE TABLE IF NOT EXISTS myapp_usersettings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        setting_name TEXT NOT NULL,
-        guid TEXT NULL,
-        settings TEXT NOT NULL,
-        UNIQUE(setting_name, guid));
-    """
-    )
-
-    conn.commit()
-    conn.close()
+    with connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS myapp_event (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                location TEXT,
+                datetime TEXT,
+                timezone TEXT,
+                latitude REAL,
+                longitude REAL,
+                altitude REAL,
+                notime INTEGER DEFAULT FALSE,
+                random_column TEXT NULL,
+                name TEXT NOT NULL,
+                UNIQUE(name, random_column)
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS myapp_location (
+                location_name TEXT PRIMARY KEY,
+                latitude REAL,
+                longitude REAL,
+                altitude REAL
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS myapp_usersettings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                setting_name TEXT NOT NULL,
+                guid TEXT NULL,
+                settings TEXT NOT NULL,
+                UNIQUE(setting_name, guid)
+            )
+            """
+        )
 
 
-# Function to add or update an event in the database
 def update_event(
-    name, location, datetime_str, timezone, latitude, longitude, altitude, notime, guid
+    name,
+    location,
+    datetime_str,
+    timezone,
+    latitude,
+    longitude,
+    altitude=None,
+    notime=False,
+    guid=None,
 ):
-    conn = sqlite3.connect("db.sqlite3")
-    cursor = conn.cursor()
+    altitude, notime, guid = _coerce_update_event_args(altitude, notime, guid)
+    guid_value = str(guid) if guid else None
+    location_key = f"{latitude},{longitude}" if location == "Davison chart" else location
+    if location_key:
+        save_location(location_key, latitude, longitude, altitude)
 
-    # only for debug
-    # print(f"name={name} location={location} datetime_str={datetime_str} timezone={timezone} latitude={latitude} longitude={longitude} altitude={altitude} notime={notime} guid={guid}")
-    result = get_event(name, guid)
-    if result:
-        # print(f"DEBUG: get_event() result{result}")        cursor.execute(
-        """
-        UPDATE myapp_event
-        SET location = ?,
-            datetime = ?,
-            timezone = ?,
-            latitude = ?,
-            longitude = ?,
-            altitude = ?,
-            notime = ?,
-            random_column = ?
-        WHERE name = ? AND random_column = ?
-        """,
-        (
+    with connect() as conn:
+        cursor = conn.cursor()
+        event_columns = _table_columns(conn, "myapp_event")
+        has_altitude_column = "altitude" in event_columns
+        where_clause, extra_where_params = _event_where_clause(guid_value)
+        cursor.execute(
+            f"SELECT 1 FROM myapp_event WHERE {where_clause} LIMIT 1",
+            (name, *extra_where_params),
+        )
+        exists = cursor.fetchone() is not None
+
+        if exists:
+            fields = [
+                ("location", location),
+                ("datetime", datetime_str),
+                ("timezone", timezone),
+                ("latitude", latitude),
+                ("longitude", longitude),
+                ("notime", int(notime)),
+                ("random_column", guid_value),
+            ]
+            if has_altitude_column:
+                fields.insert(5, ("altitude", altitude))
+            assignments = ", ".join(f"{field} = ?" for field, _value in fields)
+            values = [value for _field, value in fields]
+            cursor.execute(
+                f"UPDATE myapp_event SET {assignments} WHERE {where_clause}",
+                (*values, name, *extra_where_params),
+            )
+            return
+
+        columns = [
+            "location",
+            "datetime",
+            "timezone",
+            "latitude",
+            "longitude",
+            "notime",
+            "random_column",
+            "name",
+        ]
+        values = [
             location,
             datetime_str,
             timezone,
             latitude,
             longitude,
-            altitude,
-            notime,
-            str(guid),
+            int(notime),
+            guid_value,
             name,
-            str(guid),
-        ),
-    else:
-        if guid:
-            cursor.execute(
-                """
-            
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, random_column, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(random_column, name) DO UPDATE SET
-            location=excluded.location,
-            datetime=excluded.datetime,
-            timezone=excluded.timezone,
-            latitude=excluded.latitude,
-            longitude=excluded.longitude,
-            altitude=excluded.altitude,
-            notime=excluded.notime,
-            random_column=excluded.random_column,
-            name=excluded.name
-            """,
-                (
-                    location,
-                    datetime_str,
-                    timezone,
-                    latitude,
-                    longitude,
-                    altitude,
-                    notime,
-                    str(guid),
-                    name,
-                ),
-            )
-        else:
-            cursor.execute(
-                """
-            
-            INSERT INTO myapp_event (location, datetime, timezone, latitude, longitude, altitude, notime, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(random_column, name) DO UPDATE SET
-            location=excluded.location,
-            datetime=excluded.datetime,
-            timezone=excluded.timezone,
-            latitude=excluded.latitude,
-            longitude=excluded.longitude,
-            altitude=excluded.altitude,
-            notime=excluded.notime,
-            name=excluded.name
-            """,
-                (
-                    location,
-                    datetime_str,
-                    timezone,
-                    latitude,
-                    longitude,
-                    altitude,
-                    notime,
-                    name,
-                ),
-            )
+        ]
+        if has_altitude_column:
+            columns.insert(5, "altitude")
+            values.insert(5, altitude)
+        placeholders = ", ".join("?" for _column in columns)
+        cursor.execute(
+            f"INSERT INTO myapp_event ({', '.join(columns)}) VALUES ({placeholders})",
+            values,
+        )
 
-    conn.commit()
-    conn.close()
+
+def _location_altitude(cursor, location, latitude, longitude):
+    location_key = f"{latitude},{longitude}" if location == "Davison chart" else location
+    if not location_key:
+        return None
+    cursor.execute(
+        "SELECT altitude FROM myapp_location WHERE location_name = ?",
+        (str(location_key),),
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None
 
 
 def get_event(name, guid=None):
-    """
-    Retrieve event data from the database based on the given name and optional GUID.
-    Args:
-        name (str): The name of the event.
-        guid (str, optional): The GUID of the event. Defaults to None.
-    Returns:
-        dict or None: A dictionary containing the event data if found, or None if not found.
-    Raises:
-        sqlite3.Error: If an error occurs while accessing the database.
-    """
     try:
-        with sqlite3.connect("db.sqlite3") as conn:
+        with connect() as conn:
             cursor = conn.cursor()
+            event_columns = _table_columns(conn, "myapp_event")
+            has_altitude_column = "altitude" in event_columns
+            columns = "location, datetime, timezone, latitude, longitude"
+            if has_altitude_column:
+                columns += ", altitude"
+            columns += ", notime"
 
             if guid:
                 cursor.execute(
-                    "SELECT location, datetime, timezone, latitude, longitude, altitude, notime FROM myapp_event WHERE name = ? AND random_column = ?",
-                    (
-                        name,
-                        guid,
-                    ),
+                    f"""
+                    SELECT {columns}
+                    FROM myapp_event
+                    WHERE name = ? AND random_column = ?
+                    LIMIT 1
+                    """,
+                    (name, str(guid)),
                 )
             else:
                 cursor.execute(
-                    "SELECT location, datetime, timezone, latitude, longitude, altitude, notime FROM myapp_event WHERE name = ?",
+                    f"""
+                    SELECT {columns}
+                    FROM myapp_event
+                    WHERE name = ?
+                    LIMIT 1
+                    """,
                     (name,),
                 )
 
             event_data = cursor.fetchone()
-
             if not event_data:
                 return None
 
-            location, datetime, timezone, latitude, longitude, altitude, notime = (
-                event_data
-            )
+            if has_altitude_column:
+                location, datetime, timezone, latitude, longitude, altitude, notime = event_data
+            else:
+                location, datetime, timezone, latitude, longitude, notime = event_data
+                altitude = _location_altitude(cursor, location, latitude, longitude)
 
-            event = {
+            if altitude is None:
+                altitude = _location_altitude(cursor, location, latitude, longitude)
+
+            return {
                 "name": name,
                 "location": location,
                 "datetime": datetime,
@@ -240,118 +261,59 @@ def get_event(name, guid=None):
                 "altitude": altitude,
                 "notime": notime,
             }
-
-            return event
-
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
         return None
 
 
 def read_saved_names(guid=None, db_filename="db.sqlite3"):
-    """
-    Reads the names of saved events from a SQLite database and returns a list of event names.
-    Checks if the user is authenticated before proceeding.
-
-    Args:
-    guid (uuid): .
-    db_filename (str): The path to the SQLite database file.
-
-    Returns:
-    list: A list of names of saved events, or an empty list if the user is not authenticated.
-    """
-    # print(f"DEBUG - guid: {str(guid)}")
     try:
-
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_filename)
-        cursor = conn.cursor()
-
-        # Execute a query to retrieve the names of the events
-        if guid:
-            # print(f"DEBUG - read_saved_names() guid: {guid}")
-            cursor.execute(
-                f"SELECT name FROM myapp_event WHERE random_column=?", (guid,)
-            )
-        else:
-            cursor.execute("SELECT name FROM myapp_event")
-        rows = cursor.fetchall()
-
-        # Extract the names from the query result
-        names = [row[0] for row in rows]
-
-        # Close the database connection
-        conn.close()
-
-        return names
+        with connect(db_filename) as conn:
+            cursor = conn.cursor()
+            if guid:
+                cursor.execute(
+                    "SELECT name FROM myapp_event WHERE random_column = ? ORDER BY name",
+                    (str(guid),),
+                )
+            else:
+                cursor.execute("SELECT name FROM myapp_event ORDER BY name")
+            return [row[0] for row in cursor.fetchall()]
     except sqlite3.OperationalError as e:
-        # Handle operational errors such as missing tables or database files
         print(f"Database error: {e}")
         return []
     except Exception as e:
-        # General exception handling, useful for debugging
         print(f"An unexpected error occurred: {e}")
         return []
 
 
-import sqlite3
-
-
-def remove_saved_names(
-    names_to_remove, output_type, guid=None, db_filename="db.sqlite3"
-):
-    """
-    Removes the specified names of saved events from a SQLite database.
-    Checks if the user is authenticated before proceeding.
-
-    Args:
-    names_to_remove (list of str): The names of the saved events to remove.
-    output_type (str): The type of output expected (e.g., 'json', 'text').
-    guid (uuid, optional): The user's GUID. Defaults to None.
-    db_filename (str): The path to the SQLite database file. Defaults to 'db.sqlite3'.
-
-    Returns:
-    str: A string message indicating the result of the removal operation.
-    """
+def remove_saved_names(names_to_remove, output_type, guid=None, db_filename="db.sqlite3"):
     existing_names = set(read_saved_names(guid, db_filename))
     names_to_remove = set(names_to_remove)
-
-    # Check if the names to remove are valid
-    invalid_names = names_to_remove - existing_names
-    valid_names = names_to_remove - invalid_names
-
-    invalid_names = list(invalid_names)
-    valid_names = list(valid_names)
+    invalid_names = list(names_to_remove - existing_names)
+    valid_names = list(names_to_remove - set(invalid_names))
 
     if valid_names:
         try:
-            conn = sqlite3.connect(db_filename)
-            cursor = conn.cursor()
-
-            if guid:
-                cursor.execute(
-                    "DELETE FROM myapp_event WHERE name IN ({}) AND random_column=?".format(
-                        ",".join("?" * len(valid_names))
-                    ),
-                    (*valid_names, guid),
-                )
-            else:
-                cursor.execute(
-                    "DELETE FROM myapp_event WHERE name IN ({})".format(
-                        ",".join("?" * len(valid_names))
-                    ),
-                    valid_names,
-                )
-
-            conn.commit()
-
-            conn.close()
-
+            with connect(db_filename) as conn:
+                cursor = conn.cursor()
+                placeholders = ",".join("?" for _name in valid_names)
+                if guid:
+                    cursor.execute(
+                        f"""
+                        DELETE FROM myapp_event
+                        WHERE name IN ({placeholders}) AND random_column = ?
+                        """,
+                        (*valid_names, str(guid)),
+                    )
+                else:
+                    cursor.execute(
+                        f"DELETE FROM myapp_event WHERE name IN ({placeholders})",
+                        valid_names,
+                    )
         except sqlite3.OperationalError as e:
             print(f"Database error: {e}")
             return f"Database error: {e}"
         except Exception as e:
-            # General exception handling, useful for debugging
             print(f"An unexpected error occurred: {e}")
             return f"An unexpected error occurred: {e}"
 
@@ -367,115 +329,136 @@ def remove_saved_names(
             )
     else:
         if invalid_names:
-            to_return += f"\nThe following names are not saved events: {', '.join(invalid_names)}.\n"
+            to_return += (
+                f"\nThe following names are not saved events: "
+                f"{', '.join(invalid_names)}.\n"
+            )
         if valid_names:
             to_return += (
-                f"\nThe following names have been removed: {', '.join(valid_names)}.\n"
+                f"\nThe following names have been removed: "
+                f"{', '.join(valid_names)}.\n"
             )
 
     return to_return
 
 
-# Function to save a location in the database
 def save_location(location_name, latitude, longitude, altitude):
-    conn = sqlite3.connect("db.sqlite3")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-    INSERT INTO myapp_location (location_name, latitude, longitude, altitude)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(location_name) DO UPDATE SET
-    latitude=excluded.latitude,
-    longitude=excluded.longitude,
-    altitude=excluded.altitude
-    """,
-        (location_name, latitude, longitude, altitude),
-    )
-
-    conn.commit()
-    conn.close()
+    with connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO myapp_location (location_name, latitude, longitude, altitude)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(location_name) DO UPDATE SET
+                latitude = excluded.latitude,
+                longitude = excluded.longitude,
+                altitude = COALESCE(excluded.altitude, myapp_location.altitude)
+            """,
+            (location_name, latitude, longitude, altitude),
+        )
 
 
-# Function to load a location from the database
 def load_location(location_name):
-    conn = sqlite3.connect("db.sqlite3")
-    cursor = conn.cursor()
+    with connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT latitude, longitude, altitude
+            FROM myapp_location
+            WHERE location_name = ?
+            """,
+            (location_name,),
+        )
+        return cursor.fetchone()
 
-    cursor.execute(
-        "SELECT latitude, longitude, altitude FROM myapp_location WHERE location_name = ?",
-        (location_name,),
-    )
-    location = cursor.fetchone()
 
-    conn.close()
-    return location
-
-
-# Function to save default settings in the database
 def store_defaults(defaults):
-    """
-    Stores the given default settings into the myapp_defaults table.
-    """
-    guid = defaults["GUID"] if defaults["GUID"] is not None else ""
+    guid = defaults.get("GUID") or ""
+    defaults["Name"] = normalize_settings_name(defaults.get("Name"))
 
-    conn = sqlite3.connect("db.sqlite3")
-    cursor = conn.cursor()
+    with connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO myapp_usersettings (setting_name, guid, settings)
+            VALUES (?, ?, ?)
+            ON CONFLICT(setting_name, guid) DO UPDATE SET
+                settings = excluded.settings
+            """,
+            (defaults["Name"], guid, json.dumps(defaults)),
+        )
 
-    cursor.execute(
-        """
-        INSERT INTO myapp_usersettings (setting_name, guid, settings) 
-        VALUES (?, ?, ?)
-        ON CONFLICT(setting_name, guid) 
-        DO UPDATE SET 
-            settings = excluded.settings
-    """,
-        (defaults["Name"], guid, json.dumps(defaults)),
+
+def list_settings_profiles(guid="", db_filename="db.sqlite3"):
+    settings_names = [DEFAULT_SETTINGS_NAME]
+    try:
+        with connect(db_filename) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT setting_name
+                FROM myapp_usersettings
+                WHERE guid IS NULL OR guid = '' OR guid = ?
+                ORDER BY LOWER(setting_name)
+                """,
+                (guid or "",),
+            )
+            for (setting_name,) in cursor.fetchall():
+                normalized_name = normalize_settings_name(setting_name)
+                if normalized_name not in settings_names:
+                    settings_names.append(normalized_name)
+    except sqlite3.OperationalError as e:
+        print(f"Database error: {e}")
+
+    return [DEFAULT_SETTINGS_NAME] + sorted(
+        [name for name in settings_names if name != DEFAULT_SETTINGS_NAME],
+        key=str.lower,
     )
 
-    conn.commit()
-    conn.close()
+
+def delete_settings_profile(settings_name, guid="", db_filename="db.sqlite3"):
+    normalized_name = normalize_settings_name(settings_name)
+    if normalized_name == DEFAULT_SETTINGS_NAME:
+        return False
+
+    with connect(db_filename) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            DELETE FROM myapp_usersettings
+            WHERE setting_name = ? AND guid = ?
+            """,
+            (normalized_name, guid or ""),
+        )
+        return cursor.rowcount > 0
 
 
 def read_defaults(settings_name, guid="", db_filename="db.sqlite3"):
-    """
-    Reads the default settings from the myapp_defaults table and returns a dictionary with the values.
-
-    Args:
-    settings_name (str): The name of the default settings to use.
-    guid (str): The GUID of the user.
-    db_filename (str): The path to the SQLite database file.
-
-    Returns:
-    dict: A dictionary with the retrieved default settings.
-    """
-    conn = sqlite3.connect(db_filename)
-    cursor = conn.cursor()
+    normalized_name = normalize_settings_name(settings_name)
+    candidate_names = [normalized_name]
+    if normalized_name == DEFAULT_SETTINGS_NAME:
+        candidate_names.append(LEGACY_DEFAULT_SETTINGS_NAME)
 
     try:
-        cursor.execute(
-            """
-            SELECT 
-                settings
-            FROM myapp_usersettings
-            WHERE setting_name = ? AND (guid IS NULL OR guid = ?)
-        """,
-            (settings_name, guid),
-        )
-
-        row = cursor.fetchone()
-
-        if row:
-            defaults = json.loads(row[0])
-        else:
-            defaults = {}
-
+        with connect(db_filename) as conn:
+            cursor = conn.cursor()
+            for candidate_name in candidate_names:
+                cursor.execute(
+                    """
+                    SELECT settings
+                    FROM myapp_usersettings
+                    WHERE setting_name = ?
+                        AND (guid IS NULL OR guid = '' OR guid = ?)
+                    ORDER BY CASE WHEN guid = ? THEN 0 ELSE 1 END
+                    LIMIT 1
+                    """,
+                    (candidate_name, guid or "", guid or ""),
+                )
+                row = cursor.fetchone()
+                if row:
+                    return json.loads(row[0])
     except sqlite3.OperationalError as e:
         print(f"Database error: {e}")
-        defaults = {}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        defaults = {}
-
-    conn.close()
-    return defaults
+    return {}
