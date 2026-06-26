@@ -98,10 +98,7 @@ def calculate_planet_positions(
     if EPHE:
         swe.set_ephe_path(EPHE)
     else:
-        if os.name == "nt":
-            swe.set_ephe_path(".\ephe")
-        else:
-            swe.set_ephe_path("./ephe")
+        swe.set_ephe_path(os.path.join(".", "ephe"))
 
     if center == "topocentric":
         # Handle None altitude by defaulting to sea level (0.0)

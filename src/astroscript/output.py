@@ -48,13 +48,13 @@ def get_sabian_symbol(planet_positions, planet: str):
     - str: The Sabian symbol corresponding to the specified degree within the zodiac sign.
     """
     ephe = os.getenv("PRODUCTION_EPHE")
-    if ephe:
-        sabian_symbols = json.load(open(f"{ephe}/sabian.json"))
-    else:
-        if os.name == "nt":
-            sabian_symbols = json.load(open(".\ephe\sabian.json"))
-        else:
-            sabian_symbols = json.load(open("./ephe/sabian.json"))
+    sabian_path = (
+        os.path.join(ephe, "sabian.json")
+        if ephe
+        else os.path.join(".", "ephe", "sabian.json")
+    )
+    with open(sabian_path, encoding="utf-8") as sabian_file:
+        sabian_symbols = json.load(sabian_file)
     zodiac_sign = planet_positions["Sun"]["zodiac_sign"]
     degree = int(planet_positions["Sun"]["longitude"]) - ZODIAC_DEGREES[zodiac_sign]
 

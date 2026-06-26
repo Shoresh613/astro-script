@@ -16,10 +16,7 @@ EPHE = os.getenv("PRODUCTION_EPHE")
 if EPHE:
     swe.set_ephe_path(EPHE)
 else:
-    if os.name == "nt":
-        swe.set_ephe_path(".\ephe")
-    else:
-        swe.set_ephe_path("./ephe")
+    swe.set_ephe_path(os.path.join(".", "ephe"))
 
 # Initialize database
 # Keeping import-time init behavior from the original monolith.
