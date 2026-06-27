@@ -10,6 +10,7 @@ AstroScript is a powerful astrology software tool designed to calculate and outp
 - **Moon Phase Calculation**: Determines the current phase of the Moon and its illumination.
 - **Fixed Star Aspects**: Lists aspects between planets and fixed stars, considering the house placement of each fixed star.
 - **Asteroid Aspects**: Lists aspects between planets and asteroids, considering the house placements.
+- **Tropical or Sidereal Zodiac**: Use tropical positions by default, or Sidereal Lahiri positions with `--zodiac sidereal` or `--zodiac vedic`. The selected zodiac applies to planets, asteroids, fixed stars, angles, and house cusps.
 - **Location Handling**: Uses Nominatim via the geopy library to convert location names to geographic coordinates, with the ability to save and retrieve frequently used locations.
 - **Davison relationship charts**: Calculate Davison relationship charts for as many people as you like.
 - **Customizable**: There are switches for showing degrees in minutes, minor aspects, brief aspects (for transits), different house calculations, the level of harmony/disharmony of different aspects (also taking into account the magnitude of stars and orb), etc.
@@ -88,6 +89,15 @@ You can run AstroScript with the following command (so far it only accepts date 
 python astro_script.py --name "John Doe" --date "2021-12-25 15:30" --location "New York, USA" --timezone "America/New_York"
 ```
 
+Sidereal and Vedic are aliases for the same Lahiri calculation mode:
+
+```bash
+python astro_script.py --date "2021-12-25 15:30" --zodiac sidereal --latitude 57.7 --longitude 11.9 --timezone Europe/Stockholm
+python astro_script.py --date "2021-12-25 15:30" --zodiac vedic --latitude 57.7 --longitude 11.9 --timezone Europe/Stockholm
+```
+
+This option changes positional calculations only. It does not add nakshatras, dashas, Vedic aspects, or separate Vedic dignity rules.
+
 
 ### Options
 
@@ -97,6 +107,7 @@ python astro_script.py --name "John Doe" --date "2021-12-25 15:30" --location "N
 - `--latitude` and `--longitude`: Specific latitude and longitude to use.
 - `--timezone`: Timezone of the location.
 - `--house_system`: House system to use, defaults to Placidus.
+- `--zodiac`: Zodiac mode (`tropical`, `sidereal`, or `vedic`). `sidereal` and `vedic` both use Lahiri ayanamsha; the default is `tropical`.
 - `--output_type`: Format of the output (`text`, `return_text`, `html`).
 - `--save_settings`: Save the specified settings. If no parameter passed, will save "default" settings, that will be used henceforth.
 - `--use_saved_settings`: Loads the specified settings. If no parameter passed, will use "default" settings (will use default settings if saved even if `--use_saved_settings` not passed).

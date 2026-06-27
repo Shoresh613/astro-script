@@ -3,8 +3,11 @@ import csv
 import swisseph as swe
 
 from .config import EPHE
+from .houses import find_house_number
+from .zodiac import calculation_flags
 
-def get_fixed_star_position(star_name, jd):
+
+def get_fixed_star_position(star_name, jd, zodiac="tropical"):
     """
     Retrieve the ecliptic longitude of a fixed star on a given Julian Day.
 
@@ -23,9 +26,10 @@ def get_fixed_star_position(star_name, jd):
     - ValueError: If the star name is not recognized by the Swiss Ephemeris.
     """
     try:
-        star_info = swe.fixstar(star_name, jd)
+        flags = calculation_flags(zodiac, swe.FLG_SWIEPH)
+        star_info = swe.fixstar_ut(star_name, jd, flags)
         return star_info[0][0]  # Returning the longitude part of the position
-    except:
+    except Exception:
         raise ValueError(f"Fixed star '{star_name}' not recognized.")
 
 
@@ -56,7 +60,13 @@ def check_aspect(planet_long, star_long, aspect_angle, orb):
 
 
 def calculate_aspects_to_fixed_stars(
-    date, planet_positions, houses, orb=1.0, aspect_types=None, all_stars=False
+    date,
+    planet_positions,
+    houses,
+    orb=1.0,
+    aspect_types=None,
+    all_stars=False,
+    zodiac="tropical",
 ):
     """
     List aspects between planets and fixed stars, considering the house placement of each fixed star
@@ -92,23 +102,8 @@ def calculate_aspects_to_fixed_stars(
 
     for star_name in fixed_stars.keys():
         try:
-            star_long = get_fixed_star_position(star_name, jd) % 360
-
-            house_num = 1  # Begin as house 1 in case nothing else matches
-            # Check for each house from 1 to 11 (12 handled separately)
-            for i, cusp in enumerate(houses):
-                next_cusp = houses[(i + 1) % 12]
-
-                # If at last house and next cusp is less than the current because of wrap-around
-                if next_cusp < cusp:
-                    next_cusp += 360
-
-                if cusp <= star_long < next_cusp:
-                    house_num = i + 1
-                    break
-                elif i == 11 and (star_long >= cusp or star_long < houses[0]):
-                    house_num = 12  # Assign to house 12 if nothing else matches
-                    break
+            star_long = get_fixed_star_position(star_name, jd, zodiac=zodiac) % 360
+            house_num = find_house_number(star_long, houses)
 
             for planet, data in planet_positions.items():
                 planet_long = data["longitude"]

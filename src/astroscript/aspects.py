@@ -414,6 +414,7 @@ def find_exact_aspects_in_timeframe(
     center,
     step_days=1,
     output_type="html",
+    zodiac="tropical",
 ):
     """
     Finds exact aspects between planets within a given time frame.
@@ -438,7 +439,13 @@ def find_exact_aspects_in_timeframe(
     while current_date <= end_date:
         # Calculate the positions of all planets for the current date using the existing function
         planet_positions = calculate_planet_positions(
-            current_date, latitude, longitude, altitude, output_type
+            current_date,
+            latitude,
+            longitude,
+            altitude,
+            output_type,
+            center=center,
+            zodiac=zodiac,
         )
 
         # Calculate aspects for the current date

@@ -1,32 +1,62 @@
 import swisseph as swe
 
-def calculate_individual_house_position(
-    date, latitude, longitude, planet_longitude, h_sys="P"
-):
-    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
-    houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode("utf-8"))
+from .zodiac import calculation_flags
 
-    house_num = 1  # Begin as house 1 in case nothing else matches
-    # Check for each house from 1 to 11 (12 handled separately)
-    for i, cusp in enumerate(houses):
-        next_cusp = houses[(i + 1) % 12]
 
-        # If at last house and next cusp is less than the current because of wrap-around
+def calculate_house_cusps(date, latitude, longitude, h_sys="P", zodiac="tropical"):
+    jd = swe.julday(
+        date.year,
+        date.month,
+        date.day,
+        date.hour + date.minute / 60.0 + date.second / 3600.0,
+    )
+    flags = calculation_flags(zodiac)
+    if flags:
+        return swe.houses_ex(
+            jd, latitude, longitude, h_sys.encode("utf-8"), flags
+        )
+    return swe.houses(jd, latitude, longitude, h_sys.encode("utf-8"))
+
+
+def find_house_number(longitude, houses):
+    """Return the house containing longitude, including 0/360 wraparound."""
+    longitude %= 360
+    house_cusps = houses[:12]
+
+    for index, cusp in enumerate(house_cusps):
+        cusp %= 360
+        next_cusp = house_cusps[(index + 1) % 12] % 360
+        adjusted_longitude = longitude
+
         if next_cusp < cusp:
             next_cusp += 360
+            if adjusted_longitude < cusp:
+                adjusted_longitude += 360
 
-        if cusp <= planet_longitude < next_cusp:
-            house_num = i + 1
-            break
-        elif i == 11 and (planet_longitude >= cusp or planet_longitude < houses[0]):
-            house_num = 12  # Assign to house 12 if nothing else matches
-            break
+        if cusp <= adjusted_longitude < next_cusp:
+            return index + 1
 
-    return house_num
+    return 1
+
+
+def calculate_individual_house_position(
+    date, latitude, longitude, planet_longitude, h_sys="P", zodiac="tropical"
+):
+    houses, _ = calculate_house_cusps(
+        date, latitude, longitude, h_sys=h_sys, zodiac=zodiac
+    )
+    return find_house_number(planet_longitude, houses)
 
 
 def calculate_house_positions(
-    date, latitude, longitude, altitude, planets_positions, notime=False, h_sys="P"
+    date,
+    latitude,
+    longitude,
+    altitude,
+    planets_positions,
+    notime=False,
+    h_sys="P",
+    zodiac="tropical",
 ):
     """
     Calculate the house positions for a given datetime, latitude, and longitude, considering the positions of planets.
@@ -47,7 +77,7 @@ def calculate_house_positions(
     - ValueError: If the time component of the date is exactly midnight, which may result in less accurate calculations.
     """
     try:
-        swe.set_topo(altitude, latitude, longitude)
+        swe.set_topo(longitude, latitude, altitude or 0.0)
     except Exception as e:
         print(f"Error setting topocentric coordinates: {e}")
 
@@ -55,8 +85,9 @@ def calculate_house_positions(
     if notime:
         print("Warning: Time is not set. Houses cannot be reliably calculated.")
 
-    jd = swe.julday(date.year, date.month, date.day, date.hour + date.minute / 60.0)
-    houses, ascmc = swe.houses(jd, latitude, longitude, h_sys.encode("utf-8"))
+    houses, ascmc = calculate_house_cusps(
+        date, latitude, longitude, h_sys=h_sys, zodiac=zodiac
+    )
 
     ascendant_long = ascmc[0]  # Ascendant is the first item in ascmc list
     midheaven_long = ascmc[1]  # Midheaven is the second item in ascmc list
@@ -73,21 +104,7 @@ def calculate_house_positions(
     # Assign planets to houses
     for planet, planet_info in planets_positions.items():
         planet_longitude = planet_info["longitude"] % 360
-        house_num = 1  # Begin as house 1 in case nothing else matches
-        # Check for each house from 1 to 11 (12 handled separately)
-        for i, cusp in enumerate(houses):
-            next_cusp = houses[(i + 1) % 12]
-
-            # If at last house and next cusp is less than the current because of wrap-around
-            if next_cusp < cusp:
-                next_cusp += 360
-
-            if cusp <= planet_longitude < next_cusp:
-                house_num = i + 1
-                break
-            elif i == 11 and (planet_longitude >= cusp or planet_longitude < houses[0]):
-                house_num = 12  # Assign to house 12 if nothing else matches
-                break
+        house_num = find_house_number(planet_longitude, houses)
 
         house_positions[planet] = {"longitude": planet_longitude, "house": house_num}
 

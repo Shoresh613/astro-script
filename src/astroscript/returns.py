@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import swisseph as swe
 
 from .constants import PLANET_RETURN_DICT
+from .zodiac import calculation_flags
+
 
 def find_next_same_degree(
     dt,
@@ -12,6 +14,7 @@ def find_next_same_degree(
     altitude,
     nextprev="next",
     center="topocentric",
+    zodiac="tropical",
 ):
     if planet_name.title() not in PLANET_RETURN_DICT:
         raise ValueError("Invalid planet name provided.")
@@ -26,13 +29,14 @@ def find_next_same_degree(
     if altitude is None:
         altitude = 0.0
 
+    flags = calculation_flags(zodiac, swe.FLG_SWIEPH | swe.FLG_SPEED)
     if center == "topocentric":
         swe.set_topo(float(longitude), float(latitude), float(altitude))
-        current_pos, _ = swe.calc(julian_day, planet, swe.FLG_TOPOCTR)
+        current_pos, _ = swe.calc_ut(julian_day, planet, flags | swe.FLG_TOPOCTR)
     elif center == "heliocentric":
-        current_pos, _ = swe.calc_ut(julian_day, planet, swe.FLG_HELCTR)
+        current_pos, _ = swe.calc_ut(julian_day, planet, flags | swe.FLG_HELCTR)
     else:
-        current_pos, _ = swe.calc_ut(julian_day, planet)
+        current_pos, _ = swe.calc_ut(julian_day, planet, flags)
 
     current_degree = current_pos[0] % 360  # Normalize to 0-360 degrees
 
@@ -54,11 +58,15 @@ def find_next_same_degree(
 
         if center == "topocentric":
             swe.set_topo(float(longitude), float(latitude), float(altitude))
-            next_pos, _ = swe.calc(julian_day_next, planet, swe.FLG_TOPOCTR)
+            next_pos, _ = swe.calc_ut(
+                julian_day_next, planet, flags | swe.FLG_TOPOCTR
+            )
         elif center == "heliocentric":
-            next_pos, _ = swe.calc_ut(julian_day_next, planet, swe.FLG_HELCTR)
+            next_pos, _ = swe.calc_ut(
+                julian_day_next, planet, flags | swe.FLG_HELCTR
+            )
         else:
-            next_pos, _ = swe.calc_ut(julian_day_next, planet)
+            next_pos, _ = swe.calc_ut(julian_day_next, planet, flags)
 
         return next_pos[0] % 360
 

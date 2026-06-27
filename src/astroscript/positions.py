@@ -8,8 +8,14 @@ from .constants import ASTEROIDS, PLANETS
 from .coords import longitude_to_zodiac
 from .dignity import get_decan_ruler
 from .fixed_stars import get_fixed_star_position, read_fixed_stars
-from .houses import calculate_house_positions, calculate_individual_house_position
+from .houses import (
+    calculate_house_cusps,
+    calculate_house_positions,
+    calculate_individual_house_position,
+)
 from .arabic_parts import add_arabic_parts
+from .zodiac import calculation_flags
+
 
 def get_pluto_ecliptic(
     date: datetime,
@@ -79,6 +85,7 @@ def calculate_planet_positions(
     arabic_parts=False,
     all_stars=False,
     classic_rulers=False,
+    zodiac="tropical",
 ):
     """
     Calculate the ecliptic longitudes, signs, and retrograde status of celestial bodies
@@ -115,6 +122,7 @@ def calculate_planet_positions(
         date.day,
         date.hour + date.minute / 60.0 + date.second / 3600.0,
     )
+    base_flags = calculation_flags(zodiac, swe.FLG_SWIEPH | swe.FLG_SPEED)
     positions = {}
     if mode == "planets":
         PLANETS.pop(
@@ -136,7 +144,9 @@ def calculate_planet_positions(
 
         for star_name in fixed_stars.keys():
             try:
-                star_long = get_fixed_star_position(star_name, jd) % 360
+                star_long = (
+                    get_fixed_star_position(star_name, jd, zodiac=zodiac) % 360
+                )
                 positions[star_name] = {
                     "longitude": star_long,
                     "zodiac_sign": longitude_to_zodiac(star_long, output).split()[0],
@@ -144,9 +154,14 @@ def calculate_planet_positions(
                     "speed": 0,  # Speed of the fix star in degrees per day
                     "house": (
                         ""
-                        if center == "Heliocentric"
+                        if center == "heliocentric"
                         else calculate_individual_house_position(
-                            date, latitude, longitude, star_long, h_sys
+                            date,
+                            latitude,
+                            longitude,
+                            star_long,
+                            h_sys,
+                            zodiac=zodiac,
                         )
                     ),
                 }
@@ -168,21 +183,21 @@ def calculate_planet_positions(
                 if altitude is None:
                     altitude = 0.0
                 swe.set_topo(float(longitude), float(latitude), float(altitude))
-                pos, ret = swe.calc_ut(jd, id, swe.FLG_TOPOCTR)
+                pos, ret = swe.calc_ut(jd, id, base_flags | swe.FLG_TOPOCTR)
                 pos_geo, ret_geo = swe.calc_ut(
-                    jd, id
+                    jd, id, base_flags
                 )  # To get information about speed, retrograde etc.
                 pos = list(pos)
                 pos[3] = pos_geo[3]
                 pos = tuple(pos)
             elif center == "heliocentric":
-                pos, ret = swe.calc_ut(jd, id, swe.FLG_HELCTR)
-                pos_geo, ret_geo = swe.calc_ut(jd, id)
+                pos, ret = swe.calc_ut(jd, id, base_flags | swe.FLG_HELCTR)
+                pos_geo, ret_geo = swe.calc_ut(jd, id, base_flags)
                 pos = list(pos)
                 pos[3] = pos_geo[3] if planet != "Earth" else 0.9863
                 pos = tuple(pos)
             else:
-                pos, ret = swe.calc_ut(jd, id)
+                pos, ret = swe.calc_ut(jd, id, base_flags)
 
             if pos[3] < 0.001:
                 retrograde_stationary = "R"
@@ -198,9 +213,14 @@ def calculate_planet_positions(
                 "speed": pos[3],  # Speed of the planet in degrees per day
                 "house": (
                     ""
-                    if center == "Heliocentric"
+                    if center == "heliocentric"
                     else calculate_individual_house_position(
-                        date, latitude, longitude, pos[0], h_sys
+                        date,
+                        latitude,
+                        longitude,
+                        pos[0],
+                        h_sys,
+                        zodiac=zodiac,
                     )
                 ),
             }
@@ -244,7 +264,9 @@ def calculate_planet_positions(
 
     # Calculate Ascendant and Midheaven, speed not exact but ok for now and only for approximately calculating aspect durations
     if mode == "planets" and center != "heliocentric":
-        cusps, asc_mc = swe.houses(jd, latitude, longitude, h_sys.encode("utf-8"))
+        cusps, asc_mc = calculate_house_cusps(
+            date, latitude, longitude, h_sys=h_sys, zodiac=zodiac
+        )
         positions["Ascendant"] = {
             "longitude": asc_mc[0],
             "zodiac_sign": longitude_to_zodiac(asc_mc[0], output).split()[0],
@@ -285,7 +307,14 @@ def calculate_planet_positions(
             positions = add_arabic_parts(date, latitude, longitude, positions, output)
 
     house_positions, house_cusps = calculate_house_positions(
-        date, latitude, longitude, altitude, positions, notime=False, h_sys=h_sys
+        date,
+        latitude,
+        longitude,
+        altitude,
+        positions,
+        notime=False,
+        h_sys=h_sys,
+        zodiac=zodiac,
     )
 
     for planet in positions:

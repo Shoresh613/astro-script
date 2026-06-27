@@ -29,6 +29,7 @@ from .aspects import *
 from .output import *
 from .events import *
 from .returns import *
+from .zodiac import *
 
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
@@ -147,6 +148,7 @@ def called_by_gui(
     output_type,
     guid,
     chart_theme=None,
+    zodiac=None,
 ):
 
     if isinstance(date, datetime):
@@ -204,6 +206,7 @@ def called_by_gui(
         "Output": output_type,
         "Remove Saved Names": remove_saved_names,
         "Chart Theme": chart_theme,
+        "Zodiac": zodiac,
         "Guid": guid if guid else None,
     }
 
@@ -440,6 +443,14 @@ If no record is found, default values will be used.""",
         help="Choose center of calculations (default: topocentric).",
     )
     parser.add_argument(
+        "--zodiac",
+        choices=ZODIAC_CHOICES,
+        help=(
+            "Zodiac calculation mode. Sidereal and vedic both use Lahiri "
+            "ayanamsha. (Default: tropical)"
+        ),
+    )
+    parser.add_argument(
         "--all_stars",
         action="store_true",
         help="Show aspects for all fixed stars. (Default: false)",
@@ -587,6 +598,7 @@ If no record is found, default values will be used.""",
         "Degree in Minutes": args.degree_in_minutes,
         "Node": args.node,
         "Center": args.center,
+        "Zodiac": args.zodiac,
         "All Stars": args.all_stars,
         "House System": args.house_system,
         "House Cusps": args.house_cusps,
@@ -678,6 +690,11 @@ def main(gui_arguments=None):
         PLANETS.update({"Earth": swe.EARTH})
         hide_fixed_star_aspects = True
 
+    stored_defaults = db_manager.read_defaults(
+        args["Use Saved Settings"] if args["Use Saved Settings"] else "default",
+        args["Guid"] if args["Guid"] else "",
+    )
+
     try:
         if args["Return"]:
             if not args["Name"]:
@@ -695,6 +712,10 @@ def main(gui_arguments=None):
                 altitude,
                 nextprev,
                 center_of_calculations,
+                zodiac=normalize_zodiac(
+                    args.get("Zodiac")
+                    or (stored_defaults or {}).get("Zodiac")
+                ),
             )
             if not return_utc_datetime:
                 return "No return found for specified planet."
@@ -729,6 +750,7 @@ def main(gui_arguments=None):
 
     def_degree_in_minutes = False  # Default degree in minutes
     def_node = "true"  # Default node (true node is more accurate than mean node)
+    def_zodiac = "tropical"
     def_all_stars = False  # Default only astrologically known stars
     def_house_cusps = False  # Default do not show house cusps
     def_output_type = "text"  # Default output type
@@ -790,6 +812,9 @@ def main(gui_arguments=None):
                 args["Classical Rulership"] if args["Classical Rulership"] else None
             ),
             "Center": args["Center"] if args["Center"] else None,
+            "Zodiac": (
+                normalize_zodiac(args.get("Zodiac")) if args.get("Zodiac") else None
+            ),
             "All Stars": args["All Stars"] if args["All Stars"] else None,
             "House System": args["House System"] if args["House System"] else None,
             "House Cusps": args["House Cusps"] if args["House Cusps"] else None,
@@ -830,11 +855,6 @@ def main(gui_arguments=None):
             return f"Settings stored with the name '{args['Save Settings']}'."
 
     # Override using stored settings (default or specified name)
-    stored_defaults = db_manager.read_defaults(
-        args["Use Saved Settings"] if args["Use Saved Settings"] else "default",
-        args["Guid"] if args["Guid"] else "",
-    )
-
     if stored_defaults:
         keys = [
             "Location",
@@ -859,6 +879,7 @@ def main(gui_arguments=None):
             "Classical Rulership",
             "Node",
             "Center",
+            "Zodiac",
             "All Stars",
             "House System",
             "House Cusps",
@@ -874,6 +895,8 @@ def main(gui_arguments=None):
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
+
+    zodiac = normalize_zodiac(args.get("Zodiac") or def_zodiac)
 
     if args["Location"]:
         place = args["Location"]
@@ -1322,6 +1345,7 @@ def main(gui_arguments=None):
         center_of_calculations,
         show_arabic_parts,
         classic_rulers=args["Classical Rulership"],
+        zodiac=zodiac,
     )
     house_positions, house_cusps = calculate_house_positions(
         utc_datetime,
@@ -1331,6 +1355,7 @@ def main(gui_arguments=None):
         copy.deepcopy(planet_positions),
         notime,
         HOUSE_SYSTEMS[house_system_name],
+        zodiac=zodiac,
     )
 
     complex_aspects = {}
@@ -1454,11 +1479,30 @@ def main(gui_arguments=None):
     string_house_system_moon_nodes = (
         f"{br}{bold}Center:{nobold} {center_of_calculations.title()}"
     )
+    string_house_system_moon_nodes += (
+        f", {bold}Zodiac:{nobold} {zodiac_label(zodiac)}"
+    )
+    if is_sidereal(zodiac):
+        ayanamsha_jd = swe.julday(
+            utc_datetime.year,
+            utc_datetime.month,
+            utc_datetime.day,
+            utc_datetime.hour
+            + utc_datetime.minute / 60.0
+            + utc_datetime.second / 3600.0,
+        )
+        string_house_system_moon_nodes += (
+            f", {bold}Ayanamsha:{nobold} "
+            f"{get_ayanamsha_ut(ayanamsha_jd, zodiac):.6f}°"
+        )
     if center_of_calculations in ("geocentric", "topocentric"):
         string_house_system_moon_nodes += (
-            f", {bold}House system:{nobold} {house_system_name}, {bold}Moon nodes:{nobold} {node}{br}"
-            + (h_sys_changed + f"{br}" if h_sys_changed else "")
+            f", {bold}House system:{nobold} {house_system_name}, "
+            f"{bold}Moon nodes:{nobold} {node}"
         )
+    string_house_system_moon_nodes += f"{br}"
+    if h_sys_changed:
+        string_house_system_moon_nodes += h_sys_changed + f"{br}"
     string_house_cusps = f"{p}{bold}House cusps:{nobold} {house_cusps}{br}"
     if output_type in ("return_text"):
         if moon_phase_name1 != moon_phase_name2:
@@ -1507,7 +1551,11 @@ def main(gui_arguments=None):
 
         print(f"{string_ruled_by}", end="")
 
-        if not show_synastry and not center_of_calculations == "heliocentric":
+        if (
+            not show_synastry
+            and center_of_calculations != "heliocentric"
+            and not is_sidereal(zodiac)
+        ):
             try:
                 print(
                     f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}",
@@ -1571,7 +1619,11 @@ def main(gui_arguments=None):
 
         to_return += f"{string_ruled_by}"
 
-        if not show_synastry and not center_of_calculations == "heliocentric":
+        if (
+            not show_synastry
+            and center_of_calculations != "heliocentric"
+            and not is_sidereal(zodiac)
+        ):
             try:
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
             except:
@@ -1652,6 +1704,7 @@ def main(gui_arguments=None):
         orbs["Fixed Star"],
         MAJOR_ASPECTS,
         all_stars,
+        zodiac=zodiac,
     )
 
     if not hide_planetary_aspects:
@@ -1682,6 +1735,7 @@ def main(gui_arguments=None):
             copy.deepcopy(planet_positions),
             notime,
             HOUSE_SYSTEMS[house_system_name],
+            zodiac=zodiac,
         )
         to_return += f"{p}" + print_fixed_star_aspects(
             fixstar_aspects,
@@ -1707,6 +1761,7 @@ def main(gui_arguments=None):
             "asteroids",
             center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
         asteroid_aspects = calculate_aspects_takes_two(
             copy.deepcopy(planet_positions),
@@ -1769,6 +1824,7 @@ def main(gui_arguments=None):
             "planets",
             center=center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
         transits_planet_positions = calculate_planet_positions(
             transits_utc_datetime,
@@ -1780,6 +1836,7 @@ def main(gui_arguments=None):
             "planets",
             center=center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
 
         transit_aspects = calculate_aspects_takes_two(
@@ -1833,6 +1890,7 @@ def main(gui_arguments=None):
             center=center_of_calculations,
             mode="stars",
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
         transit_star_aspects = calculate_aspects_takes_two(
             copy.deepcopy(star_positions),
@@ -1874,6 +1932,7 @@ def main(gui_arguments=None):
             "asteroids",
             center=center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
         asteroid_transit_aspects = calculate_aspects_takes_two(
             copy.deepcopy(asteroid_positions),
@@ -1915,6 +1974,7 @@ def main(gui_arguments=None):
             h_sys,
             center=center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
         synastry_planet_positions = calculate_planet_positions(
             synastry_utc_datetime,
@@ -1925,6 +1985,7 @@ def main(gui_arguments=None):
             h_sys,
             center=center_of_calculations,
             classic_rulers=args["Classical Rulership"],
+            zodiac=zodiac,
         )
 
         synastry_aspects = calculate_aspects_takes_two(
@@ -1987,9 +2048,28 @@ def main(gui_arguments=None):
                 None,
                 guid=args["Guid"] if args["Guid"] else None,
                 chart_theme=args.get("Chart Theme"),
+                zodiac=zodiac,
             )
         elif chart_type == "Transit":
-            to_return += chart_output.chart_output(name, utc_datetime, longitude, latitude, local_timezone, place, chart_type, output_type, transits_utc_datetime, output_type, second_longitude=transits_longitude, second_latitude=transits_latitude, second_local_timezone=local_transits_timezone, second_place=transits_location, guid=args["Guid"] if args["Guid"] else None, chart_theme=args.get("Chart Theme"))
+            to_return += chart_output.chart_output(
+                name,
+                utc_datetime,
+                longitude,
+                latitude,
+                local_timezone,
+                place,
+                chart_type,
+                output_type,
+                transits_utc_datetime,
+                output_type,
+                second_longitude=transits_longitude,
+                second_latitude=transits_latitude,
+                second_local_timezone=local_transits_timezone,
+                second_place=transits_location,
+                guid=args["Guid"] if args["Guid"] else None,
+                chart_theme=args.get("Chart Theme"),
+                zodiac=zodiac,
+            )
         elif chart_type == "Synastry":
             to_return += chart_output.chart_output(
                 name,
@@ -2008,6 +2088,7 @@ def main(gui_arguments=None):
                 synastry_place,
                 guid=args["Guid"] if args["Guid"] else None,
                 chart_theme=args.get("Chart Theme"),
+                zodiac=zodiac,
             )
 
         if output_type in ("html", "return_html"):

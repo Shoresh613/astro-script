@@ -3,6 +3,8 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
+from astroscript.zodiac import is_sidereal
+
 
 def normalize_chart_theme(chart_theme):
     return "dark" if chart_theme == "dark" else "classic"
@@ -70,6 +72,7 @@ def chart_output(
     second_place=None,
     guid=None,
     chart_theme=None,
+    zodiac="tropical",
 ):
     chart_folder = str(guid or uuid.uuid4().hex)
     output_directory, chart_url_prefix = _output_paths(chart_folder)
@@ -101,35 +104,44 @@ def chart_output(
         else chart_filename
     )
 
-    subject = AstrologicalSubject(
-        subject_name,
-        year=utc_datetime.year,
-        month=utc_datetime.month,
-        day=utc_datetime.day,
-        hour=utc_datetime.hour,
-        minute=utc_datetime.minute,
-        lng=longitude,
-        lat=latitude,
-        tz_str=str(local_timezone),
-        city=place,
-        nation="GB",
-        online=False,
-    )
+    subject_kwargs = {
+        "year": utc_datetime.year,
+        "month": utc_datetime.month,
+        "day": utc_datetime.day,
+        "hour": utc_datetime.hour,
+        "minute": utc_datetime.minute,
+        "lng": longitude,
+        "lat": latitude,
+        "tz_str": str(local_timezone),
+        "city": place,
+        "nation": "GB",
+        "online": False,
+    }
+    if is_sidereal(zodiac):
+        subject_kwargs.update(zodiac_type="Sidereal", sidereal_mode="LAHIRI")
+
+    subject = AstrologicalSubject(subject_name, **subject_kwargs)
     if chart_type in ("Transit", "Synastry"):
         second_subject_name = (name if chart_type == "Transit" else second_name) or ""
+        second_subject_kwargs = {
+            "year": second_datetime.year,
+            "month": second_datetime.month,
+            "day": second_datetime.day,
+            "hour": second_datetime.hour,
+            "minute": second_datetime.minute,
+            "lng": second_longitude,
+            "lat": second_latitude,
+            "tz_str": str(second_local_timezone),
+            "city": second_place,
+            "nation": "GB",
+            "online": False,
+        }
+        if is_sidereal(zodiac):
+            second_subject_kwargs.update(
+                zodiac_type="Sidereal", sidereal_mode="LAHIRI"
+            )
         second_subject = AstrologicalSubject(
-            second_subject_name.strip() or "Chart",
-            year=second_datetime.year,
-            month=second_datetime.month,
-            day=second_datetime.day,
-            hour=second_datetime.hour,
-            minute=second_datetime.minute,
-            lng=second_longitude,
-            lat=second_latitude,
-            tz_str=str(second_local_timezone),
-            city=second_place,
-            nation="GB",
-            online=False,
+            second_subject_name.strip() or "Chart", **second_subject_kwargs
         )
 
     if chart_type == "Natal":
