@@ -131,6 +131,64 @@ class ChartThemeTests(unittest.TestCase):
         self.assertEqual(FakeSubject.calls[0]["zodiac_type"], "Sidereal")
         self.assertEqual(FakeSubject.calls[0]["sidereal_mode"], "LAHIRI")
 
+    def test_legacy_kerykeion_without_theme_argument_falls_back_to_classic(self):
+        class FakeSubject:
+            def __init__(self, name, **kwargs):
+                self.name = name
+
+        class LegacyChart:
+            def __init__(
+                self,
+                subject,
+                chart_type,
+                *args,
+                new_output_directory,
+            ):
+                self.subject = subject
+                self.chart_type = chart_type
+                self.output_directory = Path(new_output_directory)
+
+            def makeSVG(self):
+                self.output_directory.mkdir(parents=True, exist_ok=True)
+                chart_path = (
+                    self.output_directory
+                    / f"{self.subject.name} {self.chart_type}Chart.svg"
+                )
+                chart_path.write_text("<svg></svg>")
+
+        fake_kerykeion = types.SimpleNamespace(
+            AstrologicalSubject=FakeSubject,
+            KerykeionChartSVG=LegacyChart,
+        )
+
+        original_file = chart_output.__file__
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(
+            sys.modules, {"kerykeion": fake_kerykeion}
+        ):
+            try:
+                chart_output.__file__ = str(
+                    Path(temp_dir) / "src" / "charts" / "chart_output.py"
+                )
+                html = chart_output.chart_output(
+                    "Legacy Test",
+                    datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+                    11.9,
+                    57.7,
+                    "UTC",
+                    "Gothenburg",
+                    "Natal",
+                    "return_html",
+                    None,
+                    guid="legacy-theme-test",
+                    chart_theme="dark",
+                    zodiac="sidereal",
+                )
+            finally:
+                chart_output.__file__ = original_file
+
+        self.assertIn("Legacy%20Test%20-%20Natal%20Chart.svg", html)
+        self.assertNotIn("Chart%20Dark.svg", html)
+
 
 if __name__ == "__main__":
     unittest.main()

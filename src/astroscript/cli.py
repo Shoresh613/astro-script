@@ -96,6 +96,23 @@ def set_orbs(args, def_orbs):
         return orbs
 
 
+def read_stored_defaults_for_run(args, *, include_implicit_default):
+    settings_name = args.get("Use Saved Settings")
+    if not settings_name and not include_implicit_default:
+        return {}
+
+    return db_manager.read_defaults(
+        settings_name or "default",
+        args.get("Guid") or "",
+    )
+
+
+def should_show_sabian_symbol(show_synastry, center_of_calculations, zodiac=None):
+    """Show the Sun's Sabian symbol for both tropical and sidereal charts."""
+
+    return not show_synastry and center_of_calculations != "heliocentric"
+
+
 def called_by_gui(
     name,
     date,
@@ -625,6 +642,7 @@ If no record is found, default values will be used.""",
 
 
 def main(gui_arguments=None):
+    include_implicit_default = gui_arguments is None
     if gui_arguments:
         args = gui_arguments
     else:
@@ -690,9 +708,9 @@ def main(gui_arguments=None):
         PLANETS.update({"Earth": swe.EARTH})
         hide_fixed_star_aspects = True
 
-    stored_defaults = db_manager.read_defaults(
-        args["Use Saved Settings"] if args["Use Saved Settings"] else "default",
-        args["Guid"] if args["Guid"] else "",
+    stored_defaults = read_stored_defaults_for_run(
+        args,
+        include_implicit_default=include_implicit_default,
     )
 
     try:
@@ -1551,10 +1569,10 @@ def main(gui_arguments=None):
 
         print(f"{string_ruled_by}", end="")
 
-        if (
-            not show_synastry
-            and center_of_calculations != "heliocentric"
-            and not is_sidereal(zodiac)
+        if should_show_sabian_symbol(
+            show_synastry,
+            center_of_calculations,
+            zodiac,
         ):
             try:
                 print(
@@ -1619,10 +1637,10 @@ def main(gui_arguments=None):
 
         to_return += f"{string_ruled_by}"
 
-        if (
-            not show_synastry
-            and center_of_calculations != "heliocentric"
-            and not is_sidereal(zodiac)
+        if should_show_sabian_symbol(
+            show_synastry,
+            center_of_calculations,
+            zodiac,
         ):
             try:
                 to_return += f"{br}{bold}Sabian Symbol:{nobold} {get_sabian_symbol(planet_positions, 'Sun')}"
@@ -2049,6 +2067,9 @@ def main(gui_arguments=None):
                 guid=args["Guid"] if args["Guid"] else None,
                 chart_theme=args.get("Chart Theme"),
                 zodiac=zodiac,
+                house_system=h_sys,
+                center=center_of_calculations,
+                node=node,
             )
         elif chart_type == "Transit":
             to_return += chart_output.chart_output(
@@ -2069,6 +2090,9 @@ def main(gui_arguments=None):
                 guid=args["Guid"] if args["Guid"] else None,
                 chart_theme=args.get("Chart Theme"),
                 zodiac=zodiac,
+                house_system=h_sys,
+                center=center_of_calculations,
+                node=node,
             )
         elif chart_type == "Synastry":
             to_return += chart_output.chart_output(
@@ -2089,6 +2113,9 @@ def main(gui_arguments=None):
                 guid=args["Guid"] if args["Guid"] else None,
                 chart_theme=args.get("Chart Theme"),
                 zodiac=zodiac,
+                house_system=h_sys,
+                center=center_of_calculations,
+                node=node,
             )
 
         if output_type in ("html", "return_html"):
