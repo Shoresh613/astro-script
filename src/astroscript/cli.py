@@ -113,6 +113,30 @@ def should_show_sabian_symbol(show_synastry, center_of_calculations, zodiac=None
     return not show_synastry and center_of_calculations != "heliocentric"
 
 
+def parse_transits_local_datetime(value):
+    """Normalize GUI/session transit values to a naive local datetime."""
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        parsed = datetime.strptime(value, "%Y-%m-%d %H:%M")
+    else:
+        raise TypeError("Transit datetime must be text or a datetime object.")
+    if parsed.tzinfo is not None:
+        raise ValueError("Transit datetime must be local time without a UTC offset.")
+    return parsed
+
+
+def resolve_transits_timezone(explicit_timezone, latitude, longitude, fallback):
+    """Use an explicit legacy value or infer the transit timezone from its place."""
+    if explicit_timezone:
+        return pytz.timezone(explicit_timezone)
+    if tz_finder_installed:
+        timezone_name = TimezoneFinder().timezone_at(lng=longitude, lat=latitude)
+        if timezone_name:
+            return pytz.timezone(timezone_name)
+    return fallback
+
+
 def called_by_gui(
     name,
     date,
@@ -166,6 +190,9 @@ def called_by_gui(
     guid,
     chart_theme=None,
     zodiac=None,
+    primary_event=None,
+    secondary_event=None,
+    runtime_overrides=None,
 ):
 
     if isinstance(date, datetime):
@@ -225,9 +252,11 @@ def called_by_gui(
         "Chart Theme": chart_theme,
         "Zodiac": zodiac,
         "Guid": guid if guid else None,
+        "Primary Event": primary_event,
+        "Secondary Event": secondary_event,
+        "Runtime Overrides": runtime_overrides or {},
     }
 
-    print(arguments)
     text = main(arguments)
     return text
 
@@ -655,10 +684,12 @@ def main(gui_arguments=None):
     to_return = ""
 
     #################### Load event ####################
-    if args["Guid"]:
-        exists = load_event(name, args["Guid"]) if name else False
-    else:
-        exists = load_event(name) if name else False
+    exists = args.get("Primary Event")
+    if not exists:
+        if args["Guid"]:
+            exists = load_event(name, args["Guid"]) if name else False
+        else:
+            exists = load_event(name) if name else False
     if exists:
         local_datetime = datetime.fromisoformat(exists["datetime"])
         latitude = exists["latitude"]
@@ -855,9 +886,6 @@ def main(gui_arguments=None):
                 args["Hide Asteroid Aspects"] if args["Hide Asteroid Aspects"] else None
             ),
             "Hide Decans": args["Hide Decans"] if args["Hide Decans"] else None,
-            "Transits Timezone": (
-                args["Transits Timezone"] if args["Transits Timezone"] else None
-            ),
             "Transits Location": (
                 args["Transits Location"] if args["Transits Location"] else None
             ),
@@ -905,7 +933,6 @@ def main(gui_arguments=None):
             "Hide Planetary Aspects",
             "Hide Fixed Star Aspects",
             "Hide Asteroid Aspects",
-            "Transits Timezone",
             "Transits Location",
             "Output",
         ]
@@ -913,6 +940,38 @@ def main(gui_arguments=None):
         for key in keys:
             if stored_defaults.get(key):
                 args[key] = stored_defaults.get(key)
+
+    runtime_override_keys = {
+        "Node",
+        "Imprecise Aspects",
+        "Minor Aspects",
+        "Show Brief Aspects",
+        "LMT",
+        "Center",
+        "Zodiac",
+        "House System",
+        "House Cusps",
+        "Arabic Parts",
+        "Aspects To Arabic Parts",
+        "Classical Rulership",
+        "Hide Planetary Positions",
+        "Hide Planetary Aspects",
+        "Hide Fixed Star Aspects",
+        "Hide Asteroid Aspects",
+        "Hide Decans",
+        "Orb",
+        "Orb Major",
+        "Orb Minor",
+        "Orb Fixed Star",
+        "Orb Asteroid",
+        "Orb Transit Fast",
+        "Orb Transit Slow",
+        "Orb Synastry Fast",
+        "Orb Synastry Slow",
+    }
+    for key, value in (args.get("Runtime Overrides") or {}).items():
+        if key in runtime_override_keys and value is not None:
+            args[key] = value
 
     zodiac = normalize_zodiac(args.get("Zodiac") or def_zodiac)
 
@@ -1213,7 +1272,9 @@ def main(gui_arguments=None):
         show_arabic_parts = False
 
     if args["Davison"]:
-        utc_datetime, longitude, latitude, altitude = get_davison_data(args["Davison"])
+        utc_datetime, longitude, latitude, altitude = get_davison_data(
+            args["Davison"], args["Guid"] if args["Guid"] else None
+        )
         place = "Davison chart"
         local_timezone = pytz.utc
         local_datetime = utc_datetime
@@ -1231,11 +1292,6 @@ def main(gui_arguments=None):
                 utc_datetime = convert_to_utc(local_datetime, local_timezone)
 
     if args["Transits"]:
-        if args["Transits Timezone"]:
-            local_transits_timezone = pytz.timezone(args["Transits Timezone"])
-        else:
-            local_transits_timezone = def_transits_tz
-
         if args["Transits Location"]:
             transits_location = args["Transits Location"]
         else:
@@ -1249,6 +1305,14 @@ def main(gui_arguments=None):
             print(location_error_string)
             return location_error_string
 
+        # Explicit values remain accepted for CLI compatibility; web flows infer.
+        local_transits_timezone = resolve_transits_timezone(
+            args["Transits Timezone"],
+            transits_latitude,
+            transits_longitude,
+            def_transits_tz,
+        )
+
         transits_altitude = get_altitude(
             transits_latitude, transits_longitude, transits_location
         )
@@ -1261,13 +1325,10 @@ def main(gui_arguments=None):
             show_transits = True
         else:
             try:
-                if EPHE:
-                    transits_local_datetime = args["Transits"]
-                else:
-                    transits_local_datetime = datetime.strptime(
-                        args["Transits"], "%Y-%m-%d %H:%M"
-                    )
-            except ValueError:
+                transits_local_datetime = parse_transits_local_datetime(
+                    args["Transits"]
+                )
+            except (TypeError, ValueError):
                 print(
                     "Invalid transit date format. Please use YYYY-MM-DD HH:MM (00:00 for time if unknown).\nEnter 'now' for current time (UTC).",
                     file=sys.stderr,
@@ -1291,24 +1352,28 @@ def main(gui_arguments=None):
 
     if args["Synastry"]:
         try:
-            exists = load_event(
+            synastry_event = args.get("Secondary Event") or load_event(
                 args["Synastry"], args["Guid"] if args["Guid"] else None
             )
-            if exists:
-                synastry_local_datetime = datetime.fromisoformat(exists["datetime"])
-                synastry_latitude = exists["latitude"]
-                synastry_longitude = exists["longitude"]
-                synastry_altitude = exists["altitude"]
+            if synastry_event:
+                synastry_local_datetime = datetime.fromisoformat(
+                    synastry_event["datetime"]
+                )
+                synastry_latitude = synastry_event["latitude"]
+                synastry_longitude = synastry_event["longitude"]
+                synastry_altitude = synastry_event["altitude"]
 
-                if exists["timezone"] == "LMT":
+                if synastry_event["timezone"] == "LMT":
                     synastry_local_timezone == "LMT"
                 else:
-                    synastry_local_timezone = pytz.timezone(exists["timezone"])
-                synastry_place = exists["location"]
+                    synastry_local_timezone = pytz.timezone(
+                        synastry_event["timezone"]
+                    )
+                synastry_place = synastry_event["location"]
                 synastry_utc_datetime = convert_to_utc(
                     synastry_local_datetime, synastry_local_timezone
                 )
-                synastry_notime = True if exists["notime"] else False
+                synastry_notime = True if synastry_event["notime"] else False
                 show_synastry = True
                 hide_planetary_positions = True
                 hide_planetary_aspects = True
@@ -1536,7 +1601,7 @@ def main(gui_arguments=None):
     )
     string_transits = f"{p}{bold}{h2}Transits for"
     string_synastry = f"{p}{bold}{h2}Synastry chart for"
-    string_no_transits_tz = f"{p}No timezone or location specified for transits (--transits_timezone, --transits_location).\nUsing default timezone ({def_transits_tz}) and location ({def_transits_location}) for transits."
+    string_no_transits_location = f"{p}No location specified for transits (--transits_location).\nUsing default location ({def_transits_location}) and its inferred timezone."
 
     if output_type in ("text", "html"):
         print(f"{string_heading}", end="")
@@ -1873,11 +1938,11 @@ def main(gui_arguments=None):
         else:
             to_return += f"{string_transits} {name} {transits_local_datetime.strftime('%Y-%m-%d %H:%M')} in {transits_location}{h2_}{nobold}"
 
-        if not args["Transits Timezone"] or not args["Transits Location"]:
+        if not args["Transits Location"]:
             if output_type in ("text", "html"):
-                print(f"{string_no_transits_tz}")
+                print(f"{string_no_transits_location}")
             elif not EPHE:
-                to_return += f"{string_no_transits_tz}"
+                to_return += f"{string_no_transits_location}"
 
         to_return += f"{p}" + print_aspects(
             transit_aspects,
