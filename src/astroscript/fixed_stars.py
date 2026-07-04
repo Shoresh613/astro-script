@@ -7,6 +7,24 @@ from .houses import find_house_number
 from .zodiac import calculation_flags
 
 
+CURATED_FIXED_STAR_NAMES = (
+    "Aldebaran",
+    "Algol",
+    "Antares",
+    "Regulus",
+    "Sirius",
+    "Spica",
+    "Polaris",
+    "Arcturus",
+    "Deneb",
+    "Rigel",
+    "Capella",
+    "Altair",
+    "Vega",
+)
+DEFAULT_FIXED_STAR_ORB_DEGREES = 1.0
+
+
 def get_fixed_star_position(star_name, jd, zodiac="tropical"):
     """
     Retrieve the ecliptic longitude of a fixed star on a given Julian Day.

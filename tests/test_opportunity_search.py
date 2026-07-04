@@ -550,6 +550,91 @@ class OpportunitySearchTests(unittest.TestCase):
         self.assertGreater(windows[0].score, 99.9)
         self.assertIn("Mars Trine Juno", windows[0].evaluations[0].description)
 
+    def test_fixed_star_works_as_natal_target(self):
+        natal_datetime = datetime(1990, 1, 1, tzinfo=timezone.utc)
+
+        def provider(when, body):
+            if when.year == 1990 and body == "Regulus":
+                return (100, 0)
+            days = (when - self.start).total_seconds() / 86400
+            return (99 + 2 * days, 2) if body == "Mars" else (0, 0)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "mars_natal_regulus",
+                    "Mars",
+                    "Regulus",
+                    ("Conjunction",),
+                    0.5,
+                ),
+            ),
+            natal_chart=NatalChart(
+                natal_datetime, 57.7, 11.9, time_unknown=True
+            ),
+        )
+
+        windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(windows[0].peak - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertIn(
+            "natal Regulus", windows[0].evaluations[0].description
+        )
+
+    def test_fixed_star_orb_is_limited_to_one_degree(self):
+        conditions = (
+            AspectCondition(
+                "sun_regulus", "Sun", "Regulus", ("Conjunction",), 1.01
+            ),
+            NatalAspectCondition(
+                "mars_regulus",
+                "Mars",
+                "Regulus",
+                ("Conjunction",),
+                1.01,
+            ),
+        )
+
+        for condition in conditions:
+            query = OpportunitySearchQuery(
+                self.start,
+                self.end,
+                conditions=(condition,),
+                natal_chart=(
+                    NatalChart(
+                        datetime(1990, 1, 1, tzinfo=timezone.utc),
+                        57.7,
+                        11.9,
+                        time_unknown=True,
+                    )
+                    if isinstance(condition, NatalAspectCondition)
+                    else None
+                ),
+            )
+            with self.subTest(condition=condition), self.assertRaisesRegex(
+                ValueError, "fixed-star orb must be at most 1.0 degree"
+            ):
+                search_opportunities(query)
+
+    def test_real_fixed_star_example_finds_sun_regulus_conjunction(self):
+        query = load_opportunity_query(
+            ROOT_DIR / "examples" / "fixed_star_opportunity_rules.json"
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertEqual(len(windows), 1)
+        self.assertGreater(windows[0].score, 99.9)
+        self.assertIn(
+            "Sun Conjunction Regulus", windows[0].evaluations[0].description
+        )
+
 
 class OpportunityJsonTests(unittest.TestCase):
     def setUp(self):
@@ -729,6 +814,40 @@ class OpportunityJsonTests(unittest.TestCase):
 
         for rules in cases:
             with self.subTest(rules=rules), self.assertRaises((ValueError, KeyError)):
+                opportunity_query_from_dict(rules)
+
+    def test_json_accepts_curated_fixed_star_with_small_orb(self):
+        rules = copy.deepcopy(self.rules)
+        rules["conditions"] = [
+            {
+                "id": "sun_regulus",
+                "type": "aspect",
+                "body1": "Sun",
+                "body2": "Regulus",
+                "aspects": ["Conjunction"],
+                "max_orb_degrees": 1,
+            }
+        ]
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertEqual(query.conditions[0].body2, "Regulus")
+
+    def test_json_rejects_full_catalog_star_and_large_fixed_star_orb(self):
+        for star, orb in (("Betelgeuse", 1), ("Regulus", 1.5)):
+            rules = copy.deepcopy(self.rules)
+            rules["conditions"] = [
+                {
+                    "id": "star",
+                    "type": "aspect",
+                    "body1": "Sun",
+                    "body2": star,
+                    "aspects": ["Conjunction"],
+                    "max_orb_degrees": orb,
+                }
+            ]
+
+            with self.subTest(star=star, orb=orb), self.assertRaises(ValueError):
                 opportunity_query_from_dict(rules)
 
 

@@ -23,6 +23,7 @@ from astroscript.aspect_search import (
 from astroscript.cli import argparser, main, run_aspect_period
 from astroscript.constants import MAJOR_ASPECTS, PLANETS
 from astroscript.aspects import find_exact_aspects_in_timeframe
+from astroscript.fixed_stars import CURATED_FIXED_STAR_NAMES, read_fixed_stars
 
 
 class AspectSearchTests(unittest.TestCase):
@@ -48,6 +49,11 @@ class AspectSearchTests(unittest.TestCase):
             set(ASTEROID_BODY_IDS), {"Ceres", "Pholus", "Pallas", "Juno", "Vesta"}
         )
         self.assertIn("Juno", SUPPORTED_BODY_IDS)
+        self.assertNotIn("Regulus", DEFAULT_BODIES)
+        self.assertIn("Regulus", CURATED_FIXED_STAR_NAMES)
+        self.assertEqual(
+            set(CURATED_FIXED_STAR_NAMES), set(read_fixed_stars(all_stars=False))
+        )
         self.assertEqual(set(MAJOR_ASPECTS), {
             "Conjunction", "Opposition", "Square", "Trine", "Sextile"
         })
@@ -217,6 +223,34 @@ class AspectSearchTests(unittest.TestCase):
         separation = abs(events[0].body1_longitude - events[0].body2_longitude) % 360
         separation = min(separation, 360 - separation)
         self.assertAlmostEqual(separation, 120, delta=0.001)
+
+    def test_curated_fixed_star_search_finds_exact_conjunction(self):
+        query = AspectSearchQuery(
+            datetime(2026, 8, 22, tzinfo=timezone.utc),
+            datetime(2026, 8, 24, tzinfo=timezone.utc),
+            bodies=("Sun", "Regulus"),
+        )
+
+        events = search_exact_aspects(query)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].aspect, "Conjunction")
+        self.assertEqual((events[0].body1, events[0].body2), ("Sun", "Regulus"))
+        self.assertAlmostEqual(
+            events[0].body1_longitude,
+            events[0].body2_longitude,
+            delta=0.001,
+        )
+
+    def test_non_curated_fixed_star_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            search_exact_aspects(
+                AspectSearchQuery(
+                    self.start,
+                    self.start,
+                    bodies=("Sun", "Betelgeuse"),
+                )
+            )
 
     def test_tropical_and_sidereal_find_same_sun_moon_time(self):
         values = dict(

@@ -15,6 +15,7 @@ from .aspect_search import (
     MAX_PHASE_CHANGE_DEGREES,
     MAX_STEP,
     SUPPORTED_BODY_IDS,
+    SUPPORTED_BODY_NAMES,
     AspectSearchQuery,
     PositionProvider,
     _CachedPositions,
@@ -27,6 +28,10 @@ from .aspect_search import (
     _validate_aware,
 )
 from .constants import ALL_ASPECTS, HOUSE_SYSTEMS
+from .fixed_stars import (
+    CURATED_FIXED_STAR_NAMES,
+    DEFAULT_FIXED_STAR_ORB_DEGREES,
+)
 from .houses import calculate_house_cusps, find_house_number
 from .zodiac import normalize_zodiac
 
@@ -224,7 +229,7 @@ def _normalize_house_system(value: str) -> str:
 
 
 def _natal_target_names() -> Tuple[str, ...]:
-    return tuple(SUPPORTED_BODY_IDS) + NATAL_ANGLES + NATAL_HOUSE_CUSPS
+    return tuple(SUPPORTED_BODY_NAMES) + NATAL_ANGLES + NATAL_HOUSE_CUSPS
 
 
 def _condition_requires_natal_houses(condition: Condition) -> bool:
@@ -232,6 +237,20 @@ def _condition_requires_natal_houses(condition: Condition) -> bool:
         isinstance(condition, NatalAspectCondition)
         and condition.natal_target in NATAL_ANGLES + NATAL_HOUSE_CUSPS
     )
+
+
+def _condition_uses_fixed_star(condition: Condition) -> bool:
+    if isinstance(condition, AspectCondition):
+        return (
+            condition.body1 in CURATED_FIXED_STAR_NAMES
+            or condition.body2 in CURATED_FIXED_STAR_NAMES
+        )
+    if isinstance(condition, NatalAspectCondition):
+        return (
+            condition.transit_body in CURATED_FIXED_STAR_NAMES
+            or condition.natal_target in CURATED_FIXED_STAR_NAMES
+        )
+    return False
 
 
 def _validate_condition(condition: Condition) -> None:
@@ -244,9 +263,9 @@ def _validate_condition(condition: Condition) -> None:
         raise ValueError(f"Condition '{condition.id}' weight must be greater than 0.")
 
     if isinstance(condition, AspectCondition):
-        if condition.body1 not in SUPPORTED_BODY_IDS:
+        if condition.body1 not in SUPPORTED_BODY_NAMES:
             raise ValueError(f"Unsupported celestial body: {condition.body1}")
-        if condition.body2 not in SUPPORTED_BODY_IDS:
+        if condition.body2 not in SUPPORTED_BODY_NAMES:
             raise ValueError(f"Unsupported celestial body: {condition.body2}")
         if condition.body1 == condition.body2:
             raise ValueError(f"Condition '{condition.id}' requires two different bodies.")
@@ -256,7 +275,7 @@ def _validate_condition(condition: Condition) -> None:
             f"Condition '{condition.id}' max_orb_degrees",
         )
     elif isinstance(condition, NatalAspectCondition):
-        if condition.transit_body not in SUPPORTED_BODY_IDS:
+        if condition.transit_body not in SUPPORTED_BODY_NAMES:
             raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
         if condition.natal_target not in _natal_target_names():
             raise ValueError(f"Unsupported natal target: {condition.natal_target}")
@@ -301,6 +320,15 @@ def _validate_condition(condition: Condition) -> None:
         raise ValueError(
             f"Condition '{condition.id}' maximum deviation must be above 0 "
             "and at most 180 degrees."
+        )
+    if (
+        maximum is not None
+        and _condition_uses_fixed_star(condition)
+        and maximum > DEFAULT_FIXED_STAR_ORB_DEGREES
+    ):
+        raise ValueError(
+            f"Condition '{condition.id}' fixed-star orb must be at most "
+            f"{DEFAULT_FIXED_STAR_ORB_DEGREES:.1f} degree."
         )
 
 
@@ -411,7 +439,7 @@ def _build_natal_snapshot(
             end=natal_datetime,
             zodiac=query.zodiac,
             center=query.center,
-            bodies=tuple(SUPPORTED_BODY_IDS),
+            bodies=tuple(SUPPORTED_BODY_NAMES),
             latitude=natal.latitude,
             longitude=natal.longitude,
             altitude=natal.altitude,
@@ -421,7 +449,7 @@ def _build_natal_snapshot(
         condition.natal_target
         for condition in query.conditions
         if isinstance(condition, NatalAspectCondition)
-        and condition.natal_target in SUPPORTED_BODY_IDS
+        and condition.natal_target in SUPPORTED_BODY_NAMES
     }
     positions = {}
     for body in natal_bodies:

@@ -210,6 +210,19 @@ searches to keep result volume manageable.
 python astro_script.py --opportunity-search examples/asteroid_opportunity_rules.json
 ```
 
+Fixed stars are also opt-in. The curated set is `Aldebaran`, `Algol`,
+`Antares`, `Regulus`, `Sirius`, `Spica`, `Polaris`, `Arcturus`, `Deneb`,
+`Rigel`, `Capella`, `Altair`, and `Vega`. A curated star can be selected in
+`AspectSearchQuery.bodies`, used on either side of an `AspectCondition`, or
+used as a moving or natal target in `NatalAspectCondition`. Conditions involving
+a fixed star have a maximum orb of `1°`. Fixed stars are not included in default
+aspect searches, and the complete star catalog is deliberately unavailable to
+the search API so that searches remain focused and bounded.
+
+```bash
+python astro_script.py --opportunity-search examples/fixed_star_opportunity_rules.json
+```
+
 
 ### Options
 

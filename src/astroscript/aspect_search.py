@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import swisseph as swe
 
 from .constants import ASTEROIDS, MAJOR_ASPECTS, PLANETS
+from .fixed_stars import CURATED_FIXED_STAR_NAMES
 from .zodiac import calculation_flags, normalize_zodiac
 
 
@@ -26,6 +27,9 @@ ASTEROID_BODY_IDS = {
     name: body_id for name, body_id in ASTEROIDS.items() if isinstance(body_id, int)
 }
 SUPPORTED_BODY_IDS = {**DEFAULT_BODY_IDS, **ASTEROID_BODY_IDS}
+SUPPORTED_BODY_NAMES = frozenset(SUPPORTED_BODY_IDS) | frozenset(
+    CURATED_FIXED_STAR_NAMES
+)
 DEFAULT_BODIES = tuple(DEFAULT_BODY_IDS)
 
 
@@ -110,7 +114,12 @@ class _SwissEphemerisPositionProvider:
             + utc.second / 3600.0
             + utc.microsecond / 3_600_000_000.0,
         )
-        values, _ = swe.calc_ut(julian_day, SUPPORTED_BODY_IDS[body], self.flags)
+        if body in CURATED_FIXED_STAR_NAMES:
+            values, _, _ = swe.fixstar_ut(body, julian_day, self.flags)
+        else:
+            values, _ = swe.calc_ut(
+                julian_day, SUPPORTED_BODY_IDS[body], self.flags
+            )
         return _Position(values[0] % 360.0, values[3])
 
 
@@ -163,7 +172,7 @@ def _normalize_bodies(bodies: Optional[Sequence[str]]) -> Tuple[str, ...]:
     selected = tuple(bodies) if bodies is not None else DEFAULT_BODIES
     if len(selected) < 2:
         raise ValueError("At least two celestial bodies are required.")
-    unknown = [body for body in selected if body not in SUPPORTED_BODY_IDS]
+    unknown = [body for body in selected if body not in SUPPORTED_BODY_NAMES]
     if unknown:
         raise ValueError(f"Unsupported celestial bodies: {', '.join(unknown)}")
     if len(set(selected)) != len(selected):
