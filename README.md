@@ -223,6 +223,36 @@ the search API so that searches remain focused and bounded.
 python astro_script.py --opportunity-search examples/fixed_star_opportunity_rules.json
 ```
 
+Electional conditions can be combined with aspects, moon phases, natal
+conditions, asteroids, and fixed stars in the same rule file:
+
+- `retrograde`: require a body to be retrograde or direct with `"retrograde":
+  true` or `false`.
+- `zodiac_sign`: require `body` to be in one of `signs`.
+- `transit_house`: require `body` to be in one of the current chart `houses`.
+  This is distinct from `transit_natal_house`.
+- `void_of_course_moon`: require or avoid VOC with `"void": true` or `false`.
+- `planetary_hour`: require one of the traditional seven `rulers`.
+
+`transit_house` and `planetary_hour` require top-level `latitude` and
+`longitude`; current houses use the top-level `house_system`, which defaults to
+Placidus. Planetary hours use the twelve unequal daylight hours from sunrise to
+sunset and the twelve unequal night hours from sunset to the following sunrise,
+in the rule file's timezone.
+
+Void of Course Moon uses the traditional definition implemented here: the
+period begins after the Moon's last exact conjunction, sextile, square, trine,
+or opposition to the Sun, Mercury, Venus, Mars, Jupiter, or Saturn before the
+Moon enters its next zodiac sign. The VOC period ends at that sign ingress.
+
+```bash
+python astro_script.py --opportunity-search examples/electional_opportunity_rules.json
+```
+
+The Python API exposes these rules as `RetrogradeCondition`,
+`ZodiacSignCondition`, `TransitHouseCondition`,
+`VoidOfCourseMoonCondition`, and `PlanetaryHourCondition`.
+
 
 ### Options
 

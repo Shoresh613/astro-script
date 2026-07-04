@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from math import ceil, floor
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import pytz
 
@@ -28,6 +28,13 @@ from .aspect_search import (
     _validate_aware,
 )
 from .constants import ALL_ASPECTS, HOUSE_SYSTEMS
+from .electional import (
+    ZODIAC_SIGNS,
+    PlanetaryHour,
+    planetary_hour_at,
+    planetary_hours_between,
+    validate_planetary_hour_rulers,
+)
 from .fixed_stars import (
     CURATED_FIXED_STAR_NAMES,
     DEFAULT_FIXED_STAR_ORB_DEGREES,
@@ -47,11 +54,18 @@ NATAL_ANGLES = ("Ascendant", "Midheaven", "IC", "DC")
 NATAL_HOUSE_CUSPS = tuple(f"House {number}" for number in range(1, 13))
 NATAL_STATIC_PREFIX = "__natal__:"
 ZODIAC_ORIGIN = "__zodiac_origin__"
+VOC_BODIES = ("Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn")
+VOC_ASPECTS = ("Conjunction", "Sextile", "Square", "Trine", "Opposition")
 
 __all__ = [
     "AspectCondition",
     "NatalAspectCondition",
     "TransitNatalHouseCondition",
+    "RetrogradeCondition",
+    "ZodiacSignCondition",
+    "TransitHouseCondition",
+    "VoidOfCourseMoonCondition",
+    "PlanetaryHourCondition",
     "MoonPhaseCondition",
     "NatalChart",
     "OpportunitySearchQuery",
@@ -104,6 +118,49 @@ class TransitNatalHouseCondition:
 
 
 @dataclass(frozen=True)
+class RetrogradeCondition:
+    id: str
+    body: str
+    retrograde: bool = True
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class ZodiacSignCondition:
+    id: str
+    body: str
+    signs: Sequence[str]
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class TransitHouseCondition:
+    id: str
+    body: str
+    houses: Sequence[int]
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class VoidOfCourseMoonCondition:
+    id: str
+    void: bool = True
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class PlanetaryHourCondition:
+    id: str
+    rulers: Sequence[str]
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
 class NatalChart:
     datetime: datetime
     latitude: float
@@ -118,6 +175,11 @@ Condition = Union[
     MoonPhaseCondition,
     NatalAspectCondition,
     TransitNatalHouseCondition,
+    RetrogradeCondition,
+    ZodiacSignCondition,
+    TransitHouseCondition,
+    VoidOfCourseMoonCondition,
+    PlanetaryHourCondition,
 ]
 
 
@@ -133,6 +195,7 @@ class OpportunitySearchQuery:
     longitude: Optional[float] = None
     altitude: float = 0.0
     natal_chart: Optional[NatalChart] = None
+    house_system: str = "Placidus"
 
 
 @dataclass(frozen=True)
@@ -173,6 +236,13 @@ class _TimeWindow:
 class _NatalSnapshot:
     positions: Mapping[str, float]
     house_cusps: Optional[Tuple[float, ...]]
+
+
+@dataclass(frozen=True)
+class _EvaluationContext:
+    query: OpportunitySearchQuery
+    void_intervals: Tuple[_TimeWindow, ...] = ()
+    planetary_hours: Tuple[PlanetaryHour, ...] = ()
 
 
 class _StaticOverlayProvider:
@@ -221,10 +291,10 @@ def _validate_aspect_names(
 
 def _normalize_house_system(value: str) -> str:
     if not isinstance(value, str):
-        raise ValueError("natal_chart house_system must be a string.")
+        raise ValueError("house_system must be a string.")
     normalized = HOUSE_SYSTEMS.get(value, value)
     if normalized not in set(HOUSE_SYSTEMS.values()):
-        raise ValueError(f"Unsupported natal house system: {value}")
+        raise ValueError(f"Unsupported house system: {value}")
     return normalized
 
 
@@ -237,6 +307,35 @@ def _condition_requires_natal_houses(condition: Condition) -> bool:
         isinstance(condition, NatalAspectCondition)
         and condition.natal_target in NATAL_ANGLES + NATAL_HOUSE_CUSPS
     )
+
+
+def _condition_requires_location(condition: Condition) -> bool:
+    return isinstance(
+        condition, (TransitHouseCondition, PlanetaryHourCondition)
+    )
+
+
+def _validate_sequence(
+    condition_id: str,
+    values: Sequence[Any],
+    label: str,
+) -> None:
+    if (
+        isinstance(values, (str, bytes))
+        or not isinstance(values, Sequence)
+        or not values
+    ):
+        raise ValueError(f"Condition '{condition_id}' requires {label}.")
+
+
+def _validate_houses(condition_id: str, houses: Sequence[int]) -> None:
+    _validate_sequence(condition_id, houses, "houses")
+    if any(isinstance(house, bool) or not isinstance(house, int) for house in houses):
+        raise ValueError(f"Condition '{condition_id}' houses must be integers.")
+    if any(house < 1 or house > 12 for house in houses):
+        raise ValueError(f"Condition '{condition_id}' houses must be between 1 and 12.")
+    if len(set(houses)) != len(houses):
+        raise ValueError(f"Condition '{condition_id}' contains duplicate houses.")
 
 
 def _condition_uses_fixed_star(condition: Condition) -> bool:
@@ -287,21 +386,55 @@ def _validate_condition(condition: Condition) -> None:
     elif isinstance(condition, TransitNatalHouseCondition):
         if condition.transit_body not in SUPPORTED_BODY_IDS:
             raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
-        if (
-            isinstance(condition.houses, (str, bytes))
-            or not isinstance(condition.houses, Sequence)
-            or not condition.houses
-        ):
-            raise ValueError(f"Condition '{condition.id}' requires natal houses.")
-        if any(
-            isinstance(house, bool) or not isinstance(house, int)
-            for house in condition.houses
-        ):
-            raise ValueError(f"Condition '{condition.id}' houses must be integers.")
-        if any(house < 1 or house > 12 for house in condition.houses):
-            raise ValueError(f"Condition '{condition.id}' houses must be between 1 and 12.")
-        if len(set(condition.houses)) != len(condition.houses):
-            raise ValueError(f"Condition '{condition.id}' contains duplicate houses.")
+        _validate_houses(condition.id, condition.houses)
+        maximum = None
+    elif isinstance(condition, RetrogradeCondition):
+        if condition.body not in SUPPORTED_BODY_IDS:
+            raise ValueError(f"Unsupported celestial body: {condition.body}")
+        if not isinstance(condition.retrograde, bool):
+            raise ValueError(
+                f"Condition '{condition.id}' retrograde must be boolean."
+            )
+        maximum = None
+    elif isinstance(condition, ZodiacSignCondition):
+        if condition.body not in SUPPORTED_BODY_NAMES:
+            raise ValueError(f"Unsupported celestial body: {condition.body}")
+        _validate_sequence(condition.id, condition.signs, "zodiac signs")
+        if any(not isinstance(sign, str) for sign in condition.signs):
+            raise ValueError(
+                f"Condition '{condition.id}' zodiac signs must be strings."
+            )
+        if len(set(condition.signs)) != len(condition.signs):
+            raise ValueError(
+                f"Condition '{condition.id}' contains duplicate zodiac signs."
+            )
+        unknown = [sign for sign in condition.signs if sign not in ZODIAC_SIGNS]
+        if unknown:
+            raise ValueError(f"Unknown zodiac signs: {', '.join(unknown)}")
+        maximum = None
+    elif isinstance(condition, TransitHouseCondition):
+        if condition.body not in SUPPORTED_BODY_NAMES:
+            raise ValueError(f"Unsupported celestial body: {condition.body}")
+        _validate_houses(condition.id, condition.houses)
+        maximum = None
+    elif isinstance(condition, VoidOfCourseMoonCondition):
+        if not isinstance(condition.void, bool):
+            raise ValueError(f"Condition '{condition.id}' void must be boolean.")
+        maximum = None
+    elif isinstance(condition, PlanetaryHourCondition):
+        _validate_sequence(
+            condition.id, condition.rulers, "planetary-hour rulers"
+        )
+        if any(not isinstance(ruler, str) for ruler in condition.rulers):
+            raise ValueError(
+                f"Condition '{condition.id}' planetary-hour rulers must be strings."
+            )
+        if len(set(condition.rulers)) != len(condition.rulers):
+            raise ValueError(
+                f"Condition '{condition.id}' contains duplicate "
+                "planetary-hour rulers."
+            )
+        validate_planetary_hour_rulers(condition.rulers)
         maximum = None
     elif isinstance(condition, MoonPhaseCondition):
         if not isinstance(condition.phase, str):
@@ -392,6 +525,12 @@ def _validate_query(query: OpportunitySearchQuery) -> Tuple[datetime, datetime]:
         raise ValueError(
             "Topocentric opportunity searches require latitude and longitude."
         )
+    if any(_condition_requires_location(condition) for condition in query.conditions):
+        if query.latitude is None or query.longitude is None:
+            raise ValueError(
+                "Transit-house and planetary-hour conditions require latitude "
+                "and longitude."
+            )
     if not isinstance(query.timezone, str):
         raise ValueError("timezone must be a string.")
     pytz.timezone(query.timezone)
@@ -402,6 +541,11 @@ def _validate_query(query: OpportunitySearchQuery) -> Tuple[datetime, datetime]:
     ):
         if value is not None:
             _number(value, field)
+    if query.latitude is not None and not -90 <= float(query.latitude) <= 90:
+        raise ValueError("latitude must be between -90 and 90 degrees.")
+    if query.longitude is not None and not -180 <= float(query.longitude) <= 180:
+        raise ValueError("longitude must be between -180 and 180 degrees.")
+    _normalize_house_system(query.house_system)
     return start, end
 
 
@@ -611,11 +755,61 @@ def _circular_deviation(value: float, target: float) -> float:
     return abs((value - target + 180.0) % 360.0 - 180.0)
 
 
+def _categorical_result(matched: bool) -> Tuple[float, float, float]:
+    return (100.0 if matched else 0.0, 0.0 if matched else 1.0, 0.0)
+
+
+def _zodiac_sign(longitude: float) -> str:
+    return ZODIAC_SIGNS[int((longitude % 360.0) // 30.0)]
+
+
+def _transit_house(
+    condition: TransitHouseCondition,
+    when: datetime,
+    positions: _CachedPositions,
+    query: OpportunitySearchQuery,
+) -> int:
+    cusps, _ = calculate_house_cusps(
+        when.astimezone(timezone.utc),
+        float(query.latitude),
+        float(query.longitude),
+        h_sys=_normalize_house_system(query.house_system),
+        zodiac=query.zodiac,
+    )
+    return find_house_number(positions.get(when, condition.body).longitude, cusps)
+
+
+def _is_in_windows(when: datetime, windows: Sequence[_TimeWindow]) -> bool:
+    return any(
+        window.start <= when < window.end
+        or (window.start == window.end == when)
+        for window in windows
+    )
+
+
+def _planetary_hour_for_context(
+    when: datetime,
+    context: _EvaluationContext,
+) -> PlanetaryHour:
+    for hour in context.planetary_hours:
+        if hour.start <= when < hour.end:
+            return hour
+    query = context.query
+    return planetary_hour_at(
+        when,
+        query.timezone,
+        float(query.latitude),
+        float(query.longitude),
+        float(query.altitude),
+    )
+
+
 def _evaluate_condition(
     condition: Condition,
     when: datetime,
     positions: _CachedPositions,
     natal_snapshot: Optional[_NatalSnapshot],
+    context: _EvaluationContext,
 ) -> ConditionEvaluation:
     if isinstance(condition, (AspectCondition, NatalAspectCondition)):
         if isinstance(condition, AspectCondition):
@@ -670,7 +864,7 @@ def _evaluate_condition(
             f"deviation {deviation:.4f}° / {maximum:.4f}°"
         )
         condition_type = "moon_phase"
-    else:
+    elif isinstance(condition, TransitNatalHouseCondition):
         if natal_snapshot is None or natal_snapshot.house_cusps is None:
             raise ValueError("Natal house conditions require calculated house cusps.")
         transit = positions.get(when, condition.transit_body)
@@ -686,6 +880,56 @@ def _evaluate_condition(
             f"allowed {', '.join(str(value) for value in condition.houses)}"
         )
         condition_type = "transit_natal_house"
+    elif isinstance(condition, RetrogradeCondition):
+        speed = positions.get(when, condition.body).speed
+        is_retrograde = speed < 0.0
+        matched = is_retrograde == condition.retrograde
+        score, deviation, maximum = _categorical_result(matched)
+        state = "retrograde" if is_retrograde else "direct"
+        expected = "retrograde" if condition.retrograde else "direct"
+        description = (
+            f"{condition.body} is {state}; required {expected} "
+            f"(speed {speed:.6f}°/day)"
+        )
+        condition_type = "retrograde"
+    elif isinstance(condition, ZodiacSignCondition):
+        longitude = positions.get(when, condition.body).longitude
+        sign = _zodiac_sign(longitude)
+        matched = sign in condition.signs
+        score, deviation, maximum = _categorical_result(matched)
+        description = (
+            f"{condition.body} in {sign}; allowed {', '.join(condition.signs)}"
+        )
+        condition_type = "zodiac_sign"
+    elif isinstance(condition, TransitHouseCondition):
+        house = _transit_house(condition, when, positions, context.query)
+        matched = house in condition.houses
+        score, deviation, maximum = _categorical_result(matched)
+        description = (
+            f"{condition.body} in current house {house}; allowed "
+            f"{', '.join(str(value) for value in condition.houses)}"
+        )
+        condition_type = "transit_house"
+    elif isinstance(condition, VoidOfCourseMoonCondition):
+        is_void = _is_in_windows(when, context.void_intervals)
+        matched = is_void == condition.void
+        score, deviation, maximum = _categorical_result(matched)
+        state = "void of course" if is_void else "not void of course"
+        expected = "void" if condition.void else "not void"
+        description = f"Moon is {state}; required {expected}"
+        condition_type = "void_of_course_moon"
+    elif isinstance(condition, PlanetaryHourCondition):
+        hour = _planetary_hour_for_context(when, context)
+        matched = hour.ruler in condition.rulers
+        score, deviation, maximum = _categorical_result(matched)
+        description = (
+            f"Planetary hour ruled by {hour.ruler} "
+            f"(day ruler {hour.day_ruler}, hour {hour.hour_number}); "
+            f"allowed {', '.join(condition.rulers)}"
+        )
+        condition_type = "planetary_hour"
+    else:
+        raise TypeError("Unsupported opportunity condition type.")
 
     return ConditionEvaluation(
         condition_id=condition.id,
@@ -721,12 +965,180 @@ def _merge_activities(
     return merged
 
 
+def _activities_from_windows(
+    windows: Sequence[_TimeWindow],
+    start: datetime,
+    end: datetime,
+) -> List[_ConditionActivity]:
+    activities = []
+    for window in windows:
+        clipped_start = max(start, window.start)
+        clipped_end = min(end, window.end)
+        if clipped_start <= clipped_end:
+            activities.append(
+                _ConditionActivity(
+                    clipped_start,
+                    clipped_end,
+                    (clipped_start + (clipped_end - clipped_start) / 2,),
+                )
+            )
+    return _merge_activities(activities)
+
+
+def _complement_windows(
+    windows: Sequence[_TimeWindow],
+    start: datetime,
+    end: datetime,
+) -> List[_TimeWindow]:
+    if start == end:
+        return [] if _is_in_windows(start, windows) else [_TimeWindow(start, end)]
+    result = []
+    cursor = start
+    for window in _merge_time_windows(windows):
+        if window.end < start or window.start > end:
+            continue
+        window_start = max(start, window.start)
+        window_end = min(end, window.end)
+        if cursor < window_start:
+            result.append(_TimeWindow(cursor, window_start))
+        cursor = max(cursor, window_end)
+    if cursor < end:
+        result.append(_TimeWindow(cursor, end))
+    return result
+
+
+def _collect_speed_stations(
+    start: datetime,
+    end: datetime,
+    body: str,
+    positions: _CachedPositions,
+) -> List[datetime]:
+    stations = []
+    current = start
+    current_speed = positions.get(current, body).speed
+    while current < end:
+        next_time = min(current + MAX_STEP, end)
+        next_speed = positions.get(next_time, body).speed
+        if current_speed == 0.0:
+            stations.append(current)
+        if current_speed * next_speed < 0.0:
+            stations.append(
+                _refine_station(
+                    positions,
+                    body,
+                    ZODIAC_ORIGIN,
+                    current,
+                    next_time,
+                    current_speed,
+                    next_speed,
+                )
+            )
+        elif next_speed == 0.0:
+            stations.append(next_time)
+        current = next_time
+        current_speed = next_speed
+    return _deduplicate_times(stations)
+
+
+def _sampled_categorical_activities(
+    start: datetime,
+    end: datetime,
+    evaluate: Callable[[datetime], bool],
+    step: timedelta,
+) -> List[_ConditionActivity]:
+    if start == end:
+        return [_ConditionActivity(start, end, (start,))] if evaluate(start) else []
+
+    boundaries = []
+    current = start
+    current_state = evaluate(current)
+    while current < end:
+        next_time = min(current + step, end)
+        next_state = evaluate(next_time)
+        if next_state != current_state:
+            left, right = current, next_time
+            left_state = current_state
+            while right - left > timedelta(seconds=1):
+                midpoint = left + (right - left) / 2
+                if evaluate(midpoint) == left_state:
+                    left = midpoint
+                else:
+                    right = midpoint
+            boundaries.append(right)
+        current = next_time
+        current_state = next_state
+
+    points = _deduplicate_times([start, *boundaries, end])
+    activities = []
+    for left, right in zip(points, points[1:]):
+        midpoint = left + (right - left) / 2
+        if evaluate(midpoint):
+            activities.append(_ConditionActivity(left, right, (midpoint,)))
+    return _merge_activities(activities)
+
+
+def _void_of_course_windows(
+    start: datetime,
+    end: datetime,
+    positions: _CachedPositions,
+) -> List[_TimeWindow]:
+    margin = timedelta(days=4)
+    scan_start = start - margin
+    scan_end = end + margin
+    sign_boundaries, _ = _collect_phase_crossings(
+        scan_start,
+        scan_end,
+        "Moon",
+        ZODIAC_ORIGIN,
+        tuple((sign, index * 30.0) for index, sign in enumerate(ZODIAC_SIGNS)),
+        0.0,
+        positions,
+    )
+    exact_aspects = []
+    targets = []
+    for aspect_name in VOC_ASPECTS:
+        angle = float(ALL_ASPECTS[aspect_name]["Degrees"])
+        targets.extend(
+            (aspect_name, branch) for branch in _aspect_branches(angle)
+        )
+    for body in VOC_BODIES:
+        crossings, _ = _collect_phase_crossings(
+            scan_start,
+            scan_end,
+            "Moon",
+            body,
+            targets,
+            0.0,
+            positions,
+        )
+        exact_aspects.extend(crossings)
+    exact_aspects = _deduplicate_times(exact_aspects)
+
+    points = _deduplicate_times([scan_start, *sign_boundaries, scan_end])
+    windows = []
+    for sign_start, sign_end in zip(points, points[1:]):
+        if sign_end < start or sign_start > end:
+            continue
+        sign_aspects = [
+            event
+            for event in exact_aspects
+            if sign_start <= event < sign_end
+        ]
+        void_start = sign_aspects[-1] if sign_aspects else sign_start
+        clipped_start = max(start, void_start)
+        clipped_end = min(end, sign_end)
+        if clipped_start <= clipped_end:
+            windows.append(_TimeWindow(clipped_start, clipped_end))
+    return _merge_time_windows(windows)
+
+
 def _condition_activities(
     condition: Condition,
     start: datetime,
     end: datetime,
     positions: _CachedPositions,
     natal_snapshot: Optional[_NatalSnapshot],
+    context: _EvaluationContext,
 ) -> List[_ConditionActivity]:
     if isinstance(condition, AspectCondition):
         targets = []
@@ -755,7 +1167,7 @@ def _condition_activities(
         tolerance = float(condition.max_deviation_degrees)
         body1, body2 = "Moon", "Sun"
         categorical = False
-    else:
+    elif isinstance(condition, TransitNatalHouseCondition):
         if natal_snapshot is None or natal_snapshot.house_cusps is None:
             raise ValueError("Natal house conditions require calculated house cusps.")
         targets = [
@@ -765,6 +1177,63 @@ def _condition_activities(
         tolerance = 0.0
         body1, body2 = condition.transit_body, ZODIAC_ORIGIN
         categorical = True
+    elif isinstance(condition, ZodiacSignCondition):
+        targets = tuple(
+            (sign, index * 30.0) for index, sign in enumerate(ZODIAC_SIGNS)
+        )
+        tolerance = 0.0
+        body1, body2 = condition.body, ZODIAC_ORIGIN
+        categorical = True
+    elif isinstance(condition, RetrogradeCondition):
+        points = _deduplicate_times(
+            [
+                start,
+                *_collect_speed_stations(
+                    start, end, condition.body, positions
+                ),
+                end,
+            ]
+        )
+        if start == end:
+            evaluation = _evaluate_condition(
+                condition, start, positions, natal_snapshot, context
+            )
+            return [
+                _ConditionActivity(start, end, (start,))
+            ] if evaluation.matched else []
+        activities = []
+        for left, right in zip(points, points[1:]):
+            midpoint = left + (right - left) / 2
+            if _evaluate_condition(
+                condition, midpoint, positions, natal_snapshot, context
+            ).matched:
+                activities.append(_ConditionActivity(left, right, (midpoint,)))
+        return _merge_activities(activities)
+    elif isinstance(condition, TransitHouseCondition):
+        return _sampled_categorical_activities(
+            start,
+            end,
+            lambda when: _evaluate_condition(
+                condition, when, positions, natal_snapshot, context
+            ).matched,
+            timedelta(minutes=5),
+        )
+    elif isinstance(condition, VoidOfCourseMoonCondition):
+        windows = list(context.void_intervals)
+        if not condition.void:
+            windows = _complement_windows(windows, start, end)
+        return _activities_from_windows(windows, start, end)
+    elif isinstance(condition, PlanetaryHourCondition):
+        windows = [
+            _TimeWindow(max(start, hour.start), min(end, hour.end))
+            for hour in context.planetary_hours
+            if hour.ruler in condition.rulers
+            and hour.end >= start
+            and hour.start <= end
+        ]
+        return _activities_from_windows(windows, start, end)
+    else:
+        raise TypeError("Unsupported opportunity condition type.")
 
     boundaries, peaks = _collect_phase_crossings(
         start,
@@ -781,7 +1250,7 @@ def _condition_activities(
 
     if start == end:
         evaluation = _evaluate_condition(
-            condition, start, positions, natal_snapshot
+            condition, start, positions, natal_snapshot, context
         )
         return [
             _ConditionActivity(start, end, (start,))
@@ -793,7 +1262,7 @@ def _condition_activities(
             continue
         midpoint = left + (right - left) / 2
         if _evaluate_condition(
-            condition, midpoint, positions, natal_snapshot
+            condition, midpoint, positions, natal_snapshot, context
         ).matched:
             active_peaks = tuple(
                 peak for peak in peaks if left <= peak <= right
@@ -858,9 +1327,37 @@ def search_opportunities(
     positions = _CachedPositions(
         _StaticOverlayProvider(moving_provider, static_positions)
     )
+    void_intervals: Tuple[_TimeWindow, ...] = ()
+    if any(
+        isinstance(condition, VoidOfCourseMoonCondition)
+        for condition in query.conditions
+    ):
+        void_intervals = tuple(
+            _void_of_course_windows(start, end, positions)
+        )
+    planetary_hours: Tuple[PlanetaryHour, ...] = ()
+    if any(
+        isinstance(condition, PlanetaryHourCondition)
+        for condition in query.conditions
+    ):
+        planetary_hours = tuple(
+            planetary_hours_between(
+                start,
+                end,
+                query.timezone,
+                float(query.latitude),
+                float(query.longitude),
+                float(query.altitude),
+            )
+        )
+    context = _EvaluationContext(
+        query=query,
+        void_intervals=void_intervals,
+        planetary_hours=planetary_hours,
+    )
     activities: Dict[str, List[_ConditionActivity]] = {
         condition.id: _condition_activities(
-            condition, start, end, positions, natal_snapshot
+            condition, start, end, positions, natal_snapshot, context
         )
         for condition in query.conditions
     }
@@ -897,7 +1394,11 @@ def search_opportunities(
         for candidate in candidate_times:
             evaluations = tuple(
                 _evaluate_condition(
-                    condition, candidate, positions, natal_snapshot
+                    condition,
+                    candidate,
+                    positions,
+                    natal_snapshot,
+                    context,
                 )
                 for condition in query.conditions
             )
@@ -1011,6 +1512,7 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
             "latitude",
             "longitude",
             "altitude",
+            "house_system",
             "natal_chart",
             "conditions",
         ),
@@ -1096,6 +1598,79 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
                     weight=raw.get("weight", 1.0),
                 )
             )
+        elif condition_type == "retrograde":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"body", "retrograde"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                RetrogradeCondition(
+                    id=raw.get("id"),
+                    body=raw.get("body"),
+                    retrograde=raw.get("retrograde", True),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
+        elif condition_type == "zodiac_sign":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"body", "signs"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                ZodiacSignCondition(
+                    id=raw.get("id"),
+                    body=raw.get("body"),
+                    signs=raw.get("signs"),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
+        elif condition_type == "transit_house":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"body", "houses"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                TransitHouseCondition(
+                    id=raw.get("id"),
+                    body=raw.get("body"),
+                    houses=raw.get("houses"),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
+        elif condition_type == "void_of_course_moon":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"void"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                VoidOfCourseMoonCondition(
+                    id=raw.get("id"),
+                    void=raw.get("void", True),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
+        elif condition_type == "planetary_hour":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"rulers"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                PlanetaryHourCondition(
+                    id=raw.get("id"),
+                    rulers=raw.get("rulers"),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
         elif condition_type == "moon_phase":
             _validate_json_keys(
                 raw,
@@ -1127,6 +1702,7 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
         latitude=data.get("latitude"),
         longitude=data.get("longitude"),
         altitude=data.get("altitude", 0.0),
+        house_system=data.get("house_system", "Placidus"),
         natal_chart=_natal_chart_from_dict(data.get("natal_chart")),
     )
     _validate_query(query)

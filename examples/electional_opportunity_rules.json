@@ -1,0 +1,48 @@
+{
+  "start": "2026-07-03 00:00",
+  "end": "2026-07-04 00:00",
+  "timezone": "Europe/Stockholm",
+  "latitude": 57.7089,
+  "longitude": 11.9746,
+  "house_system": "Placidus",
+  "conditions": [
+    {
+      "id": "mercury_retrograde",
+      "type": "retrograde",
+      "body": "Mercury",
+      "retrograde": true,
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "moon_aquarius",
+      "type": "zodiac_sign",
+      "body": "Moon",
+      "signs": ["Aquarius"],
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "moon_house_9",
+      "type": "transit_house",
+      "body": "Moon",
+      "houses": [9],
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "venus_hour",
+      "type": "planetary_hour",
+      "rulers": ["Venus"],
+      "required": true,
+      "weight": 1
+    }
+  ]
+}

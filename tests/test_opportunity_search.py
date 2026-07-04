@@ -19,10 +19,15 @@ from astroscript.opportunity_search import (
     NatalAspectCondition,
     NatalChart,
     MoonPhaseCondition,
+    PlanetaryHourCondition,
     OpportunitySearchQuery,
     OpportunityWindow,
     ConditionEvaluation,
+    RetrogradeCondition,
+    TransitHouseCondition,
     TransitNatalHouseCondition,
+    VoidOfCourseMoonCondition,
+    ZodiacSignCondition,
     load_opportunity_query,
     opportunity_query_from_dict,
     search_opportunities,
@@ -635,6 +640,137 @@ class OpportunitySearchTests(unittest.TestCase):
             "Sun Conjunction Regulus", windows[0].evaluations[0].description
         )
 
+    def test_retrograde_condition_uses_exact_station(self):
+        def provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            speed = 2 * days - 1
+            return (100 + days * days - days, speed)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(RetrogradeCondition("mercury_rx", "Mercury"),),
+        )
+
+        windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertEqual(windows[0].start, self.start)
+        self.assertLess(
+            abs(windows[0].end - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertIn("Mercury is retrograde", windows[0].evaluations[0].description)
+
+    def test_zodiac_sign_condition_handles_sign_ingress(self):
+        def provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            return (29 + 2 * days, 2)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                ZodiacSignCondition("mercury_taurus", "Mercury", ("Taurus",)),
+            ),
+        )
+
+        windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(windows[0].start - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertEqual(windows[0].end, self.end)
+        self.assertIn("Mercury in Taurus", windows[0].evaluations[0].description)
+
+    def test_current_house_condition_is_separate_from_natal_houses(self):
+        def provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            return (25 + 10 * days, 10)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(TransitHouseCondition("mars_house_2", "Mars", (2,)),),
+            latitude=57.7,
+            longitude=11.9,
+        )
+        with patch(
+            "astroscript.opportunity_search.calculate_house_cusps",
+            return_value=(tuple(range(0, 360, 30)), (0, 270)),
+        ):
+            windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(windows[0].start - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertIn("current house 2", windows[0].evaluations[0].description)
+
+    def test_void_of_course_moon_uses_last_traditional_aspect_to_ingress(self):
+        query = OpportunitySearchQuery(
+            datetime(2026, 7, 1, tzinfo=timezone.utc),
+            datetime(2026, 7, 2, tzinfo=timezone.utc),
+            conditions=(VoidOfCourseMoonCondition("voc"),),
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(
+                windows[0].start
+                - datetime(2026, 7, 1, 11, 50, 46, tzinfo=timezone.utc)
+            ),
+            timedelta(seconds=1),
+        )
+        self.assertLess(
+            abs(
+                windows[0].end
+                - datetime(2026, 7, 1, 19, 32, 51, tzinfo=timezone.utc)
+            ),
+            timedelta(seconds=1),
+        )
+        self.assertIn("Moon is void of course", windows[0].evaluations[0].description)
+
+    def test_planetary_hours_use_sunrise_and_unequal_day_hours(self):
+        query = OpportunitySearchQuery(
+            datetime(2026, 7, 3, tzinfo=timezone.utc),
+            datetime(2026, 7, 4, tzinfo=timezone.utc),
+            conditions=(PlanetaryHourCondition("venus_hour", ("Venus",)),),
+            timezone="Europe/Stockholm",
+            latitude=57.7089,
+            longitude=11.9746,
+        )
+
+        windows = sorted(search_opportunities(query), key=lambda item: item.start)
+
+        self.assertEqual(len(windows), 3)
+        self.assertLess(
+            abs(
+                windows[0].start
+                - datetime(2026, 7, 3, 2, 18, 6, tzinfo=timezone.utc)
+            ),
+            timedelta(seconds=1),
+        )
+        self.assertGreater(windows[0].end - windows[0].start, timedelta(hours=1))
+        self.assertIn("day ruler Venus", windows[0].evaluations[0].description)
+
+    def test_real_electional_example_combines_all_new_conditions(self):
+        query = load_opportunity_query(
+            ROOT_DIR / "examples" / "electional_opportunity_rules.json"
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertEqual(len(windows), 1)
+        self.assertEqual(len(windows[0].evaluations), 5)
+        self.assertTrue(all(item.matched for item in windows[0].evaluations))
+        self.assertEqual(windows[0].peak, windows[0].start)
+
 
 class OpportunityJsonTests(unittest.TestCase):
     def setUp(self):
@@ -848,6 +984,105 @@ class OpportunityJsonTests(unittest.TestCase):
             ]
 
             with self.subTest(star=star, orb=orb), self.assertRaises(ValueError):
+                opportunity_query_from_dict(rules)
+
+    def test_json_supports_electional_conditions(self):
+        rules = copy.deepcopy(self.rules)
+        rules.update(
+            {
+                "latitude": 57.7,
+                "longitude": 11.9,
+                "house_system": "Placidus",
+            }
+        )
+        rules["conditions"] = [
+            {"id": "rx", "type": "retrograde", "body": "Mercury"},
+            {
+                "id": "sign",
+                "type": "zodiac_sign",
+                "body": "Moon",
+                "signs": ["Cancer", "Leo"],
+            },
+            {
+                "id": "house",
+                "type": "transit_house",
+                "body": "Venus",
+                "houses": [5, 7],
+            },
+            {
+                "id": "voc",
+                "type": "void_of_course_moon",
+                "void": False,
+            },
+            {
+                "id": "hour",
+                "type": "planetary_hour",
+                "rulers": ["Venus", "Jupiter"],
+            },
+        ]
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertIsInstance(query.conditions[0], RetrogradeCondition)
+        self.assertIsInstance(query.conditions[1], ZodiacSignCondition)
+        self.assertIsInstance(query.conditions[2], TransitHouseCondition)
+        self.assertIsInstance(query.conditions[3], VoidOfCourseMoonCondition)
+        self.assertIsInstance(query.conditions[4], PlanetaryHourCondition)
+        self.assertEqual(query.house_system, "Placidus")
+
+    def test_invalid_electional_rules_are_rejected(self):
+        invalid_conditions = [
+            {"id": "rx", "type": "retrograde", "body": "Regulus"},
+            {
+                "id": "sign",
+                "type": "zodiac_sign",
+                "body": "Moon",
+                "signs": ["Ophiuchus"],
+            },
+            {
+                "id": "house",
+                "type": "transit_house",
+                "body": "Moon",
+                "houses": [0],
+            },
+            {
+                "id": "voc",
+                "type": "void_of_course_moon",
+                "void": "no",
+            },
+            {
+                "id": "hour",
+                "type": "planetary_hour",
+                "rulers": ["Uranus"],
+            },
+        ]
+        for condition in invalid_conditions:
+            rules = copy.deepcopy(self.rules)
+            rules["conditions"] = [condition]
+            rules["latitude"] = 57.7
+            rules["longitude"] = 11.9
+            with self.subTest(condition=condition), self.assertRaises(ValueError):
+                opportunity_query_from_dict(rules)
+
+    def test_location_conditions_require_coordinates(self):
+        for condition in (
+            {
+                "id": "house",
+                "type": "transit_house",
+                "body": "Moon",
+                "houses": [1],
+            },
+            {
+                "id": "hour",
+                "type": "planetary_hour",
+                "rulers": ["Moon"],
+            },
+        ):
+            rules = copy.deepcopy(self.rules)
+            rules["conditions"] = [condition]
+            with self.subTest(condition=condition), self.assertRaisesRegex(
+                ValueError, "require latitude and longitude"
+            ):
                 opportunity_query_from_dict(rules)
 
 
