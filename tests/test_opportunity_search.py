@@ -472,6 +472,84 @@ class OpportunitySearchTests(unittest.TestCase):
         )
         self.assertLess(windows[0].evaluations[0].deviation_degrees, 0.001)
 
+    def test_asteroids_work_in_generic_natal_and_house_conditions(self):
+        natal_datetime = datetime(1990, 1, 1, tzinfo=timezone.utc)
+        cusps = tuple(range(0, 360, 30))
+
+        def provider(when, body):
+            if when.year == 1990 and body == "Juno":
+                return (100, 0)
+            days = (when - self.start).total_seconds() / 86400
+            values = {
+                "Mars": (99 + 2 * days, 2),
+                "Juno": (25 + 10 * days, 10),
+                "Ceres": (100, 0),
+            }
+            return values.get(body, (0, 0))
+
+        generic = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                AspectCondition(
+                    "ceres_mars", "Ceres", "Mars", ("Conjunction",), 1
+                ),
+            ),
+        )
+        natal = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "mars_natal_juno",
+                    "Mars",
+                    "Juno",
+                    ("Conjunction",),
+                    0.5,
+                ),
+            ),
+            natal_chart=NatalChart(
+                natal_datetime, 57.7, 11.9, time_unknown=True
+            ),
+        )
+        house = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                TransitNatalHouseCondition("juno_house_2", "Juno", (2,)),
+            ),
+            natal_chart=NatalChart(natal_datetime, 57.7, 11.9),
+        )
+
+        generic_windows = search_opportunities(
+            generic, _position_provider=provider
+        )
+        natal_windows = search_opportunities(natal, _position_provider=provider)
+        with patch(
+            "astroscript.opportunity_search.calculate_house_cusps",
+            return_value=(cusps, (0, 270)),
+        ):
+            house_windows = search_opportunities(
+                house, _position_provider=provider
+            )
+
+        self.assertTrue(generic_windows)
+        self.assertEqual(len(natal_windows), 1)
+        self.assertEqual(len(house_windows), 1)
+        self.assertIn("natal Juno", natal_windows[0].evaluations[0].description)
+        self.assertIn("natal house 2", house_windows[0].evaluations[0].description)
+
+    def test_real_asteroid_example_finds_mars_juno_trine(self):
+        query = load_opportunity_query(
+            ROOT_DIR / "examples" / "asteroid_opportunity_rules.json"
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertEqual(len(windows), 1)
+        self.assertGreater(windows[0].score, 99.9)
+        self.assertIn("Mars Trine Juno", windows[0].evaluations[0].description)
+
 
 class OpportunityJsonTests(unittest.TestCase):
     def setUp(self):

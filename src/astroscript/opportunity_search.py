@@ -12,9 +12,9 @@ import pytz
 from .aspect_search import (
     ANGULAR_TOLERANCE_DEGREES,
     DEDUPLICATION_TOLERANCE,
-    DEFAULT_BODY_IDS,
     MAX_PHASE_CHANGE_DEGREES,
     MAX_STEP,
+    SUPPORTED_BODY_IDS,
     AspectSearchQuery,
     PositionProvider,
     _CachedPositions,
@@ -224,7 +224,7 @@ def _normalize_house_system(value: str) -> str:
 
 
 def _natal_target_names() -> Tuple[str, ...]:
-    return tuple(DEFAULT_BODY_IDS) + NATAL_ANGLES + NATAL_HOUSE_CUSPS
+    return tuple(SUPPORTED_BODY_IDS) + NATAL_ANGLES + NATAL_HOUSE_CUSPS
 
 
 def _condition_requires_natal_houses(condition: Condition) -> bool:
@@ -244,9 +244,9 @@ def _validate_condition(condition: Condition) -> None:
         raise ValueError(f"Condition '{condition.id}' weight must be greater than 0.")
 
     if isinstance(condition, AspectCondition):
-        if condition.body1 not in DEFAULT_BODY_IDS:
+        if condition.body1 not in SUPPORTED_BODY_IDS:
             raise ValueError(f"Unsupported celestial body: {condition.body1}")
-        if condition.body2 not in DEFAULT_BODY_IDS:
+        if condition.body2 not in SUPPORTED_BODY_IDS:
             raise ValueError(f"Unsupported celestial body: {condition.body2}")
         if condition.body1 == condition.body2:
             raise ValueError(f"Condition '{condition.id}' requires two different bodies.")
@@ -256,7 +256,7 @@ def _validate_condition(condition: Condition) -> None:
             f"Condition '{condition.id}' max_orb_degrees",
         )
     elif isinstance(condition, NatalAspectCondition):
-        if condition.transit_body not in DEFAULT_BODY_IDS:
+        if condition.transit_body not in SUPPORTED_BODY_IDS:
             raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
         if condition.natal_target not in _natal_target_names():
             raise ValueError(f"Unsupported natal target: {condition.natal_target}")
@@ -266,7 +266,7 @@ def _validate_condition(condition: Condition) -> None:
             f"Condition '{condition.id}' max_orb_degrees",
         )
     elif isinstance(condition, TransitNatalHouseCondition):
-        if condition.transit_body not in DEFAULT_BODY_IDS:
+        if condition.transit_body not in SUPPORTED_BODY_IDS:
             raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
         if (
             isinstance(condition.houses, (str, bytes))
@@ -411,7 +411,7 @@ def _build_natal_snapshot(
             end=natal_datetime,
             zodiac=query.zodiac,
             center=query.center,
-            bodies=tuple(DEFAULT_BODY_IDS),
+            bodies=tuple(SUPPORTED_BODY_IDS),
             latitude=natal.latitude,
             longitude=natal.longitude,
             altitude=natal.altitude,
@@ -421,7 +421,7 @@ def _build_natal_snapshot(
         condition.natal_target
         for condition in query.conditions
         if isinstance(condition, NatalAspectCondition)
-        and condition.natal_target in DEFAULT_BODY_IDS
+        and condition.natal_target in SUPPORTED_BODY_IDS
     }
     positions = {}
     for body in natal_bodies:

@@ -1,0 +1,17 @@
+{
+  "start": "2026-07-08 00:00",
+  "end": "2026-07-11 00:00",
+  "timezone": "Europe/Stockholm",
+  "conditions": [
+    {
+      "id": "mars_trine_juno",
+      "type": "aspect",
+      "body1": "Mars",
+      "body2": "Juno",
+      "aspects": ["Trine"],
+      "max_orb_degrees": 1,
+      "required": true,
+      "weight": 1
+    }
+  ]
+}

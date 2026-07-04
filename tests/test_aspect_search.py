@@ -13,7 +13,9 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from astroscript.aspect_search import (
+    ASTEROID_BODY_IDS,
     DEFAULT_BODIES,
+    SUPPORTED_BODY_IDS,
     AspectEvent,
     AspectSearchQuery,
     search_exact_aspects,
@@ -41,6 +43,11 @@ class AspectSearchTests(unittest.TestCase):
         )
         self.assertEqual(DEFAULT_BODIES, valid_planets)
         self.assertNotIn("Ascendant", DEFAULT_BODIES)
+        self.assertNotIn("Ceres", DEFAULT_BODIES)
+        self.assertEqual(
+            set(ASTEROID_BODY_IDS), {"Ceres", "Pholus", "Pallas", "Juno", "Vesta"}
+        )
+        self.assertIn("Juno", SUPPORTED_BODY_IDS)
         self.assertEqual(set(MAJOR_ASPECTS), {
             "Conjunction", "Opposition", "Square", "Trine", "Sextile"
         })
@@ -192,6 +199,22 @@ class AspectSearchTests(unittest.TestCase):
         trines = [event for event in events if event.aspect == "Trine"]
         self.assertEqual(len(trines), 1)
         separation = abs(trines[0].body1_longitude - trines[0].body2_longitude) % 360
+        separation = min(separation, 360 - separation)
+        self.assertAlmostEqual(separation, 120, delta=0.001)
+
+    def test_explicit_asteroid_search_finds_exact_aspect(self):
+        query = AspectSearchQuery(
+            datetime(2026, 7, 9, tzinfo=timezone.utc),
+            datetime(2026, 7, 10, tzinfo=timezone.utc),
+            bodies=("Mars", "Juno"),
+        )
+
+        events = search_exact_aspects(query)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].aspect, "Trine")
+        self.assertEqual((events[0].body1, events[0].body2), ("Mars", "Juno"))
+        separation = abs(events[0].body1_longitude - events[0].body2_longitude) % 360
         separation = min(separation, 360 - separation)
         self.assertAlmostEqual(separation, 120, delta=0.001)
 

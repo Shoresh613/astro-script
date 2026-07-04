@@ -198,6 +198,18 @@ The Python API exposes these as `NatalChart`, `NatalAspectCondition`, and
 noon for planetary positions and rejects house-, cusp-, and angle-dependent
 conditions because those cannot be calculated reliably without a birth time.
 
+Asteroid bodies are opt-in and use the same aspect and natal condition types as
+planets. Supported names are `Ceres`, `Pholus`, `Pallas`, `Juno`, and `Vesta`.
+They can be selected through `AspectSearchQuery.bodies`, used on either side of
+an `AspectCondition`, used as a moving or natal target in
+`NatalAspectCondition`, and placed in natal houses with
+`TransitNatalHouseCondition`. They are deliberately excluded from default
+searches to keep result volume manageable.
+
+```bash
+python astro_script.py --opportunity-search examples/asteroid_opportunity_rules.json
+```
+
 
 ### Options
 
