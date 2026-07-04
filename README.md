@@ -98,6 +98,40 @@ python astro_script.py --date "2021-12-25 15:30" --zodiac vedic --latitude 57.7 
 
 This option changes positional calculations only. It does not add nakshatras, dashas, Vedic aspects, or separate Vedic dignity rules.
 
+Search for exact major aspects between the moving bodies in `PLANETS` during an
+inclusive local-time period:
+
+```bash
+python astro_script.py --aspect-period "2026-07-01 00:00" "2026-07-08 00:00" --timezone Europe/Stockholm
+```
+
+Aspect-period searches are geocentric and tropical by default. Use `--zodiac`
+to change zodiac mode. CLI output supports `text` and `return_text`; HTML is not
+generated for period searches. A topocentric search requires explicit coordinates:
+
+```bash
+python astro_script.py --aspect-period "2026-07-01 00:00" "2026-07-02 00:00" --timezone Europe/Stockholm --center topocentric --latitude 57.7 --longitude 11.9
+```
+
+The reusable Python API returns structured, chronologically sorted events:
+
+```python
+from datetime import datetime, timezone
+
+from astroscript.aspect_search import AspectSearchQuery, search_exact_aspects
+
+events = search_exact_aspects(
+    AspectSearchQuery(
+        start=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 7, 8, tzinfo=timezone.utc),
+    )
+)
+```
+
+`bodies` and `aspect_types` can optionally be supplied on `AspectSearchQuery`.
+The default excludes angles and house cusps and searches conjunctions,
+oppositions, squares, trines, and sextiles.
+
 
 ### Options
 
@@ -106,6 +140,7 @@ This option changes positional calculations only. It does not add nakshatras, da
 - `--location`: Location name for looking up geographic coordinates.
 - `--latitude` and `--longitude`: Specific latitude and longitude to use.
 - `--timezone`: Timezone of the location.
+- `--aspect-period`: Inclusive start and end for an exact moving-body aspect search (`YYYY-MM-DD HH:MM`).
 - `--house_system`: House system to use, defaults to Placidus.
 - `--zodiac`: Zodiac mode (`tropical`, `sidereal`, or `vedic`). `sidereal` and `vedic` both use Lahiri ayanamsha; the default is `tropical`.
 - `--output_type`: Format of the output (`text`, `return_text`, `html`).

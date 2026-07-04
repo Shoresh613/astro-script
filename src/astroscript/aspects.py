@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import timezone
 from math import sin, cos, radians, exp, pi
 
 from .constants import *
 from .coords import coord_in_minutes
-from .positions import calculate_planet_positions
 
 def calculate_adjustment_factor(magnitude, min_factor=0.8, max_factor=1.2):
     """
@@ -417,7 +416,11 @@ def find_exact_aspects_in_timeframe(
     zodiac="tropical",
 ):
     """
-    Finds exact aspects between planets within a given time frame.
+    Find exact aspects between planets within a given time frame.
+
+    This compatibility wrapper retains the legacy dictionary response while
+    delegating the actual search to :func:`search_exact_aspects`. ``orbs`` and
+    ``step_days`` are retained for callers but do not affect exact events.
 
     Parameters:
     - begin_date: The start date (datetime object) in UTC.
@@ -432,47 +435,43 @@ def find_exact_aspects_in_timeframe(
     - A list of dictionaries, each representing an exact aspect found within the timeframe.
     """
 
-    aspects_list = []
+    from .aspect_search import AspectSearchQuery, search_exact_aspects
 
-    # Loop through each date within the given range
-    current_date = begin_date
-    while current_date <= end_date:
-        # Calculate the positions of all planets for the current date using the existing function
-        planet_positions = calculate_planet_positions(
-            current_date,
-            latitude,
-            longitude,
-            altitude,
-            output_type,
-            center=center,
-            zodiac=zodiac,
+    start = (
+        begin_date.replace(tzinfo=timezone.utc)
+        if begin_date.tzinfo is None
+        else begin_date
+    )
+    end = end_date.replace(tzinfo=timezone.utc) if end_date.tzinfo is None else end_date
+    query = AspectSearchQuery(
+        start=start,
+        end=end,
+        zodiac=zodiac,
+        center=center,
+        latitude=latitude,
+        longitude=longitude,
+        altitude=altitude or 0.0,
+    )
+    events = search_exact_aspects(query)
+    results = []
+    for event in events:
+        definition = MAJOR_ASPECTS[event.aspect]
+        separation = aspect_diff(event.body1_longitude, event.body2_longitude)
+        angle_diff = separation - event.aspect_angle
+        results.append(
+            {
+                "date": event.exact_at.isoformat(),
+                "planet1": event.body1,
+                "planet2": event.body2,
+                "aspect": event.aspect,
+                "angle_diff": angle_diff,
+                "angle_diff_in_minutes": coord_in_minutes(angle_diff, output_type),
+                "is_imprecise": False,
+                "aspect_score": definition["Score"],
+                "aspect_comment": definition["Comment"],
+            }
         )
-
-        # Calculate aspects for the current date
-        aspects_found = calculate_planetary_aspects(
-            planet_positions, orbs, output_type, aspect_types=MAJOR_ASPECTS
-        )
-
-        # If aspects are found, append them to the results list
-        if aspects_found:
-            for aspect, details in aspects_found.items():
-                aspect_detail = {
-                    "date": current_date.isoformat(),
-                    "planet1": aspect[0],
-                    "planet2": aspect[1],
-                    "aspect": details["aspect_name"],
-                    "angle_diff": details["angle_diff"],
-                    "angle_diff_in_minutes": details["angle_diff_in_minutes"],
-                    "is_imprecise": details["is_imprecise"],
-                    "aspect_score": details["aspect_score"],
-                    "aspect_comment": details["aspect_comment"],
-                }
-                aspects_list.append(aspect_detail)
-
-        # Move to the next day
-        current_date += timedelta(days=step_days)
-    print(aspects_list)
-    return aspects_list
+    return results
 
 
 def calculate_planetary_aspects(planet_positions, orbs, output_type, aspect_types):

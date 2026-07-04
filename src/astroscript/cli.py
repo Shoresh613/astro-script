@@ -9,6 +9,7 @@ import pytz
 import swisseph as swe
 from colorama import Fore, Style, init
 from geopy.geocoders import Nominatim
+from pytz.exceptions import Error as PytzError
 from tabulate import SEPARATING_LINE, tabulate
 
 from db import db_manager
@@ -30,6 +31,7 @@ from .output import *
 from .events import *
 from .returns import *
 from .zodiac import *
+from .aspect_search import AspectSearchQuery, search_exact_aspects
 
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
@@ -135,6 +137,82 @@ def resolve_transits_timezone(explicit_timezone, latitude, longitude, fallback):
         if timezone_name:
             return pytz.timezone(timezone_name)
     return fallback
+
+
+def parse_aspect_period_datetime(value):
+    """Parse one naive local datetime used by the aspect-period CLI action."""
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        parsed = datetime.strptime(value, "%Y-%m-%d %H:%M")
+    else:
+        raise TypeError("Aspect period values must be text or datetime objects.")
+    if parsed.tzinfo is not None:
+        raise ValueError("Aspect period values must not contain a UTC offset.")
+    return parsed
+
+
+def run_aspect_period(args):
+    """Run the standalone exact-aspect search without entering chart setup."""
+    output_type = args.get("Output") or "text"
+    if output_type not in ("text", "return_text"):
+        raise ValueError(
+            "Aspect-period searches support output_type text or return_text."
+        )
+
+    values = args.get("Aspect Period")
+    if not values or len(values) != 2:
+        raise ValueError("An aspect period requires a start and end datetime.")
+
+    timezone_name = args.get("Timezone") or "Europe/Stockholm"
+    local_timezone = pytz.timezone(timezone_name)
+    start_local = local_timezone.localize(
+        parse_aspect_period_datetime(values[0]), is_dst=None
+    )
+    end_local = local_timezone.localize(
+        parse_aspect_period_datetime(values[1]), is_dst=None
+    )
+
+    center = (args.get("Center") or "geocentric").lower()
+    latitude = args.get("Latitude")
+    longitude = args.get("Longitude")
+    if center == "topocentric" and (latitude is None or longitude is None):
+        raise ValueError(
+            "Topocentric aspect-period searches require --latitude and --longitude."
+        )
+
+    query = AspectSearchQuery(
+        start=start_local,
+        end=end_local,
+        zodiac=args.get("Zodiac") or "tropical",
+        center=center,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    events = search_exact_aspects(query)
+    if events:
+        rows = [
+            [
+                event.exact_at.astimezone(local_timezone).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                event.body1,
+                event.aspect,
+                event.body2,
+            ]
+            for event in events
+        ]
+        result = tabulate(
+            rows,
+            headers=("Exact time", "Body 1", "Aspect", "Body 2"),
+            tablefmt="simple",
+        )
+    else:
+        result = "No exact aspects found in the specified period."
+
+    if output_type == "text":
+        print(result)
+    return result
 
 
 def called_by_gui(
@@ -554,6 +632,18 @@ If no record is found, default values will be used.""",
         required=False,
     )
     parser.add_argument(
+        "--aspect-period",
+        "--aspect_period",
+        dest="aspect_period",
+        nargs=2,
+        metavar=("START", "END"),
+        help=(
+            "Find exact moving-body aspects in an inclusive local-time period. "
+            "Quote each value as 'YYYY-MM-DD HH:MM'."
+        ),
+        required=False,
+    )
+    parser.add_argument(
         "--synastry",
         help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)",
         required=False,
@@ -656,6 +746,7 @@ If no record is found, default values will be used.""",
         "Transits": args.transits,
         "Transits Timezone": args.transits_timezone,
         "Transits Location": args.transits_location,
+        "Aspect Period": args.aspect_period,
         "Synastry": args.synastry,
         "Progressed": args.progressed,
         "Saved Names": args.saved_names,
@@ -676,6 +767,15 @@ def main(gui_arguments=None):
         args = gui_arguments
     else:
         args = argparser()
+
+    if args.get("Aspect Period"):
+        try:
+            return run_aspect_period(args)
+        except (TypeError, ValueError, PytzError) as error:
+            message = f"Invalid aspect period: {error}"
+            if (args.get("Output") or "text") in ("text", "html"):
+                print(message, file=sys.stderr)
+            return message
 
     local_datetime = datetime.now()  # Default date now
 
