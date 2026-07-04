@@ -1,0 +1,25 @@
+{
+  "start": "2026-07-01 00:00",
+  "end": "2026-08-01 00:00",
+  "timezone": "Europe/Stockholm",
+  "conditions": [
+    {
+      "id": "full_moon",
+      "type": "moon_phase",
+      "phase": "full",
+      "max_deviation_degrees": 8,
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "venus_jupiter",
+      "type": "aspect",
+      "body1": "Venus",
+      "body2": "Jupiter",
+      "aspects": ["Trine"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    }
+  ]
+}

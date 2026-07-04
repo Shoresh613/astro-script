@@ -132,6 +132,57 @@ events = search_exact_aspects(
 The default excludes angles and house cusps and searches conjunctions,
 oppositions, squares, trines, and sextiles.
 
+### Opportunity windows
+
+Opportunity searches combine required and optional astrological conditions. All
+required conditions must overlap. Every condition contributes its configured
+weight to a transparent `0-100` score based only on its distance from the exact
+aspect or lunar phase.
+
+Create a JSON rule file. A runnable version of this example is included at
+`examples/opportunity_rules.json`:
+
+```json
+{
+  "start": "2026-07-01 00:00",
+  "end": "2026-08-01 00:00",
+  "timezone": "Europe/Stockholm",
+  "conditions": [
+    {
+      "id": "full_moon",
+      "type": "moon_phase",
+      "phase": "full",
+      "max_deviation_degrees": 8,
+      "required": true,
+      "weight": 1
+    },
+    {
+      "id": "venus_jupiter",
+      "type": "aspect",
+      "body1": "Venus",
+      "body2": "Jupiter",
+      "aspects": ["Trine"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    }
+  ]
+}
+```
+
+Run the search with:
+
+```bash
+python astro_script.py --opportunity-search examples/opportunity_rules.json
+```
+
+Aspect conditions accept names from both `MAJOR_ASPECTS` and `MINOR_ASPECTS`.
+Moon phase conditions accept `new`, `first_quarter`, `full`, and
+`last_quarter`. Set `required` to `false` for a condition that should affect
+ranking without restricting which windows qualify. The Python API is available
+from `astroscript.opportunity_search` through `OpportunitySearchQuery`,
+`AspectCondition`, `MoonPhaseCondition`, and `search_opportunities()`.
+
 
 ### Options
 
@@ -141,6 +192,7 @@ oppositions, squares, trines, and sextiles.
 - `--latitude` and `--longitude`: Specific latitude and longitude to use.
 - `--timezone`: Timezone of the location.
 - `--aspect-period`: Inclusive start and end for an exact moving-body aspect search (`YYYY-MM-DD HH:MM`).
+- `--opportunity-search`: Read combined aspect and moon-phase conditions from a JSON rule file.
 - `--house_system`: House system to use, defaults to Placidus.
 - `--zodiac`: Zodiac mode (`tropical`, `sidereal`, or `vedic`). `sidereal` and `vedic` both use Lahiri ayanamsha; the default is `tropical`.
 - `--output_type`: Format of the output (`text`, `return_text`, `html`).

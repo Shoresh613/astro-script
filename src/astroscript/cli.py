@@ -32,6 +32,7 @@ from .events import *
 from .returns import *
 from .zodiac import *
 from .aspect_search import AspectSearchQuery, search_exact_aspects
+from .opportunity_search import load_opportunity_query, search_opportunities
 
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
@@ -209,6 +210,54 @@ def run_aspect_period(args):
         )
     else:
         result = "No exact aspects found in the specified period."
+
+    if output_type == "text":
+        print(result)
+    return result
+
+
+def run_opportunity_search(args):
+    """Load, execute, and format one opportunity-rule search."""
+    output_type = args.get("Output") or "text"
+    if output_type not in ("text", "return_text"):
+        raise ValueError(
+            "Opportunity searches support output_type text or return_text."
+        )
+
+    query = load_opportunity_query(args.get("Opportunity Search"))
+    windows = search_opportunities(query)
+    local_timezone = pytz.timezone(query.timezone)
+    if windows:
+        rows = []
+        for window in windows:
+            matched = "; ".join(
+                evaluation.description
+                for evaluation in window.evaluations
+                if evaluation.matched
+            )
+            rows.append(
+                [
+                    window.start.astimezone(local_timezone).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"
+                    ),
+                    window.peak.astimezone(local_timezone).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"
+                    ),
+                    window.end.astimezone(local_timezone).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"
+                    ),
+                    f"{window.score:.1f}",
+                    matched,
+                ]
+            )
+        result = tabulate(
+            rows,
+            headers=("Start", "Best time", "End", "Score", "Conditions"),
+            tablefmt="simple",
+            disable_numparse=True,
+        )
+    else:
+        result = "No opportunity windows found for the specified rules."
 
     if output_type == "text":
         print(result)
@@ -644,6 +693,14 @@ If no record is found, default values will be used.""",
         required=False,
     )
     parser.add_argument(
+        "--opportunity-search",
+        "--opportunity_search",
+        dest="opportunity_search",
+        metavar="RULES.json",
+        help="Find ranked windows using conditions from a JSON rule file.",
+        required=False,
+    )
+    parser.add_argument(
         "--synastry",
         help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)",
         required=False,
@@ -747,6 +804,7 @@ If no record is found, default values will be used.""",
         "Transits Timezone": args.transits_timezone,
         "Transits Location": args.transits_location,
         "Aspect Period": args.aspect_period,
+        "Opportunity Search": args.opportunity_search,
         "Synastry": args.synastry,
         "Progressed": args.progressed,
         "Saved Names": args.saved_names,
@@ -767,6 +825,24 @@ def main(gui_arguments=None):
         args = gui_arguments
     else:
         args = argparser()
+
+    if args.get("Aspect Period") and args.get("Opportunity Search"):
+        message = (
+            "Invalid search: --aspect-period and --opportunity-search "
+            "cannot be combined."
+        )
+        if (args.get("Output") or "text") in ("text", "html"):
+            print(message, file=sys.stderr)
+        return message
+
+    if args.get("Opportunity Search"):
+        try:
+            return run_opportunity_search(args)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError, PytzError) as error:
+            message = f"Invalid opportunity search: {error}"
+            if (args.get("Output") or "text") in ("text", "html"):
+                print(message, file=sys.stderr)
+            return message
 
     if args.get("Aspect Period"):
         try:
