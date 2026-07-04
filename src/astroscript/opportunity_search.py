@@ -18,6 +18,7 @@ from .aspect_search import (
     AspectSearchQuery,
     PositionProvider,
     _CachedPositions,
+    _Position,
     _SwissEphemerisPositionProvider,
     _raw_phase,
     _refine_crossing,
@@ -25,7 +26,8 @@ from .aspect_search import (
     _unwrap_near,
     _validate_aware,
 )
-from .constants import ALL_ASPECTS
+from .constants import ALL_ASPECTS, HOUSE_SYSTEMS
+from .houses import calculate_house_cusps, find_house_number
 from .zodiac import normalize_zodiac
 
 
@@ -36,10 +38,17 @@ PHASE_ANGLES = {
     "last_quarter": 270.0,
 }
 MATCH_TOLERANCE_DEGREES = 1e-6
+NATAL_ANGLES = ("Ascendant", "Midheaven", "IC", "DC")
+NATAL_HOUSE_CUSPS = tuple(f"House {number}" for number in range(1, 13))
+NATAL_STATIC_PREFIX = "__natal__:"
+ZODIAC_ORIGIN = "__zodiac_origin__"
 
 __all__ = [
     "AspectCondition",
+    "NatalAspectCondition",
+    "TransitNatalHouseCondition",
     "MoonPhaseCondition",
+    "NatalChart",
     "OpportunitySearchQuery",
     "ConditionEvaluation",
     "OpportunityWindow",
@@ -69,7 +78,42 @@ class MoonPhaseCondition:
     weight: float = 1.0
 
 
-Condition = Union[AspectCondition, MoonPhaseCondition]
+@dataclass(frozen=True)
+class NatalAspectCondition:
+    id: str
+    transit_body: str
+    natal_target: str
+    aspects: Sequence[str]
+    max_orb_degrees: float
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class TransitNatalHouseCondition:
+    id: str
+    transit_body: str
+    houses: Sequence[int]
+    required: bool = True
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class NatalChart:
+    datetime: datetime
+    latitude: float
+    longitude: float
+    altitude: float = 0.0
+    house_system: str = "Placidus"
+    time_unknown: bool = False
+
+
+Condition = Union[
+    AspectCondition,
+    MoonPhaseCondition,
+    NatalAspectCondition,
+    TransitNatalHouseCondition,
+]
 
 
 @dataclass(frozen=True)
@@ -83,6 +127,7 @@ class OpportunitySearchQuery:
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     altitude: float = 0.0
+    natal_chart: Optional[NatalChart] = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +164,27 @@ class _TimeWindow:
     end: datetime
 
 
+@dataclass(frozen=True)
+class _NatalSnapshot:
+    positions: Mapping[str, float]
+    house_cusps: Optional[Tuple[float, ...]]
+
+
+class _StaticOverlayProvider:
+    def __init__(
+        self,
+        moving_provider: PositionProvider,
+        static_positions: Mapping[str, float],
+    ):
+        self.moving_provider = moving_provider
+        self.static_positions = static_positions
+
+    def __call__(self, when: datetime, body: str) -> Any:
+        if body in self.static_positions:
+            return _Position(self.static_positions[body] % 360.0, 0.0)
+        return self.moving_provider(when, body)
+
+
 def _canonical_phase(value: str) -> str:
     return value.strip().lower().replace("-", "_").replace(" ", "_")
 
@@ -127,6 +193,45 @@ def _number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field} must be a number.")
     return float(value)
+
+
+def _validate_aspect_names(
+    condition_id: str,
+    aspects: Sequence[str],
+) -> None:
+    if (
+        isinstance(aspects, (str, bytes))
+        or not isinstance(aspects, Sequence)
+        or not aspects
+    ):
+        raise ValueError(f"Condition '{condition_id}' requires at least one aspect.")
+    if any(not isinstance(name, str) for name in aspects):
+        raise ValueError(f"Condition '{condition_id}' aspects must be strings.")
+    unknown = [name for name in aspects if name not in ALL_ASPECTS]
+    if unknown:
+        raise ValueError(f"Unknown aspects: {', '.join(unknown)}")
+    if len(set(aspects)) != len(aspects):
+        raise ValueError(f"Condition '{condition_id}' contains duplicate aspects.")
+
+
+def _normalize_house_system(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError("natal_chart house_system must be a string.")
+    normalized = HOUSE_SYSTEMS.get(value, value)
+    if normalized not in set(HOUSE_SYSTEMS.values()):
+        raise ValueError(f"Unsupported natal house system: {value}")
+    return normalized
+
+
+def _natal_target_names() -> Tuple[str, ...]:
+    return tuple(DEFAULT_BODY_IDS) + NATAL_ANGLES + NATAL_HOUSE_CUSPS
+
+
+def _condition_requires_natal_houses(condition: Condition) -> bool:
+    return isinstance(condition, TransitNatalHouseCondition) or (
+        isinstance(condition, NatalAspectCondition)
+        and condition.natal_target in NATAL_ANGLES + NATAL_HOUSE_CUSPS
+    )
 
 
 def _validate_condition(condition: Condition) -> None:
@@ -145,23 +250,40 @@ def _validate_condition(condition: Condition) -> None:
             raise ValueError(f"Unsupported celestial body: {condition.body2}")
         if condition.body1 == condition.body2:
             raise ValueError(f"Condition '{condition.id}' requires two different bodies.")
-        if (
-            isinstance(condition.aspects, (str, bytes))
-            or not isinstance(condition.aspects, Sequence)
-            or not condition.aspects
-        ):
-            raise ValueError(f"Condition '{condition.id}' requires at least one aspect.")
-        if any(not isinstance(name, str) for name in condition.aspects):
-            raise ValueError(f"Condition '{condition.id}' aspects must be strings.")
-        unknown = [name for name in condition.aspects if name not in ALL_ASPECTS]
-        if unknown:
-            raise ValueError(f"Unknown aspects: {', '.join(unknown)}")
-        if len(set(condition.aspects)) != len(condition.aspects):
-            raise ValueError(f"Condition '{condition.id}' contains duplicate aspects.")
+        _validate_aspect_names(condition.id, condition.aspects)
         maximum = _number(
             condition.max_orb_degrees,
             f"Condition '{condition.id}' max_orb_degrees",
         )
+    elif isinstance(condition, NatalAspectCondition):
+        if condition.transit_body not in DEFAULT_BODY_IDS:
+            raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
+        if condition.natal_target not in _natal_target_names():
+            raise ValueError(f"Unsupported natal target: {condition.natal_target}")
+        _validate_aspect_names(condition.id, condition.aspects)
+        maximum = _number(
+            condition.max_orb_degrees,
+            f"Condition '{condition.id}' max_orb_degrees",
+        )
+    elif isinstance(condition, TransitNatalHouseCondition):
+        if condition.transit_body not in DEFAULT_BODY_IDS:
+            raise ValueError(f"Unsupported celestial body: {condition.transit_body}")
+        if (
+            isinstance(condition.houses, (str, bytes))
+            or not isinstance(condition.houses, Sequence)
+            or not condition.houses
+        ):
+            raise ValueError(f"Condition '{condition.id}' requires natal houses.")
+        if any(
+            isinstance(house, bool) or not isinstance(house, int)
+            for house in condition.houses
+        ):
+            raise ValueError(f"Condition '{condition.id}' houses must be integers.")
+        if any(house < 1 or house > 12 for house in condition.houses):
+            raise ValueError(f"Condition '{condition.id}' houses must be between 1 and 12.")
+        if len(set(condition.houses)) != len(condition.houses):
+            raise ValueError(f"Condition '{condition.id}' contains duplicate houses.")
+        maximum = None
     elif isinstance(condition, MoonPhaseCondition):
         if not isinstance(condition.phase, str):
             raise ValueError(f"Condition '{condition.id}' phase must be a string.")
@@ -175,7 +297,7 @@ def _validate_condition(condition: Condition) -> None:
     else:
         raise TypeError("Unsupported opportunity condition type.")
 
-    if maximum <= 0 or maximum > 180:
+    if maximum is not None and (maximum <= 0 or maximum > 180):
         raise ValueError(
             f"Condition '{condition.id}' maximum deviation must be above 0 "
             "and at most 180 degrees."
@@ -199,6 +321,32 @@ def _validate_query(query: OpportunitySearchQuery) -> Tuple[datetime, datetime]:
         ids.append(condition.id)
     if len(ids) != len(set(ids)):
         raise ValueError("Condition ids must be unique.")
+
+    natal_conditions = [
+        condition
+        for condition in query.conditions
+        if isinstance(
+            condition, (NatalAspectCondition, TransitNatalHouseCondition)
+        )
+    ]
+    if natal_conditions and query.natal_chart is None:
+        raise ValueError("Natal conditions require natal_chart data.")
+    if query.natal_chart is not None:
+        natal = query.natal_chart
+        _validate_aware(natal.datetime, "natal_chart datetime")
+        _number(natal.latitude, "natal_chart latitude")
+        _number(natal.longitude, "natal_chart longitude")
+        _number(natal.altitude, "natal_chart altitude")
+        if not isinstance(natal.time_unknown, bool):
+            raise ValueError("natal_chart time_unknown must be boolean.")
+        _normalize_house_system(natal.house_system)
+        if natal.time_unknown and any(
+            _condition_requires_natal_houses(condition)
+            for condition in natal_conditions
+        ):
+            raise ValueError(
+                "Natal houses and angles require a known birth time."
+            )
 
     if not isinstance(query.zodiac, str):
         raise ValueError("zodiac must be a string.")
@@ -227,6 +375,85 @@ def _validate_query(query: OpportunitySearchQuery) -> Tuple[datetime, datetime]:
         if value is not None:
             _number(value, field)
     return start, end
+
+
+def _static_natal_key(target: str) -> str:
+    return f"{NATAL_STATIC_PREFIX}{target}"
+
+
+def _effective_natal_datetime(natal: NatalChart) -> datetime:
+    if not natal.time_unknown:
+        return natal.datetime
+    local_noon = datetime(
+        natal.datetime.year,
+        natal.datetime.month,
+        natal.datetime.day,
+        12,
+    )
+    natal_timezone = natal.datetime.tzinfo
+    if hasattr(natal_timezone, "localize"):
+        return natal_timezone.localize(local_noon, is_dst=None)
+    return local_noon.replace(tzinfo=natal_timezone)
+
+
+def _build_natal_snapshot(
+    query: OpportunitySearchQuery,
+    injected_provider: Optional[PositionProvider],
+) -> Optional[_NatalSnapshot]:
+    natal = query.natal_chart
+    if natal is None:
+        return None
+
+    natal_datetime = _effective_natal_datetime(natal).astimezone(timezone.utc)
+    natal_provider = injected_provider or _SwissEphemerisPositionProvider(
+        AspectSearchQuery(
+            start=natal_datetime,
+            end=natal_datetime,
+            zodiac=query.zodiac,
+            center=query.center,
+            bodies=tuple(DEFAULT_BODY_IDS),
+            latitude=natal.latitude,
+            longitude=natal.longitude,
+            altitude=natal.altitude,
+        )
+    )
+    natal_bodies = {
+        condition.natal_target
+        for condition in query.conditions
+        if isinstance(condition, NatalAspectCondition)
+        and condition.natal_target in DEFAULT_BODY_IDS
+    }
+    positions = {}
+    for body in natal_bodies:
+        value = natal_provider(natal_datetime, body)
+        longitude = value.longitude if isinstance(value, _Position) else value[0]
+        positions[body] = float(longitude) % 360.0
+
+    house_cusps = None
+    if not natal.time_unknown:
+        cusps, ascmc = calculate_house_cusps(
+            natal_datetime,
+            float(natal.latitude),
+            float(natal.longitude),
+            h_sys=_normalize_house_system(natal.house_system),
+            zodiac=query.zodiac,
+        )
+        house_cusps = tuple(float(value) % 360.0 for value in cusps[:12])
+        positions.update(
+            {
+                "Ascendant": float(ascmc[0]) % 360.0,
+                "Midheaven": float(ascmc[1]) % 360.0,
+                "IC": house_cusps[3],
+                "DC": house_cusps[6],
+            }
+        )
+        positions.update(
+            {
+                f"House {index + 1}": longitude
+                for index, longitude in enumerate(house_cusps)
+            }
+        )
+    return _NatalSnapshot(positions=positions, house_cusps=house_cusps)
 
 
 def _aspect_branches(angle: float) -> Tuple[float, ...]:
@@ -319,11 +546,16 @@ def _collect_phase_crossings(
 
         for segment_start, segment_end, phase_start, phase_end in segments:
             for _, target in targets:
-                for offset, destination in (
-                    (-tolerance, boundaries),
-                    (0.0, peaks),
-                    (tolerance, boundaries),
-                ):
+                crossings = (
+                    ((0.0, boundaries),)
+                    if tolerance == 0
+                    else (
+                        (-tolerance, boundaries),
+                        (0.0, peaks),
+                        (tolerance, boundaries),
+                    )
+                )
+                for offset, destination in crossings:
                     for level in _oriented_target_levels(
                         phase_start, phase_end, target + offset
                     ):
@@ -355,10 +587,28 @@ def _evaluate_condition(
     condition: Condition,
     when: datetime,
     positions: _CachedPositions,
+    natal_snapshot: Optional[_NatalSnapshot],
 ) -> ConditionEvaluation:
-    if isinstance(condition, AspectCondition):
-        first = positions.get(when, condition.body1)
-        second = positions.get(when, condition.body2)
+    if isinstance(condition, (AspectCondition, NatalAspectCondition)):
+        if isinstance(condition, AspectCondition):
+            body1 = condition.body1
+            body2 = condition.body2
+            aspects = condition.aspects
+            maximum = float(condition.max_orb_degrees)
+            label = f"{condition.body1} {{aspect}} {condition.body2}"
+            condition_type = "aspect"
+        else:
+            body1 = condition.transit_body
+            body2 = _static_natal_key(condition.natal_target)
+            aspects = condition.aspects
+            maximum = float(condition.max_orb_degrees)
+            label = (
+                f"Transit {condition.transit_body} {{aspect}} "
+                f"natal {condition.natal_target}"
+            )
+            condition_type = "natal_aspect"
+        first = positions.get(when, body1)
+        second = positions.get(when, body2)
         phase = _raw_phase(first, second)
         separation = min(phase, 360.0 - phase)
         choices = [
@@ -368,18 +618,16 @@ def _evaluate_condition(
                 name,
                 float(ALL_ASPECTS[name]["Degrees"]),
             )
-            for index, name in enumerate(condition.aspects)
+            for index, name in enumerate(aspects)
         ]
         deviation, _, aspect_name, target = min(choices)
-        maximum = float(condition.max_orb_degrees)
         matched = deviation <= maximum + MATCH_TOLERANCE_DEGREES
         score = max(0.0, 1.0 - deviation / maximum) * 100.0
         description = (
-            f"{condition.body1} {aspect_name} {condition.body2}: "
+            f"{label.format(aspect=aspect_name)}: "
             f"orb {deviation:.4f}° / {maximum:.4f}°"
         )
-        condition_type = "aspect"
-    else:
+    elif isinstance(condition, MoonPhaseCondition):
         moon = positions.get(when, "Moon")
         sun = positions.get(when, "Sun")
         phase_angle = _raw_phase(moon, sun)
@@ -394,6 +642,22 @@ def _evaluate_condition(
             f"deviation {deviation:.4f}° / {maximum:.4f}°"
         )
         condition_type = "moon_phase"
+    else:
+        if natal_snapshot is None or natal_snapshot.house_cusps is None:
+            raise ValueError("Natal house conditions require calculated house cusps.")
+        transit = positions.get(when, condition.transit_body)
+        house = find_house_number(
+            transit.longitude, natal_snapshot.house_cusps
+        )
+        matched = house in condition.houses
+        score = 100.0 if matched else 0.0
+        deviation = 0.0 if matched else 1.0
+        maximum = 0.0
+        description = (
+            f"Transit {condition.transit_body} in natal house {house}; "
+            f"allowed {', '.join(str(value) for value in condition.houses)}"
+        )
+        condition_type = "transit_natal_house"
 
     return ConditionEvaluation(
         condition_id=condition.id,
@@ -434,6 +698,7 @@ def _condition_activities(
     start: datetime,
     end: datetime,
     positions: _CachedPositions,
+    natal_snapshot: Optional[_NatalSnapshot],
 ) -> List[_ConditionActivity]:
     if isinstance(condition, AspectCondition):
         targets = []
@@ -444,11 +709,34 @@ def _condition_activities(
             )
         tolerance = float(condition.max_orb_degrees)
         body1, body2 = condition.body1, condition.body2
-    else:
+        categorical = False
+    elif isinstance(condition, NatalAspectCondition):
+        targets = []
+        for aspect_name in condition.aspects:
+            angle = float(ALL_ASPECTS[aspect_name]["Degrees"])
+            targets.extend(
+                (aspect_name, branch) for branch in _aspect_branches(angle)
+            )
+        tolerance = float(condition.max_orb_degrees)
+        body1 = condition.transit_body
+        body2 = _static_natal_key(condition.natal_target)
+        categorical = False
+    elif isinstance(condition, MoonPhaseCondition):
         phase = _canonical_phase(condition.phase)
         targets = [(phase, PHASE_ANGLES[phase])]
         tolerance = float(condition.max_deviation_degrees)
         body1, body2 = "Moon", "Sun"
+        categorical = False
+    else:
+        if natal_snapshot is None or natal_snapshot.house_cusps is None:
+            raise ValueError("Natal house conditions require calculated house cusps.")
+        targets = [
+            (f"House {index + 1}", longitude)
+            for index, longitude in enumerate(natal_snapshot.house_cusps)
+        ]
+        tolerance = 0.0
+        body1, body2 = condition.transit_body, ZODIAC_ORIGIN
+        categorical = True
 
     boundaries, peaks = _collect_phase_crossings(
         start,
@@ -460,9 +748,13 @@ def _condition_activities(
         positions,
     )
     points = _deduplicate_times([start, *boundaries, end])
+    if categorical:
+        peaks = []
 
     if start == end:
-        evaluation = _evaluate_condition(condition, start, positions)
+        evaluation = _evaluate_condition(
+            condition, start, positions, natal_snapshot
+        )
         return [
             _ConditionActivity(start, end, (start,))
         ] if evaluation.matched else []
@@ -472,7 +764,9 @@ def _condition_activities(
         if right <= left:
             continue
         midpoint = left + (right - left) / 2
-        if _evaluate_condition(condition, midpoint, positions).matched:
+        if _evaluate_condition(
+            condition, midpoint, positions, natal_snapshot
+        ).matched:
             active_peaks = tuple(
                 peak for peak in peaks if left <= peak <= right
             )
@@ -512,7 +806,7 @@ def search_opportunities(
 ) -> List[OpportunityWindow]:
     """Return ranked windows where every required condition is active."""
     start, end = _validate_query(query)
-    provider = _position_provider or _SwissEphemerisPositionProvider(
+    moving_provider = _position_provider or _SwissEphemerisPositionProvider(
         AspectSearchQuery(
             start=start,
             end=end,
@@ -524,10 +818,21 @@ def search_opportunities(
             altitude=query.altitude,
         )
     )
-    positions = _CachedPositions(provider)
+    natal_snapshot = _build_natal_snapshot(query, _position_provider)
+    static_positions = {ZODIAC_ORIGIN: 0.0}
+    if natal_snapshot is not None:
+        static_positions.update(
+            {
+                _static_natal_key(target): longitude
+                for target, longitude in natal_snapshot.positions.items()
+            }
+        )
+    positions = _CachedPositions(
+        _StaticOverlayProvider(moving_provider, static_positions)
+    )
     activities: Dict[str, List[_ConditionActivity]] = {
         condition.id: _condition_activities(
-            condition, start, end, positions
+            condition, start, end, positions, natal_snapshot
         )
         for condition in query.conditions
     }
@@ -563,7 +868,9 @@ def search_opportunities(
         total_weight = sum(float(condition.weight) for condition in query.conditions)
         for candidate in candidate_times:
             evaluations = tuple(
-                _evaluate_condition(condition, candidate, positions)
+                _evaluate_condition(
+                    condition, candidate, positions, natal_snapshot
+                )
                 for condition in query.conditions
             )
             if any(
@@ -615,6 +922,52 @@ def _validate_json_keys(
         raise ValueError(f"Unknown {context} fields: {', '.join(unknown)}")
 
 
+def _natal_chart_from_dict(data: Any) -> Optional[NatalChart]:
+    if data is None:
+        return None
+    if not isinstance(data, Mapping):
+        raise ValueError("natal_chart must be a JSON object.")
+    _validate_json_keys(
+        data,
+        (
+            "datetime",
+            "timezone",
+            "latitude",
+            "longitude",
+            "altitude",
+            "house_system",
+            "time_unknown",
+        ),
+        "natal_chart",
+    )
+    timezone_name = data.get("timezone")
+    if not isinstance(timezone_name, str):
+        raise ValueError("natal_chart timezone must be a string.")
+    local_timezone = pytz.timezone(timezone_name)
+    time_unknown = data.get("time_unknown", False)
+    if not isinstance(time_unknown, bool):
+        raise ValueError("natal_chart time_unknown must be boolean.")
+    local_datetime = _parse_local_datetime(
+        data.get("datetime"), "natal_chart datetime"
+    )
+    if time_unknown:
+        local_datetime = local_datetime.replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
+    try:
+        natal_datetime = local_timezone.localize(local_datetime, is_dst=None)
+    except (pytz.AmbiguousTimeError, pytz.NonExistentTimeError):
+        raise ValueError("natal_chart datetime must be an unambiguous local time.")
+    return NatalChart(
+        datetime=natal_datetime,
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
+        altitude=data.get("altitude", 0.0),
+        house_system=data.get("house_system", "Placidus"),
+        time_unknown=time_unknown,
+    )
+
+
 def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQuery:
     """Build and validate an opportunity query from its JSON-compatible form."""
     if not isinstance(data, Mapping):
@@ -630,6 +983,7 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
             "latitude",
             "longitude",
             "altitude",
+            "natal_chart",
             "conditions",
         ),
         "top-level",
@@ -674,6 +1028,46 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
                     weight=raw.get("weight", 1.0),
                 )
             )
+        elif condition_type == "natal_aspect":
+            _validate_json_keys(
+                raw,
+                tuple(
+                    common
+                    | {
+                        "transit_body",
+                        "natal_target",
+                        "aspects",
+                        "max_orb_degrees",
+                    }
+                ),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                NatalAspectCondition(
+                    id=raw.get("id"),
+                    transit_body=raw.get("transit_body"),
+                    natal_target=raw.get("natal_target"),
+                    aspects=raw.get("aspects"),
+                    max_orb_degrees=raw.get("max_orb_degrees"),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
+        elif condition_type == "transit_natal_house":
+            _validate_json_keys(
+                raw,
+                tuple(common | {"transit_body", "houses"}),
+                f"condition {index + 1}",
+            )
+            conditions.append(
+                TransitNatalHouseCondition(
+                    id=raw.get("id"),
+                    transit_body=raw.get("transit_body"),
+                    houses=raw.get("houses"),
+                    required=raw.get("required", True),
+                    weight=raw.get("weight", 1.0),
+                )
+            )
         elif condition_type == "moon_phase":
             _validate_json_keys(
                 raw,
@@ -705,6 +1099,7 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
         latitude=data.get("latitude"),
         longitude=data.get("longitude"),
         altitude=data.get("altitude", 0.0),
+        natal_chart=_natal_chart_from_dict(data.get("natal_chart")),
     )
     _validate_query(query)
     return query

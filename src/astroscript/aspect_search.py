@@ -92,6 +92,10 @@ class _SwissEphemerisPositionProvider:
             self.flags |= swe.FLG_TOPOCTR
 
     def __call__(self, when: datetime, body: str) -> _Position:
+        if self.center == "topocentric":
+            swe.set_topo(
+                float(self.longitude), float(self.latitude), float(self.altitude)
+            )
         utc = when.astimezone(timezone.utc)
         julian_day = swe.julday(
             utc.year,

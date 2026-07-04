@@ -183,6 +183,21 @@ ranking without restricting which windows qualify. The Python API is available
 from `astroscript.opportunity_search` through `OpportunitySearchQuery`,
 `AspectCondition`, `MoonPhaseCondition`, and `search_opportunities()`.
 
+Natal transit searches add an inline `natal_chart` to the same rule file. Use a
+`natal_aspect` condition for aspects from a moving body to a fixed natal planet,
+angle (`Ascendant`, `Midheaven`, `IC`, or `DC`), or house cusp (`House 1` through
+`House 12`). Use `transit_natal_house` to require a moving body to occupy one or
+more natal houses:
+
+```bash
+python astro_script.py --opportunity-search examples/natal_opportunity_rules.json
+```
+
+The Python API exposes these as `NatalChart`, `NatalAspectCondition`, and
+`TransitNatalHouseCondition`. A natal chart with `time_unknown: true` uses local
+noon for planetary positions and rejects house-, cusp-, and angle-dependent
+conditions because those cannot be calculated reliably without a birth time.
+
 
 ### Options
 

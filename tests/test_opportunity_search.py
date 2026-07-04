@@ -16,10 +16,13 @@ if str(SRC_DIR) not in sys.path:
 from astroscript.cli import argparser, main, run_opportunity_search
 from astroscript.opportunity_search import (
     AspectCondition,
+    NatalAspectCondition,
+    NatalChart,
     MoonPhaseCondition,
     OpportunitySearchQuery,
     OpportunityWindow,
     ConditionEvaluation,
+    TransitNatalHouseCondition,
     load_opportunity_query,
     opportunity_query_from_dict,
     search_opportunities,
@@ -273,6 +276,202 @@ class OpportunitySearchTests(unittest.TestCase):
             timedelta(seconds=1),
         )
 
+    def test_transit_to_fixed_natal_planet(self):
+        natal_datetime = datetime(1990, 1, 1, tzinfo=timezone.utc)
+
+        def provider(when, body):
+            if when.year == 1990 and body == "Sun":
+                return (100, 0)
+            days = (when - self.start).total_seconds() / 86400
+            return (99 + 2 * days, 2) if body == "Mercury" else (0, 0)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "mercury_natal_sun",
+                    "Mercury",
+                    "Sun",
+                    ("Conjunction",),
+                    0.5,
+                ),
+            ),
+            natal_chart=NatalChart(
+                natal_datetime,
+                57.7,
+                11.9,
+                time_unknown=True,
+            ),
+        )
+
+        windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(windows[0].peak - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertEqual(
+            windows[0].evaluations[0].condition_type, "natal_aspect"
+        )
+        self.assertIn("natal Sun", windows[0].evaluations[0].description)
+
+    def test_transit_to_natal_angle_and_house_cusp(self):
+        natal_datetime = datetime(1990, 1, 1, tzinfo=timezone.utc)
+        cusps = tuple(range(0, 360, 30))
+        angles = (0, 270)
+
+        def angle_provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            return ((359 + 2 * days) % 360, 2) if body == "Mars" else (0, 0)
+
+        angle_query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "mars_asc",
+                    "Mars",
+                    "Ascendant",
+                    ("Conjunction",),
+                    0.5,
+                ),
+            ),
+            natal_chart=NatalChart(natal_datetime, 57.7, 11.9),
+        )
+        with patch(
+            "astroscript.opportunity_search.calculate_house_cusps",
+            return_value=(cusps, angles),
+        ):
+            angle_windows = search_opportunities(
+                angle_query, _position_provider=angle_provider
+            )
+
+        def cusp_provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            return (119 + 2 * days, 2) if body == "Mars" else (0, 0)
+
+        cusp_query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "mars_house_5",
+                    "Mars",
+                    "House 5",
+                    ("Conjunction",),
+                    0.5,
+                ),
+            ),
+            natal_chart=NatalChart(natal_datetime, 57.7, 11.9),
+        )
+        with patch(
+            "astroscript.opportunity_search.calculate_house_cusps",
+            return_value=(cusps, angles),
+        ):
+            cusp_windows = search_opportunities(
+                cusp_query, _position_provider=cusp_provider
+            )
+
+        self.assertEqual(len(angle_windows), 1)
+        self.assertEqual(len(cusp_windows), 1)
+        self.assertLess(
+            abs(angle_windows[0].peak - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertLess(
+            abs(cusp_windows[0].peak - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+
+    def test_transit_inside_selected_natal_house(self):
+        natal_datetime = datetime(1990, 1, 1, tzinfo=timezone.utc)
+        cusps = tuple(range(0, 360, 30))
+
+        def provider(when, body):
+            days = (when - self.start).total_seconds() / 86400
+            return (25 + 10 * days, 10) if body == "Mars" else (0, 0)
+
+        query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                TransitNatalHouseCondition("mars_house_2", "Mars", (2,)),
+            ),
+            natal_chart=NatalChart(natal_datetime, 57.7, 11.9),
+        )
+        with patch(
+            "astroscript.opportunity_search.calculate_house_cusps",
+            return_value=(cusps, (0, 270)),
+        ):
+            windows = search_opportunities(query, _position_provider=provider)
+
+        self.assertEqual(len(windows), 1)
+        self.assertLess(
+            abs(windows[0].start - (self.start + timedelta(hours=12))),
+            timedelta(seconds=1),
+        )
+        self.assertEqual(windows[0].end, self.end)
+        self.assertEqual(windows[0].score, 100)
+        self.assertIn("natal house 2", windows[0].evaluations[0].description)
+
+    def test_unknown_natal_time_uses_noon_and_rejects_houses(self):
+        natal_datetime = datetime(1990, 1, 1, 5, tzinfo=timezone.utc)
+        natal_calls = []
+
+        def provider(when, body):
+            if when.year == 1990:
+                natal_calls.append(when)
+                return (100, 0)
+            return (100, 0)
+
+        planet_query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                NatalAspectCondition(
+                    "sun",
+                    "Mercury",
+                    "Sun",
+                    ("Conjunction",),
+                    1,
+                ),
+            ),
+            natal_chart=NatalChart(
+                natal_datetime, 57.7, 11.9, time_unknown=True
+            ),
+        )
+        search_opportunities(planet_query, _position_provider=provider)
+        self.assertTrue(natal_calls)
+        self.assertTrue(all(value.hour == 12 for value in natal_calls))
+
+        house_query = OpportunitySearchQuery(
+            self.start,
+            self.end,
+            conditions=(
+                TransitNatalHouseCondition("house", "Mars", (1,)),
+            ),
+            natal_chart=planet_query.natal_chart,
+        )
+        with self.assertRaisesRegex(ValueError, "known birth time"):
+            search_opportunities(house_query, _position_provider=provider)
+
+    def test_real_natal_example_finds_solar_return_window(self):
+        query = load_opportunity_query(
+            ROOT_DIR / "examples" / "natal_opportunity_rules.json"
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertEqual(len(windows), 1)
+        self.assertGreater(windows[0].score, 99.9)
+        self.assertEqual(
+            {evaluation.condition_type for evaluation in windows[0].evaluations},
+            {"natal_aspect", "transit_natal_house"},
+        )
+        self.assertLess(windows[0].evaluations[0].deviation_degrees, 0.001)
+
 
 class OpportunityJsonTests(unittest.TestCase):
     def setUp(self):
@@ -320,6 +519,78 @@ class OpportunityJsonTests(unittest.TestCase):
             query = load_opportunity_query(path)
         self.assertEqual(len(query.conditions), 2)
 
+    def test_json_supports_natal_aspects_houses_and_angles(self):
+        rules = {
+            "start": "2026-07-01 00:00",
+            "end": "2026-08-01 00:00",
+            "timezone": "Europe/Stockholm",
+            "natal_chart": {
+                "datetime": "1990-01-01 14:30",
+                "timezone": "Europe/Stockholm",
+                "latitude": 57.7,
+                "longitude": 11.9,
+                "house_system": "Placidus",
+                "time_unknown": False,
+            },
+            "conditions": [
+                {
+                    "id": "jupiter_sun",
+                    "type": "natal_aspect",
+                    "transit_body": "Jupiter",
+                    "natal_target": "Sun",
+                    "aspects": ["Trine"],
+                    "max_orb_degrees": 2,
+                },
+                {
+                    "id": "mars_asc",
+                    "type": "natal_aspect",
+                    "transit_body": "Mars",
+                    "natal_target": "Ascendant",
+                    "aspects": ["Conjunction"],
+                    "max_orb_degrees": 1,
+                },
+                {
+                    "id": "venus_houses",
+                    "type": "transit_natal_house",
+                    "transit_body": "Venus",
+                    "houses": [5, 7],
+                    "required": False,
+                },
+            ],
+        }
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertIsInstance(query.natal_chart, NatalChart)
+        self.assertIsInstance(query.conditions[0], NatalAspectCondition)
+        self.assertEqual(query.conditions[1].natal_target, "Ascendant")
+        self.assertIsInstance(query.conditions[2], TransitNatalHouseCondition)
+
+    def test_unknown_natal_time_is_normalized_to_local_noon(self):
+        rules = copy.deepcopy(self.rules)
+        rules["natal_chart"] = {
+            "datetime": "1990-01-01 05:00",
+            "timezone": "Europe/Stockholm",
+            "latitude": 57.7,
+            "longitude": 11.9,
+            "time_unknown": True,
+        }
+        rules["conditions"] = [
+            {
+                "id": "natal_sun",
+                "type": "natal_aspect",
+                "transit_body": "Jupiter",
+                "natal_target": "Sun",
+                "aspects": ["Trine"],
+                "max_orb_degrees": 2,
+            }
+        ]
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertEqual(query.natal_chart.datetime.hour, 12)
+        self.assertTrue(query.natal_chart.time_unknown)
+
     def test_invalid_rules_are_rejected(self):
         cases = []
         unknown_body = copy.deepcopy(self.rules)
@@ -349,6 +620,34 @@ class OpportunityJsonTests(unittest.TestCase):
         duplicate_ids = copy.deepcopy(self.rules)
         duplicate_ids["conditions"][1]["id"] = "full_moon"
         cases.append(duplicate_ids)
+        missing_natal = copy.deepcopy(self.rules)
+        missing_natal["conditions"] = [
+            {
+                "id": "natal",
+                "type": "natal_aspect",
+                "transit_body": "Jupiter",
+                "natal_target": "Sun",
+                "aspects": ["Trine"],
+                "max_orb_degrees": 2,
+            }
+        ]
+        cases.append(missing_natal)
+        invalid_house = copy.deepcopy(self.rules)
+        invalid_house["natal_chart"] = {
+            "datetime": "1990-01-01 12:00",
+            "timezone": "UTC",
+            "latitude": 57.7,
+            "longitude": 11.9,
+        }
+        invalid_house["conditions"] = [
+            {
+                "id": "house",
+                "type": "transit_natal_house",
+                "transit_body": "Mars",
+                "houses": [13],
+            }
+        ]
+        cases.append(invalid_house)
 
         for rules in cases:
             with self.subTest(rules=rules), self.assertRaises((ValueError, KeyError)):
