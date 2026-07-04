@@ -40,6 +40,11 @@ from .fixed_stars import (
     DEFAULT_FIXED_STAR_ORB_DEGREES,
 )
 from .houses import calculate_house_cusps, find_house_number
+from .opportunity_presets import (
+    OpportunityPreset,
+    list_opportunity_presets,
+    load_opportunity_preset,
+)
 from .zodiac import normalize_zodiac
 
 
@@ -71,6 +76,9 @@ __all__ = [
     "OpportunitySearchQuery",
     "ConditionEvaluation",
     "OpportunityWindow",
+    "OpportunityPreset",
+    "list_opportunity_presets",
+    "load_opportunity_preset",
     "search_opportunities",
     "opportunity_query_from_dict",
     "load_opportunity_query",
@@ -1514,6 +1522,7 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
             "altitude",
             "house_system",
             "natal_chart",
+            "presets",
             "conditions",
         ),
         "top-level",
@@ -1532,9 +1541,26 @@ def opportunity_query_from_dict(data: Mapping[str, Any]) -> OpportunitySearchQue
     except (pytz.AmbiguousTimeError, pytz.NonExistentTimeError):
         raise ValueError("start and end must be unambiguous local times.")
 
-    raw_conditions = data.get("conditions")
-    if not isinstance(raw_conditions, list) or not raw_conditions:
-        raise ValueError("conditions must be a non-empty JSON array.")
+    raw_preset_names = data.get("presets", [])
+    if (
+        not isinstance(raw_preset_names, list)
+        or any(not isinstance(name, str) for name in raw_preset_names)
+    ):
+        raise ValueError("presets must be a JSON array of preset names.")
+    if len(set(raw_preset_names)) != len(raw_preset_names):
+        raise ValueError("presets must not contain duplicate names.")
+    raw_conditions = []
+    for preset_name in raw_preset_names:
+        raw_conditions.extend(load_opportunity_preset(preset_name).conditions)
+    if "conditions" in data:
+        custom_conditions = data.get("conditions")
+        if not isinstance(custom_conditions, list):
+            raise ValueError("conditions must be a JSON array.")
+        raw_conditions.extend(custom_conditions)
+    if not raw_conditions:
+        raise ValueError(
+            "At least one preset or custom condition is required."
+        )
     conditions: List[Condition] = []
     for index, raw in enumerate(raw_conditions):
         if not isinstance(raw, Mapping):

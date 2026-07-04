@@ -1,0 +1,61 @@
+{
+  "name": "launch_and_business",
+  "title": "Launch and business",
+  "description": "For launches, company starts, major releases, and commercially important beginnings.",
+  "rationale": [
+    "The Moon must not be void of course and Mercury must be direct.",
+    "Direct Jupiter, initiative-oriented lunar signs, and Sun-Jupiter aspects improve the ranking.",
+    "Sun or Jupiter planetary hours improve the ranking."
+  ],
+  "requires_location": true,
+  "conditions": [
+    {
+      "id": "launch__moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 3
+    },
+    {
+      "id": "launch__mercury_direct",
+      "type": "retrograde",
+      "body": "Mercury",
+      "retrograde": false,
+      "required": true,
+      "weight": 2
+    },
+    {
+      "id": "launch__jupiter_direct",
+      "type": "retrograde",
+      "body": "Jupiter",
+      "retrograde": false,
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "launch__moon_sign",
+      "type": "zodiac_sign",
+      "body": "Moon",
+      "signs": ["Aries", "Taurus", "Leo", "Capricorn"],
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "launch__sun_jupiter",
+      "type": "aspect",
+      "body1": "Sun",
+      "body2": "Jupiter",
+      "aspects": ["Conjunction", "Trine", "Sextile"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "launch__planetary_hour",
+      "type": "planetary_hour",
+      "rulers": ["Sun", "Jupiter"],
+      "required": false,
+      "weight": 1
+    }
+  ]
+}

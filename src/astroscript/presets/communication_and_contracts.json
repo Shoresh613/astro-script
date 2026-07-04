@@ -1,0 +1,53 @@
+{
+  "name": "communication_and_contracts",
+  "title": "Communication and contracts",
+  "description": "For conversations, publishing, negotiations, agreements, and signing documents.",
+  "rationale": [
+    "The Moon must not be void of course and Mercury must be direct.",
+    "Mercury in Gemini, Virgo, or Aquarius improves the ranking.",
+    "Mercury hours and supportive Mercury-Jupiter aspects improve the ranking."
+  ],
+  "requires_location": true,
+  "conditions": [
+    {
+      "id": "communication__moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 2
+    },
+    {
+      "id": "communication__mercury_direct",
+      "type": "retrograde",
+      "body": "Mercury",
+      "retrograde": false,
+      "required": true,
+      "weight": 3
+    },
+    {
+      "id": "communication__mercury_sign",
+      "type": "zodiac_sign",
+      "body": "Mercury",
+      "signs": ["Gemini", "Virgo", "Aquarius"],
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "communication__mercury_jupiter",
+      "type": "aspect",
+      "body1": "Mercury",
+      "body2": "Jupiter",
+      "aspects": ["Conjunction", "Trine", "Sextile"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "communication__mercury_hour",
+      "type": "planetary_hour",
+      "rulers": ["Mercury"],
+      "required": false,
+      "weight": 1
+    }
+  ]
+}

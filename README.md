@@ -253,6 +253,36 @@ The Python API exposes these rules as `RetrogradeCondition`,
 `ZodiacSignCondition`, `TransitHouseCondition`,
 `VoidOfCourseMoonCondition`, and `PlanetaryHourCondition`.
 
+### Activity presets
+
+Bundled presets provide separate, transparent rule sets for
+`general_election`, `communication_and_contracts`,
+`relationships_and_social`, `creative_work`, and `launch_and_business`.
+Reference one or more names through the top-level `presets` array; an optional
+`conditions` array adds custom rules without changing the preset:
+
+```json
+{
+  "start": "2026-08-01 00:00",
+  "end": "2026-08-08 00:00",
+  "timezone": "Europe/Stockholm",
+  "latitude": 57.7089,
+  "longitude": 11.9746,
+  "presets": ["relationships_and_social"]
+}
+```
+
+```bash
+python astro_script.py --list-opportunity-presets
+python astro_script.py --opportunity-search examples/preset_opportunity_rules.json
+```
+
+The complete rules, weights, required conditions, rationale, and location
+requirements are documented in
+[`docs/opportunity_presets.md`](docs/opportunity_presets.md). Presets are
+starting points rather than guarantees; copy or supplement their JSON rules to
+change their assumptions.
+
 
 ### Options
 
@@ -263,6 +293,7 @@ The Python API exposes these rules as `RetrogradeCondition`,
 - `--timezone`: Timezone of the location.
 - `--aspect-period`: Inclusive start and end for an exact moving-body aspect search (`YYYY-MM-DD HH:MM`).
 - `--opportunity-search`: Read combined aspect and moon-phase conditions from a JSON rule file.
+- `--list-opportunity-presets`: List bundled activity presets and location requirements.
 - `--house_system`: House system to use, defaults to Placidus.
 - `--zodiac`: Zodiac mode (`tropical`, `sidereal`, or `vedic`). `sidereal` and `vedic` both use Lahiri ayanamsha; the default is `tropical`.
 - `--output_type`: Format of the output (`text`, `return_text`, `html`).

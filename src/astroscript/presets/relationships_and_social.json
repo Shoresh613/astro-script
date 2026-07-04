@@ -1,0 +1,61 @@
+{
+  "name": "relationships_and_social",
+  "title": "Relationships and social occasions",
+  "description": "For dates, celebrations, reconciliation, networking, and relationship-focused starts.",
+  "rationale": [
+    "The Moon must not be void of course and Venus must be direct.",
+    "Supportive Venus signs, lunar signs, and Venus-Jupiter aspects improve the ranking.",
+    "Venus or Jupiter planetary hours improve the ranking."
+  ],
+  "requires_location": true,
+  "conditions": [
+    {
+      "id": "relationships__moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 2
+    },
+    {
+      "id": "relationships__venus_direct",
+      "type": "retrograde",
+      "body": "Venus",
+      "retrograde": false,
+      "required": true,
+      "weight": 3
+    },
+    {
+      "id": "relationships__venus_sign",
+      "type": "zodiac_sign",
+      "body": "Venus",
+      "signs": ["Taurus", "Libra", "Pisces"],
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "relationships__moon_sign",
+      "type": "zodiac_sign",
+      "body": "Moon",
+      "signs": ["Taurus", "Cancer", "Libra", "Pisces"],
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "relationships__venus_jupiter",
+      "type": "aspect",
+      "body1": "Venus",
+      "body2": "Jupiter",
+      "aspects": ["Conjunction", "Trine", "Sextile"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "relationships__planetary_hour",
+      "type": "planetary_hour",
+      "rulers": ["Venus", "Jupiter"],
+      "required": false,
+      "weight": 1
+    }
+  ]
+}

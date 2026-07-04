@@ -32,7 +32,12 @@ from .events import *
 from .returns import *
 from .zodiac import *
 from .aspect_search import AspectSearchQuery, search_exact_aspects
-from .opportunity_search import load_opportunity_query, search_opportunities
+from .opportunity_search import (
+    list_opportunity_presets,
+    load_opportunity_preset,
+    load_opportunity_query,
+    search_opportunities,
+)
 
 def set_orbs(args, def_orbs):
     # Set orbs to default if not specified
@@ -259,6 +264,35 @@ def run_opportunity_search(args):
     else:
         result = "No opportunity windows found for the specified rules."
 
+    if output_type == "text":
+        print(result)
+    return result
+
+
+def run_list_opportunity_presets(args):
+    """Format the bundled activity presets without running a search."""
+    output_type = args.get("Output") or "text"
+    if output_type not in ("text", "return_text"):
+        raise ValueError(
+            "Preset listings support output_type text or return_text."
+        )
+    rows = []
+    for name in list_opportunity_presets():
+        preset = load_opportunity_preset(name)
+        rows.append(
+            [
+                preset.name,
+                preset.title,
+                "yes" if preset.requires_location else "no",
+                preset.description,
+            ]
+        )
+    result = tabulate(
+        rows,
+        headers=("Name", "Activity", "Location", "Description"),
+        tablefmt="simple",
+        disable_numparse=True,
+    )
     if output_type == "text":
         print(result)
     return result
@@ -701,6 +735,13 @@ If no record is found, default values will be used.""",
         required=False,
     )
     parser.add_argument(
+        "--list-opportunity-presets",
+        "--list_opportunity_presets",
+        dest="list_opportunity_presets",
+        action="store_true",
+        help="List the bundled documented activity presets.",
+    )
+    parser.add_argument(
         "--synastry",
         help="Name of the stored event (or person) with which to calculate synastry for the person specified under --name. (Default: None)",
         required=False,
@@ -805,6 +846,7 @@ If no record is found, default values will be used.""",
         "Transits Location": args.transits_location,
         "Aspect Period": args.aspect_period,
         "Opportunity Search": args.opportunity_search,
+        "List Opportunity Presets": args.list_opportunity_presets,
         "Synastry": args.synastry,
         "Progressed": args.progressed,
         "Saved Names": args.saved_names,
@@ -825,6 +867,15 @@ def main(gui_arguments=None):
         args = gui_arguments
     else:
         args = argparser()
+
+    if args.get("List Opportunity Presets"):
+        try:
+            return run_list_opportunity_presets(args)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+            message = f"Invalid opportunity preset: {error}"
+            if (args.get("Output") or "text") in ("text", "html"):
+                print(message, file=sys.stderr)
+            return message
 
     if args.get("Aspect Period") and args.get("Opportunity Search"):
         message = (

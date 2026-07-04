@@ -13,7 +13,12 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from astroscript.cli import argparser, main, run_opportunity_search
+from astroscript.cli import (
+    argparser,
+    main,
+    run_list_opportunity_presets,
+    run_opportunity_search,
+)
 from astroscript.opportunity_search import (
     AspectCondition,
     NatalAspectCondition,
@@ -28,6 +33,8 @@ from astroscript.opportunity_search import (
     TransitNatalHouseCondition,
     VoidOfCourseMoonCondition,
     ZodiacSignCondition,
+    list_opportunity_presets,
+    load_opportunity_preset,
     load_opportunity_query,
     opportunity_query_from_dict,
     search_opportunities,
@@ -1085,6 +1092,105 @@ class OpportunityJsonTests(unittest.TestCase):
             ):
                 opportunity_query_from_dict(rules)
 
+    def test_preset_only_rules_are_expanded_to_typed_conditions(self):
+        rules = copy.deepcopy(self.rules)
+        rules.pop("conditions")
+        rules["presets"] = ["general_election"]
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertEqual(len(query.conditions), 3)
+        self.assertIsInstance(query.conditions[0], VoidOfCourseMoonCondition)
+        self.assertIsInstance(query.conditions[1], RetrogradeCondition)
+        self.assertEqual(
+            query.conditions[0].id, "general_election__moon_not_void"
+        )
+
+    def test_presets_can_be_combined_with_custom_conditions(self):
+        rules = copy.deepcopy(self.rules)
+        rules["presets"] = ["general_election"]
+        rules["conditions"] = [
+            {
+                "id": "custom__moon_sign",
+                "type": "zodiac_sign",
+                "body": "Moon",
+                "signs": ["Taurus"],
+            }
+        ]
+
+        query = opportunity_query_from_dict(rules)
+
+        self.assertEqual(len(query.conditions), 4)
+        self.assertEqual(query.conditions[-1].id, "custom__moon_sign")
+
+    def test_invalid_preset_references_are_rejected(self):
+        for presets in (
+            ["missing"],
+            ["../general_election"],
+            ["general_election", "general_election"],
+            "general_election",
+        ):
+            rules = copy.deepcopy(self.rules)
+            rules.pop("conditions")
+            rules["presets"] = presets
+            with self.subTest(presets=presets), self.assertRaises(ValueError):
+                opportunity_query_from_dict(rules)
+
+    def test_location_dependent_preset_requires_coordinates(self):
+        rules = copy.deepcopy(self.rules)
+        rules.pop("conditions")
+        rules["presets"] = ["relationships_and_social"]
+
+        with self.assertRaisesRegex(
+            ValueError, "require latitude and longitude"
+        ):
+            opportunity_query_from_dict(rules)
+
+
+class OpportunityPresetTests(unittest.TestCase):
+    def test_bundled_presets_have_valid_metadata_and_unique_condition_ids(self):
+        expected = {
+            "communication_and_contracts",
+            "creative_work",
+            "general_election",
+            "launch_and_business",
+            "relationships_and_social",
+        }
+
+        self.assertEqual(set(list_opportunity_presets()), expected)
+        all_ids = []
+        for name in list_opportunity_presets():
+            preset = load_opportunity_preset(name)
+            ids = [condition["id"] for condition in preset.conditions]
+            query = opportunity_query_from_dict(
+                {
+                    "start": "2026-08-01 00:00",
+                    "end": "2026-08-02 00:00",
+                    "timezone": "Europe/Stockholm",
+                    "latitude": 57.7,
+                    "longitude": 11.9,
+                    "presets": [name],
+                }
+            )
+            self.assertEqual(preset.name, name)
+            self.assertTrue(preset.description)
+            self.assertTrue(preset.rationale)
+            self.assertEqual(len(ids), len(set(ids)))
+            self.assertEqual(len(query.conditions), len(preset.conditions))
+            all_ids.extend(ids)
+        self.assertEqual(len(all_ids), len(set(all_ids)))
+
+    def test_real_preset_example_returns_ranked_windows(self):
+        query = load_opportunity_query(
+            ROOT_DIR / "examples" / "preset_opportunity_rules.json"
+        )
+
+        windows = search_opportunities(query)
+
+        self.assertTrue(windows)
+        self.assertEqual(len(windows[0].evaluations), 6)
+        self.assertGreater(windows[0].score, 0)
+
 
 class OpportunityCliTests(unittest.TestCase):
     def test_cli_option_is_parsed(self):
@@ -1095,6 +1201,37 @@ class OpportunityCliTests(unittest.TestCase):
         ):
             arguments = argparser()
         self.assertEqual(arguments["Opportunity Search"], "rules.json")
+
+    def test_preset_listing_option_is_parsed(self):
+        with patch.object(
+            sys,
+            "argv",
+            ["astro_script.py", "--list-opportunity-presets"],
+        ):
+            arguments = argparser()
+        self.assertTrue(arguments["List Opportunity Presets"])
+
+    def test_cli_lists_documented_presets(self):
+        result = run_list_opportunity_presets({"Output": "return_text"})
+
+        self.assertIn("general_election", result)
+        self.assertIn("relationships_and_social", result)
+        self.assertIn("Location", result)
+
+    def test_main_routes_preset_listing_before_normal_chart_flow(self):
+        args = {
+            "List Opportunity Presets": True,
+            "Output": "return_text",
+        }
+        with patch(
+            "astroscript.cli.run_list_opportunity_presets",
+            return_value="presets",
+        ) as listing, patch("astroscript.cli.load_event") as load_event:
+            result = main(args)
+
+        self.assertEqual(result, "presets")
+        listing.assert_called_once_with(args)
+        load_event.assert_not_called()
 
     def test_cli_formats_ranked_windows(self):
         query = OpportunitySearchQuery(

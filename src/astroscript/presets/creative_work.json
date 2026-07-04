@@ -1,0 +1,61 @@
+{
+  "name": "creative_work",
+  "title": "Creative work",
+  "description": "For beginning artistic, design, writing, and other creative work.",
+  "rationale": [
+    "The Moon must not be void of course.",
+    "Direct Mercury and Venus, expressive lunar signs, and Venus-Neptune aspects improve the ranking.",
+    "Sun, Venus, or Mercury planetary hours improve the ranking."
+  ],
+  "requires_location": true,
+  "conditions": [
+    {
+      "id": "creative__moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 2
+    },
+    {
+      "id": "creative__mercury_direct",
+      "type": "retrograde",
+      "body": "Mercury",
+      "retrograde": false,
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "creative__venus_direct",
+      "type": "retrograde",
+      "body": "Venus",
+      "retrograde": false,
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "creative__moon_sign",
+      "type": "zodiac_sign",
+      "body": "Moon",
+      "signs": ["Taurus", "Leo", "Libra", "Pisces"],
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "creative__venus_neptune",
+      "type": "aspect",
+      "body1": "Venus",
+      "body2": "Neptune",
+      "aspects": ["Conjunction", "Trine", "Sextile"],
+      "max_orb_degrees": 2,
+      "required": false,
+      "weight": 2
+    },
+    {
+      "id": "creative__planetary_hour",
+      "type": "planetary_hour",
+      "rulers": ["Sun", "Venus", "Mercury"],
+      "required": false,
+      "weight": 1
+    }
+  ]
+}

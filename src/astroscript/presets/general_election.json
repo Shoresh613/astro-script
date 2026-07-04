@@ -1,0 +1,35 @@
+{
+  "name": "general_election",
+  "title": "General election",
+  "description": "A restrained baseline for choosing a generally workable start time.",
+  "rationale": [
+    "The Moon must not be void of course.",
+    "Direct Mercury and Venus improve the ranking but do not exclude a period."
+  ],
+  "requires_location": false,
+  "conditions": [
+    {
+      "id": "general_election__moon_not_void",
+      "type": "void_of_course_moon",
+      "void": false,
+      "required": true,
+      "weight": 3
+    },
+    {
+      "id": "general_election__mercury_direct",
+      "type": "retrograde",
+      "body": "Mercury",
+      "retrograde": false,
+      "required": false,
+      "weight": 1
+    },
+    {
+      "id": "general_election__venus_direct",
+      "type": "retrograde",
+      "body": "Venus",
+      "retrograde": false,
+      "required": false,
+      "weight": 1
+    }
+  ]
+}
