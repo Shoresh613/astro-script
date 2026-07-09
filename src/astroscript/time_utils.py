@@ -222,19 +222,27 @@ def moon_phase(date):
     else:
         illumination = get_illuminated_fraction_of_moon(jd) * 100
 
-    if phase_angle < 45:
+    # Each of the 8 phase names is centered on its defining angle (New Moon on
+    # 0, First Quarter on 90, Full Moon on 180, Last Quarter on 270), so the
+    # bucket boundaries sit at the halfway points, offset by 22.5 degrees.
+    # Using un-offset 45-degree buckets (0/45/90/...) made e.g. "Full Moon"
+    # span 180-225 degrees instead of 157.5-202.5, so it kept being reported
+    # for over an entire day after the moon had already started waning, with
+    # illumination dropping as low as ~86% (at 224 degrees) before flipping
+    # to "Waning Gibbous".
+    if phase_angle < 22.5 or phase_angle >= 337.5:
         return "New Moon", illumination
-    elif phase_angle < 90:
+    elif phase_angle < 67.5:
         return "Waxing Crescent", illumination
-    elif phase_angle < 135:
+    elif phase_angle < 112.5:
         return "First Quarter", illumination
-    elif phase_angle < 180:
+    elif phase_angle < 157.5:
         return "Waxing Gibbous", illumination
-    elif phase_angle < 225:
+    elif phase_angle < 202.5:
         return "Full Moon", illumination
-    elif phase_angle < 270:
+    elif phase_angle < 247.5:
         return "Waning Gibbous", illumination
-    elif phase_angle < 315:
+    elif phase_angle < 292.5:
         return "Last Quarter", illumination
     else:
         return "Waning Crescent", illumination
